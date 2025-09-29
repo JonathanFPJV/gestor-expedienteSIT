@@ -1,0 +1,231 @@
+/* style.css */
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f4f9; color: #333; margin: 20px; }
+h1, h2 { color: #444; text-align: center; }
+.container { display: flex; gap: 20px; }
+.form-container, .search-container { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); flex: 1; }
+.form-group { margin-bottom: 15px; }
+label { display: block; margin-bottom: 5px; font-weight: bold; }
+input[type="text"], input[type="date"] { width: 95%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+button { padding: 10px; border: none; background-color: #007bff; color: white; font-size: 14px; border-radius: 4px; cursor: pointer; margin: 2px; }
+button:hover { background-color: #0056b3; }
+
+/* Estilos para tabs */
+.search-tabs {
+    display: flex;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #ddd;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    color: #666;
+}
+
+.tab-btn.active {
+    color: #007bff;
+    border-bottom-color: #007bff;
+}
+
+.search-section {
+    margin-bottom: 20px;
+}
+
+/* Estilos para tarjetas */
+.tarjeta-item {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 10px;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    background-color: #f9f9f9;
+}
+
+.tarjeta-item input {
+    flex: 1;
+    margin: 0;
+}
+
+.eliminar-tarjeta-btn {
+    background-color: #dc3545;
+    padding: 5px 10px;
+}
+
+.seleccionar-pdf-tarjeta-btn {
+    background-color: #28a745;
+    padding: 5px 10px;
+}
+
+/* Estilos para resultados de búsqueda */
+.search-result-item, .acta-result-item {
+    background: #f8f9fa;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    border-left: 4px solid #007bff;
+}
+
+.acta-header {
+    margin-bottom: 10px;
+}
+
+.acta-header h3 {
+    margin: 0 0 10px 0;
+    color: #007bff;
+}
+
+.tarjetas-asociadas {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #dee2e6;
+}
+
+.tarjetas-asociadas h4 {
+    margin: 0 0 10px 0;
+    color: #495057;
+}
+
+.tarjeta-asociada {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+    margin-bottom: 5px;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+}
+
+.ver-pdf-btn, .ver-pdf-acta-btn, .ver-pdf-tarjeta-btn {
+    background-color: #17a2b8;
+    font-size: 12px;
+    padding: 4px 8px;
+}
+
+.ver-pdf-acta-btn {
+    background-color: #6c757d;
+    margin-bottom: 10px;
+}
+
+/* Estilos para el visor de PDF integrado */
+.pdf-viewer {
+    margin-top: 15px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    background: white;
+}
+
+.pdf-header {
+    background: #f8f9fa;
+    padding: 10px;
+    border-bottom: 1px solid #dee2e6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pdf-header h4 {
+    margin: 0;
+    color: #495057;
+}
+
+.pdf-controls {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.pdf-btn {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.pdf-btn:hover {
+    background-color: #5a6268;
+}
+
+.page-info, .zoom-info {
+    font-size: 12px;
+    color: #6c757d;
+    margin: 0 5px;
+}
+
+.pdf-canvas-container {
+    padding: 15px;
+    text-align: center;
+    max-height: 600px;
+    overflow: auto;
+}
+
+.pdf-canvas {
+    border: 1px solid #dee2e6;
+    max-width: 100%;
+}
+
+.pdf-error {
+    color: #dc3545;
+    font-style: italic;
+    padding: 20px;
+    text-align: center;
+}
+
+.result-header {
+    margin-bottom: 10px;
+}
+
+.result-actions, .acta-actions {
+    margin-bottom: 10px;
+}
+
+.tarjeta-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+#search-input {
+    flex: 1;
+}
+#search-btn {
+    width: 40px;
+    padding: 0;
+    font-size: 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#search-btn:hover {
+    background-color: #0056b3;
+}
+.abrir-pdf-btn { 
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 5px;
+}
+.abrir-pdf-btn:hover {
+    background-color: #218838;
+}
+#seleccionar-pdf-btn {
+    background-color: #6c757d;
+}
+#seleccionar-pdf-btn:hover {
+    background-color: #5a6268;
+}

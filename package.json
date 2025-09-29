@@ -1,0 +1,19 @@
+{
+  "name": "gestor-electron",
+  "version": "1.0.0",
+  "main": "app/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "electron": "^38.0.0",
+    "electron-store": "^10.1.0",
+    "nedb": "^1.8.0",
+    "pdfjs-dist": "^5.4.149"
+  }
+}

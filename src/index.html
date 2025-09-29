@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Gestor de Vehículos</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+    <h1>Gestor de Vehículos</h1>
+
+    <div class="container">
+        <div class="form-container">
+            <h2>Nuevo Registro de Acta</h2>
+            <form id="acta-form">
+                <div class="form-group">
+                    <label for="expediente">N° de Expediente:</label>
+                    <input type="text" id="expediente" required>
+                </div>
+                <div class="form-group">
+                    <label for="fecha">Fecha del Acta:</label>
+                    <input type="date" id="fecha" required>
+                </div>
+                <div class="form-group">
+                    <label>Tarjetas asociadas a esta Acta:</label>
+                    <div id="tarjetas-list"></div>
+                    <button type="button" id="agregar-tarjeta-btn">Agregar Tarjeta</button>
+                </div>
+                <div class="form-group">
+                    <label for="pdf-file-path">Adjuntar Acta (PDF):</label>
+                    <input type="text" id="pdf-file-path" placeholder="Ningún archivo seleccionado" readonly>
+                    <button type="button" id="seleccionar-pdf-btn">Seleccionar Archivo</button>
+                </div>
+                <button type="submit" id="guardar-acta-btn">Guardar Acta</button>
+            </form>
+        </div>
+
+        <div class="search-container">
+            <h2>Búsqueda</h2>
+            <div class="search-tabs">
+                <button id="tab-tarjetas" class="tab-btn active">Buscar Tarjetas</button>
+                <button id="tab-actas" class="tab-btn">Buscar Actas</button>
+            </div>
+            
+            <div id="search-tarjetas" class="search-section">
+                <input type="text" id="search-tarjetas-input" placeholder="Buscar por placa o número de tarjeta...">
+                <button id="search-tarjetas-btn">Buscar Tarjetas</button>
+                <div id="search-tarjetas-results"></div>
+            </div>
+            
+            <div id="search-actas" class="search-section" style="display: none;">
+                <input type="text" id="search-actas-input" placeholder="Buscar por expediente...">
+                <button id="search-actas-btn">Buscar Actas</button>
+                <div id="search-actas-results"></div>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="js/main.js"></script>
+    <script>
+        // Configuración de PDF.js worker
+        if (typeof window !== 'undefined' && !window.pdfjsWorkerSrc) {
+            window.pdfjsWorkerSrc = 'node_modules/pdfjs-dist/build/pdf.worker.js';
+        }
+    </script>
+</body>
+</html>
