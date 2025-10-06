@@ -7,47 +7,47 @@ const { app } = require('electron');
 const dbDir = path.join(app.getPath('userData'), 'database');
 
 
-// Inicializa las bases de datos para actas y tarjetas
-const actasDb = new Datastore({ filename: path.join(dbDir, 'actas.db'), autoload: true });
+// Inicializa las bases de datos para expedientes y tarjetas
+const expedientesDb = new Datastore({ filename: path.join(dbDir, 'expedientes.db'), autoload: true });
 const tarjetasDb = new Datastore({ filename: path.join(dbDir, 'tarjetas.db'), autoload: true });
 
 module.exports = {
-    actas: {
-    // CRUD para Actas
+    expedientes: {
+    // CRUD para Expedientes
         insert: (doc) => new Promise((resolve, reject) => {
-            actasDb.insert(doc, (err, newDoc) => {
+            expedientesDb.insert(doc, (err, newDoc) => {
                 if (err) return reject(err);
                 resolve(newDoc);
             });
         }),
         find: (query) => new Promise((resolve, reject) => {
-            actasDb.find(query).exec((err, docs) => {
+            expedientesDb.find(query).exec((err, docs) => {
                 if (err) return reject(err);
                 resolve(docs);
             });
         }),
         update: (query, update) => new Promise((resolve, reject) => {
-            actasDb.update(query, update, {}, (err, numUpdated) => {
+            expedientesDb.update(query, update, {}, (err, numUpdated) => {
                 if (err) return reject(err);
                 resolve(numUpdated);
             });
         }),
         remove: (query) => new Promise((resolve, reject) => {
-            actasDb.remove(query, {}, (err, numRemoved) => {
+            expedientesDb.remove(query, {}, (err, numRemoved) => {
                 if (err) return reject(err);
                 resolve(numRemoved);
             });
         }),
         // Nuevo método para encontrar con paginación
         findWithPagination: (query, skip, limit) => new Promise((resolve, reject) => {
-            actasDb.find(query).sort({ _id: 1 }).skip(skip).limit(limit).exec((err, docs) => {
+            expedientesDb.find(query).sort({ _id: 1 }).skip(skip).limit(limit).exec((err, docs) => {
                 if (err) return reject(err);
                 resolve(docs);
             });
         }),
         // Método para encontrar un solo documento
         findOne: (query) => new Promise((resolve, reject) => {
-            actasDb.findOne(query, (err, doc) => {
+            expedientesDb.findOne(query, (err, doc) => {
                 if (err) return reject(err);
                 resolve(doc);
             });

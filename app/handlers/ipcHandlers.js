@@ -18,22 +18,132 @@ exports.registerIpcHandlers = (appInstance) => {
         }
     });
 
-    // -- CRUD para Actas --
-    ipcMain.handle('guardar-acta', async (event, actaData) => {
+    // -- CRUD para Expedientes --
+    
+    // Obtener todos los expedientes
+    ipcMain.handle('obtener-todos-expedientes', async () => {
         try {
-            if (actaData.pdfSourcePath) {
-                const fileName = `acta-${Date.now()}.pdf`;
-                await fileHandlers.savePdf(actaData.pdfSourcePath, fileName);
-                actaData.pdfPath = fileName;
-                delete actaData.pdfSourcePath;
+            const expedientes = await db.expedientes.find({}).sort({ fechaCreacion: -1 });
+            return expedientes;
+        } catch (error) {
+            console.error('Error al obtener expedientes:', error);
+            throw error;
+        }
+    });
+
+    // Crear nuevo expediente
+    ipcMain.handle('crear-expediente', async (event, expedienteData) => {
+        try {
+            if (expedienteData.pdfSourcePath) {
+                const fileName = `expediente-${Date.now()}.pdf`;
+                await fileHandlers.savePdf(expedienteData.pdfSourcePath, fileName);
+                expedienteData.pdfPath = fileName;
+                delete expedienteData.pdfSourcePath;
             }
-            const newActa = await db.actas.insert({
-                expediente: actaData.expediente,
-                fecha: actaData.fecha,
-                pdfPath: actaData.pdfPath
+
+            const fechaActual = new Date().toISOString();
+            const newExpediente = await db.expedientes.insert({
+                ...expedienteData,
+                expediente: `${expedienteData.numeroExpediente}-${expedienteData.anioExpediente}`,
+                fechaCreacion: fechaActual,
+                fechaActualizacion: fechaActual
+            });
+            return newExpediente;
+        } catch (error) {
+            console.error('Error al crear expediente:', error);
+            throw error;
+        }
+    });
+
+    // Actualizar expediente
+    ipcMain.handle('actualizar-expediente', async (event, expedienteId, expedienteData) => {
+        try {
+            const expedienteExistente = await db.expedientes.findOne({ _id: expedienteId });
+            if (!expedienteExistente) {
+                throw new Error('Expediente no encontrado');
+            }
+
+            if (expedienteData.pdfSourcePath) {
+                const fileName = `expediente-${Date.now()}.pdf`;
+                await fileHandlers.savePdf(expedienteData.pdfSourcePath, fileName);
+                expedienteData.pdfPath = fileName;
+                delete expedienteData.pdfSourcePath;
+            }
+
+            const updatedExpediente = await db.expedientes.update(
+                { _id: expedienteId },
+                {
+                    $set: {
+                        ...expedienteData,
+                        expediente: `${expedienteData.numeroExpediente}-${expedienteData.anioExpediente}`,
+                        fechaActualizacion: new Date().toISOString()
+                    }
+                },
+                { returnUpdatedDocs: true }
+            );
+            return updatedExpediente;
+        } catch (error) {
+            console.error('Error al actualizar expediente:', error);
+            throw error;
+        }
+    });
+
+    // Eliminar expediente
+    ipcMain.handle('eliminar-expediente', async (event, expedienteId) => {
+        try {
+            const expediente = await db.expedientes.findOne({ _id: expedienteId });
+            if (!expediente) {
+                throw new Error('Expediente no encontrado');
+            }
+
+            // Eliminar archivo PDF si existe
+            if (expediente.pdfPath) {
+                try {
+                    await fileHandlers.deletePdf(expediente.pdfPath);
+                } catch (pdfError) {
+                    console.warn('No se pudo eliminar el archivo PDF:', pdfError);
+                }
+            }
+
+            const result = await db.expedientes.remove({ _id: expedienteId });
+            return result;
+        } catch (error) {
+            console.error('Error al eliminar expediente:', error);
+            throw error;
+        }
+    });
+
+    // Guardar expediente (mantener para compatibilidad)
+    ipcMain.handle('guardar-expediente', async (event, expedienteData) => {
+        try {
+            if (expedienteData.pdfSourcePath) {
+                const fileName = `expediente-${Date.now()}.pdf`;
+                await fileHandlers.savePdf(expedienteData.pdfSourcePath, fileName);
+                expedienteData.pdfPath = fileName;
+                delete expedienteData.pdfSourcePath;
+            }
+            const newExpediente = await db.expedientes.insert({
+                // Campos existentes
+                expediente: expedienteData.expediente, // Mantenemos para compatibilidad
+                fecha: expedienteData.fecha,
+                pdfPath: expedienteData.pdfPath,
+                
+                // Nuevos campos
+                numeroExpediente: expedienteData.numeroExpediente || null,
+                anioExpediente: expedienteData.anioExpediente || new Date().getFullYear(),
+                numeroResolucion: expedienteData.numeroResolucion || null,
+                informeTecnico: expedienteData.informeTecnico || null,
+                unidadNegocio: expedienteData.unidadNegocio || null,
+                nombreEmpresa: expedienteData.nombreEmpresa || null,
+                numeroFichero: expedienteData.numeroFichero || null,
+                observaciones: expedienteData.observaciones || null,
+                
+                // Metadatos
+                fechaCreacion: new Date().toISOString(),
+                fechaActualizacion: new Date().toISOString()
             });
             const tarjetasGuardadas = [];
-            for (const tarjeta of actaData.tarjetas) {
+            for (const tarjeta of expedienteData.tarjetas) {
                 // Guardar PDF de la tarjeta si existe
                 if (tarjeta.pdfSourcePath) {
                     await fileHandlers.savePdf(tarjeta.pdfSourcePath, tarjeta.pdfPath);
@@ -44,7 +154,7 @@ exports.registerIpcHandlers = (appInstance) => {
                     placa: tarjeta.placa,
                     tarjeta: tarjeta.tarjeta,
                     pdfPath: tarjeta.pdfPath,
-                    actaId: newActa._id
+                    expedienteId: newExpediente._id
                 });
                 
                 tarjetasGuardadas.push(tarjetaGuardada);
@@ -52,43 +162,43 @@ exports.registerIpcHandlers = (appInstance) => {
             
             // Enviar evento a todas las ventanas con los datos completos
             const datosCompletos = {
-                acta: newActa,
+                expediente: newExpediente,
                 tarjetas: tarjetasGuardadas
             };
             
             BrowserWindow.getAllWindows().forEach(win => {
-                win.webContents.send('acta-guardada', datosCompletos);
+                win.webContents.send('expediente-guardado', datosCompletos);
             });
             
             return { 
                 success: true, 
-                message: 'Acta y tarjetas guardadas exitosamente.',
+                message: 'Expediente y tarjetas guardados exitosamente.',
                 data: datosCompletos
             };
         } catch (error) {
-            console.error('Error al guardar el acta:', error);
-            return { success: false, message: 'Error al guardar el acta.' };
+            console.error('Error al guardar el expediente:', error);
+            return { success: false, message: 'Error al guardar el expediente.' };
         }
     });
 
-    // -- Búsqueda de actas --
-    ipcMain.handle('buscar-acta', async (event, searchTerm) => {
+    // -- Búsqueda de expedientes --
+    ipcMain.handle('buscar-expediente', async (event, searchTerm) => {
         try {
             const query = { expediente: new RegExp(searchTerm, 'i') };
-            const actas = await db.actas.find(query);
+            const expedientes = await db.expedientes.find(query);
             
-            if (actas.length === 0) {
+            if (expedientes.length === 0) {
                 return { success: true, data: [] };
             }
             
-            const resultados = await Promise.all(actas.map(async (acta) => {
-                // Buscar tarjetas asociadas a esta acta
-                const tarjetasAsociadas = await db.tarjetas.find({ actaId: acta._id });
+            const resultados = await Promise.all(expedientes.map(async (expediente) => {
+                // Buscar tarjetas asociadas a este expediente
+                const tarjetasAsociadas = await db.tarjetas.find({ expedienteId: expediente._id });
                 return {
-                    _id: acta._id,
-                    expediente: acta.expediente,
-                    fecha: acta.fecha,
-                    pdfPath: acta.pdfPath,
+                    _id: expediente._id,
+                    expediente: expediente.expediente,
+                    fecha: expediente.fecha,
+                    pdfPath: expediente.pdfPath,
                     tarjetasAsociadas: tarjetasAsociadas.map(t => ({
                         placa: t.placa,
                         tarjeta: t.tarjeta,
@@ -99,8 +209,8 @@ exports.registerIpcHandlers = (appInstance) => {
             
             return { success: true, data: resultados };
         } catch (error) {
-            console.error('Error al buscar acta:', error);
-            return { success: false, message: 'Error al buscar acta.' };
+            console.error('Error al buscar expediente:', error);
+            return { success: false, message: 'Error al buscar expediente.' };
         }
     });
 
@@ -118,14 +228,14 @@ exports.registerIpcHandlers = (appInstance) => {
                 return { success: true, data: [] };
             }
             const resultados = await Promise.all(tarjetas.map(async (tarjeta) => {
-                const acta = await db.actas.findOne({ _id: tarjeta.actaId });
+                const expediente = await db.expedientes.findOne({ _id: tarjeta.expedienteId });
                 return {
                     placa: tarjeta.placa,
                     tarjeta: tarjeta.tarjeta,
-                    expediente: acta ? acta.expediente : 'N/A',
-                    fecha: acta ? acta.fecha : 'N/A',
+                    expediente: expediente ? expediente.expediente : 'N/A',
+                    fecha: expediente ? expediente.fecha : 'N/A',
                     pdfPath: tarjeta.pdfPath || null,
-                    actaPdfPath: acta ? acta.pdfPath : null
+                    expedientePdfPath: expediente ? expediente.pdfPath : null
                 };
             }));
             return { success: true, data: resultados };

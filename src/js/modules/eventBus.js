@@ -65,10 +65,10 @@ export const eventBus = new EventBus();
 
 // Eventos predefinidos de la aplicación
 export const APP_EVENTS = {
-    // Eventos de actas
-    ACTA_CREATED: 'acta:created',
-    ACTA_UPDATED: 'acta:updated',
-    ACTA_DELETED: 'acta:deleted',
+    // Eventos de expedientes
+    EXPEDIENTE_CREATED: 'expediente:created',
+    EXPEDIENTE_UPDATED: 'expediente:updated',
+    EXPEDIENTE_DELETED: 'expediente:deleted',
     
     // Eventos de tarjetas
     TARJETA_CREATED: 'tarjeta:created',

@@ -2,19 +2,54 @@
 import { pdfViewer } from './pdfViewer.js';
 import { simplePdfViewer } from './simplePdfViewer.js';
 
-const actaForm = document.getElementById('acta-form');
+const expedienteForm = document.getElementById('expediente-form');
 const pdfFilePathInput = document.getElementById('pdf-file-path');
 const tarjetasList = document.getElementById('tarjetas-list');
 const searchTarjetasResults = document.getElementById('search-tarjetas-results');
-const searchActasResults = document.getElementById('search-actas-results');
+const searchExpedientesResults = document.getElementById('search-expedientes-results');
 
 // Sistema de notificaciones
 let notificationContainer = null;
 
-export const getActaData = () => {
-    const expediente = document.getElementById('expediente').value;
+export const getExpedienteData = () => {
+    // Campos principales
+    const numeroExpediente = document.getElementById('numeroExpediente').value.trim();
+    const anioExpediente = parseInt(document.getElementById('anioExpediente').value) || new Date().getFullYear();
     const fecha = document.getElementById('fecha').value;
-    return { expediente, fecha };
+    
+    // Campos adicionales
+    const numeroResolucion = document.getElementById('numeroResolucion').value.trim() || null;
+    const informeTecnico = document.getElementById('informeTecnico').value.trim() || null;
+    const unidadNegocio = document.getElementById('unidadNegocio').value || null;
+    const nombreEmpresa = document.getElementById('nombreEmpresa').value.trim() || null;
+    const numeroFichero = document.getElementById('numeroFichero').value.trim() || null;
+    
+    // Observaciones - solo incluir si el contenedor está visible
+    const observacionesContainer = document.getElementById('observaciones-container');
+    const observaciones = observacionesContainer.classList.contains('hidden') ? 
+        null : (document.getElementById('observaciones').value.trim() || null);
+    
+    // Generar expediente completo para compatibilidad y visualización
+    const expedienteCompleto = `${numeroExpediente}-${anioExpediente}`;
+    
+    // Actualizar campo oculto para compatibilidad
+    document.getElementById('expediente').value = expedienteCompleto;
+    
+    return { 
+        // Compatibilidad
+        expediente: expedienteCompleto,
+        fecha,
+        
+        // Nuevos campos estructurados
+        numeroExpediente,
+        anioExpediente,
+        numeroResolucion,
+        informeTecnico,
+        unidadNegocio,
+        nombreEmpresa,
+        numeroFichero,
+        observaciones
+    };
 };
 
 export const getTarjetaData = () => {
@@ -56,8 +91,21 @@ export const addTarjetaInput = () => {
     });
 };
 
-export const resetActaForm = () => {
-    actaForm.reset();
+export const resetExpedienteForm = () => {
+    const expedienteForm = document.getElementById('expediente-form');
+    expedienteForm.reset();
+    
+    // Restaurar valores por defecto
+    document.getElementById('anioExpediente').value = new Date().getFullYear();
+    document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+    
+    // Ocultar observaciones al resetear
+    const observacionesContainer = document.getElementById('observaciones-container');
+    const toggleObservacionesBtn = document.getElementById('toggle-observaciones');
+    observacionesContainer.classList.add('hidden');
+    toggleObservacionesBtn.innerHTML = '➕ Agregar Observaciones';
+    toggleObservacionesBtn.classList.remove('active');
+    
     pdfFilePathInput.value = '';
     tarjetasList.innerHTML = '';
     addTarjetaInput(); // Agrega el primer campo por defecto
@@ -309,36 +357,44 @@ export const displayTarjetasResults = (results) => {
     }
 };
 
-// Función mejorada para mostrar resultados de actas
-export const displayActasResults = (results) => {
+// Función mejorada para mostrar resultados de expedientes
+export const displayExpedientesResults = (results) => {
     try {
-        searchActasResults.innerHTML = '';
+        searchExpedientesResults.innerHTML = '';
         
         if (results && results.length > 0) {
             const resultsContainer = document.createElement('div');
             resultsContainer.className = 'results-container';
             
-            results.forEach((acta, index) => {
+            results.forEach((expediente, index) => {
                 const item = document.createElement('div');
-                item.className = 'acta-result-item fade-in';
-                const actaId = `acta-result-${index}`;
-                item.id = actaId;
+                item.className = 'expediente-result-item fade-in';
+                const expedienteId = `expediente-result-${index}`;
+                item.id = expedienteId;
                 
                 item.innerHTML = `
-                    <div class="acta-header">
-                        <h3>Acta de Resolución</h3>
-                        <p><strong>Expediente:</strong> ${acta.expediente}</p>
-                        <p><strong>Fecha:</strong> ${acta.fecha}</p>
+                    <div class="expediente-header">
+                        <h3>Expediente de Resolución</h3>
+                        <div class="expediente-details">
+                            <p><strong>N° Expediente:</strong> ${expediente.numeroExpediente || 'N/A'}-${expediente.anioExpediente || 'N/A'}</p>
+                            <p><strong>Fecha:</strong> ${expediente.fecha}</p>
+                            ${expediente.numeroResolucion ? `<p><strong>N° Resolución:</strong> ${expediente.numeroResolucion}</p>` : ''}
+                            ${expediente.informeTecnico ? `<p><strong>Informe Técnico:</strong> ${expediente.informeTecnico}</p>` : ''}
+                            ${expediente.unidadNegocio ? `<p><strong>Unidad de Negocio:</strong> ${expediente.unidadNegocio}</p>` : ''}
+                            ${expediente.nombreEmpresa ? `<p><strong>Empresa:</strong> ${expediente.nombreEmpresa}</p>` : ''}
+                            ${expediente.numeroFichero ? `<p><strong>N° Fichero:</strong> ${expediente.numeroFichero}</p>` : ''}
+                            ${expediente.observaciones ? `<p><strong>Observaciones:</strong> ${expediente.observaciones}</p>` : ''}
+                        </div>
                     </div>
                 `;
                 
                 // Mostrar tarjetas asociadas como enlaces
-                if (acta.tarjetasAsociadas && acta.tarjetasAsociadas.length > 0) {
+                if (expediente.tarjetasAsociadas && expediente.tarjetasAsociadas.length > 0) {
                     const tarjetasDiv = document.createElement('div');
                     tarjetasDiv.className = 'tarjetas-asociadas';
-                    tarjetasDiv.innerHTML = `<h4>Tarjetas Asociadas (${acta.tarjetasAsociadas.length}):</h4>`;
+                    tarjetasDiv.innerHTML = `<h4>Tarjetas Asociadas (${expediente.tarjetasAsociadas.length}):</h4>`;
                     
-                    acta.tarjetasAsociadas.forEach((tarjeta) => {
+                    expediente.tarjetasAsociadas.forEach((tarjeta) => {
                         const tarjetaItem = document.createElement('div');
                         tarjetaItem.className = 'tarjeta-asociada';
                         
@@ -357,34 +413,34 @@ export const displayActasResults = (results) => {
                 
                 resultsContainer.appendChild(item);
                 
-                // Solo mostrar PDF del acta (no de las tarjetas) usando el visor simple
-                if (acta.pdfPath) {
+                // Solo mostrar PDF del expediente (no de las tarjetas) usando el visor simple
+                if (expediente.pdfPath) {
                     setTimeout(() => {
-                        simplePdfViewer.createViewer(actaId, acta.pdfPath, `PDF Acta - ${acta.expediente}`);
+                        simplePdfViewer.createViewer(expedienteId, expediente.pdfPath, `PDF Expediente - ${expediente.expediente}`);
                     }, (index * 100) + 100);
                 }
             });
             
-            searchActasResults.appendChild(resultsContainer);
+            searchExpedientesResults.appendChild(resultsContainer);
             
             // Agregar información de resultados
             const infoDiv = document.createElement('div');
             infoDiv.className = 'search-info';
-            infoDiv.innerHTML = `<p class="text-muted">Se encontraron ${results.length} acta(s)</p>`;
-            searchActasResults.prepend(infoDiv);
+            infoDiv.innerHTML = `<p class="text-muted">Se encontraron ${results.length} expediente(s)</p>`;
+            searchExpedientesResults.prepend(infoDiv);
             
         } else {
-            searchActasResults.innerHTML = `
+            searchExpedientesResults.innerHTML = `
                 <div class="no-results">
-                    <p>No se encontraron actas.</p>
+                    <p>No se encontraron expedientes.</p>
                     <small class="text-muted">Intente con un término diferente</small>
                 </div>
             `;
         }
         
     } catch (error) {
-        console.error('Error al mostrar resultados de actas:', error);
-        searchActasResults.innerHTML = `
+        console.error('Error al mostrar resultados de expedientes:', error);
+        searchExpedientesResults.innerHTML = `
             <div class="error-message">
                 <p>Error al mostrar los resultados.</p>
             </div>
@@ -479,9 +535,9 @@ export const clearTarjetasResults = () => {
     }
 };
 
-export const clearActasResults = () => {
-    if (searchActasResults) {
-        searchActasResults.innerHTML = '';
+export const clearExpedientesResults = () => {
+    if (searchExpedientesResults) {
+        searchExpedientesResults.innerHTML = '';
     }
 };
 

@@ -2,56 +2,267 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Gestor de Vehículos</title>
+    <title>Gestor de Expedientes SIT</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="css/components.css">
 </head>
 <body>
-    <h1>Gestor de Vehículos</h1>
-
-    <div class="container">
-        <div class="form-container">
-            <h2>Nuevo Registro de Acta</h2>
-            <form id="acta-form">
-                <div class="form-group">
-                    <label for="expediente">N° de Expediente:</label>
-                    <input type="text" id="expediente" required>
-                </div>
-                <div class="form-group">
-                    <label for="fecha">Fecha del Acta:</label>
-                    <input type="date" id="fecha" required>
-                </div>
-                <div class="form-group">
-                    <label>Tarjetas asociadas a esta Acta:</label>
-                    <div id="tarjetas-list"></div>
-                    <button type="button" id="agregar-tarjeta-btn">Agregar Tarjeta</button>
-                </div>
-                <div class="form-group">
-                    <label for="pdf-file-path">Adjuntar Acta (PDF):</label>
-                    <input type="text" id="pdf-file-path" placeholder="Ningún archivo seleccionado" readonly>
-                    <button type="button" id="seleccionar-pdf-btn">Seleccionar Archivo</button>
-                </div>
-                <button type="submit" id="guardar-acta-btn">Guardar Acta</button>
-            </form>
+    <!-- Navegación Principal -->
+    <nav class="main-nav">
+        <div class="nav-brand">
+            <h1>📋 Gestor de Expedientes SIT</h1>
         </div>
+        <div class="nav-menu">
+            <button id="nav-busqueda" class="nav-btn active">
+                🔍 Búsqueda
+            </button>
+            <button id="nav-registro" class="nav-btn">
+                ➕ Nuevo Expediente
+            </button>
+            <button id="nav-crud" class="nav-btn">
+                � Gestión de Expedientes
+            </button>
+        </div>
+    </nav>
 
+    <!-- Sección de Búsqueda (Vista por defecto) -->
+    <div id="vista-busqueda" class="vista-container active">
         <div class="search-container">
-            <h2>Búsqueda</h2>
+            <h2>🔍 Búsqueda Avanzada</h2>
             <div class="search-tabs">
                 <button id="tab-tarjetas" class="tab-btn active">Buscar Tarjetas</button>
-                <button id="tab-actas" class="tab-btn">Buscar Actas</button>
+                <button id="tab-expedientes" class="tab-btn">Buscar Expedientes</button>
             </div>
             
             <div id="search-tarjetas" class="search-section">
-                <input type="text" id="search-tarjetas-input" placeholder="Buscar por placa o número de tarjeta...">
+                <div class="search-input-container">
+                    <input type="text" id="search-tarjetas-input" placeholder="Buscar por placa o número de tarjeta...">
+                    <div class="search-indicator"></div>
+                    <div class="search-completed">✓</div>
+                </div>
                 <button id="search-tarjetas-btn">Buscar Tarjetas</button>
                 <div id="search-tarjetas-results"></div>
             </div>
             
-            <div id="search-actas" class="search-section" style="display: none;">
-                <input type="text" id="search-actas-input" placeholder="Buscar por expediente...">
-                <button id="search-actas-btn">Buscar Actas</button>
-                <div id="search-actas-results"></div>
+            <div id="search-expedientes" class="search-section" style="display: none;">
+                <div class="search-input-container">
+                    <input type="text" id="search-expedientes-input" placeholder="Buscar por expediente...">
+                    <div class="search-indicator"></div>
+                    <div class="search-completed">✓</div>
+                </div>
+                <button id="search-expedientes-btn">Buscar Expedientes</button>
+                <div id="search-expedientes-results"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de Registro -->
+    <div id="vista-registro" class="vista-container">
+        <div class="form-container">
+            <h2>Nuevo Registro de Expediente</h2>
+            <form id="expediente-form">
+                <!-- Sección Principal del Expediente -->
+                <fieldset class="form-section">
+                    <legend>Información Principal</legend>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="numeroExpediente">N° de Expediente:</label>
+                            <input type="text" id="numeroExpediente" placeholder="Ej: 53322" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="anioExpediente">Año:</label>
+                            <input type="number" id="anioExpediente" min="2020" max="2030" value="2025" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="numeroResolucion">N° de Resolución:</label>
+                            <input type="text" id="numeroResolucion" placeholder="Opcional">
+                        </div>
+                        <div class="form-group">
+                            <label for="fecha">Fecha del Expediente:</label>
+                            <input type="date" id="fecha" required>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- Sección de Detalles Técnicos -->
+                <fieldset class="form-section">
+                    <legend>Detalles Técnicos</legend>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="informeTecnico">Informe Técnico:</label>
+                            <input type="text" id="informeTecnico" placeholder="Referencia del informe">
+                        </div>
+                        <div class="form-group">
+                            <label for="numeroFichero">N° de Fichero:</label>
+                            <input type="text" id="numeroFichero" placeholder="Número de fichero">
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- Sección de Empresa -->
+                <fieldset class="form-section">
+                    <legend>Información de Empresa</legend>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="nombreEmpresa">Nombre de la Empresa:</label>
+                            <input type="text" id="nombreEmpresa" placeholder="Razón social">
+                        </div>
+                        <div class="form-group">
+                            <label for="unidadNegocio">Unidad de Negocio:</label>
+                            <select id="unidadNegocio">
+                                <option value="">Seleccionar...</option>
+                                <option value="C1">C1</option>
+                                <option value="C2">C2</option>
+                                <option value="C3">C3</option>
+                                <option value="C4">C4</option>
+                                <option value="C5">C5</option>
+                                <option value="C6">C6</option>
+                                <option value="C7">C7</option>
+                                <option value="C8">C8</option>
+                                <option value="C9">C9</option>
+                                <option value="C10">C10</option>
+                                <option value="C11">C11</option>
+                            </select>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- Sección de Observaciones -->
+                <fieldset class="form-section">
+                    <legend>Observaciones</legend>
+                    <div class="observaciones-toggle">
+                        <button type="button" id="toggle-observaciones" class="toggle-btn">
+                            ➕ Agregar Observaciones
+                        </button>
+                    </div>
+                    <div id="observaciones-container" class="observaciones-container hidden">
+                        <div class="form-group">
+                            <label for="observaciones">Observaciones Adicionales:</label>
+                            <textarea id="observaciones" rows="3" placeholder="Información adicional relevante..."></textarea>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- Sección de Tarjetas -->
+                <fieldset class="form-section">
+                    <legend>Tarjetas Asociadas</legend>
+                    <div id="tarjetas-list"></div>
+                    <button type="button" id="agregar-tarjeta-btn">Agregar Tarjeta</button>
+                </fieldset>
+
+                <!-- Sección de Archivos -->
+                <fieldset class="form-section">
+                    <legend>Documentos</legend>
+                    <div class="form-group">
+                        <label for="pdf-file-path">Adjuntar Expediente (PDF):</label>
+                        <input type="text" id="pdf-file-path" placeholder="Ningún archivo seleccionado" readonly>
+                        <button type="button" id="seleccionar-pdf-btn">Seleccionar Archivo</button>
+                    </div>
+                </fieldset>
+
+                <!-- Campo oculto para compatibilidad -->
+                <input type="hidden" id="expediente">
+                
+                <button type="submit" id="guardar-expediente-btn">Guardar Expediente</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sección de CRUD Expedientes -->
+    <div id="vista-crud" class="vista-container">
+        <div class="crud-container">
+            <div class="crud-header">
+                <h2>📂 Gestión de Expedientes</h2>
+                <div class="crud-actions">
+                    <button id="nuevo-expediente-btn" class="btn-primary">
+                        ➕ Nuevo Expediente
+                    </button>
+                    <div class="search-crud">
+                        <input type="text" id="search-crud-input" placeholder="Buscar expedientes..." />
+                        <button id="search-crud-btn" class="btn-secondary">🔍</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class="crud-filters">
+                <div class="filter-group">
+                    <label for="filter-anio">Año:</label>
+                    <select id="filter-anio">
+                        <option value="">Todos</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filter-unidad">Unidad:</label>
+                    <select id="filter-unidad">
+                        <option value="">Todas</option>
+                        <option value="C1">C1</option>
+                        <option value="C2">C2</option>
+                        <option value="C3">C3</option>
+                        <option value="C4">C4</option>
+                        <option value="C5">C5</option>
+                        <option value="C6">C6</option>
+                        <option value="C7">C7</option>
+                        <option value="C8">C8</option>
+                        <option value="C9">C9</option>
+                        <option value="C10">C10</option>
+                        <option value="C11">C11</option>
+                    </select>
+                </div>
+                <button id="limpiar-filtros-btn" class="btn-outline">Limpiar Filtros</button>
+            </div>
+
+            <!-- Tabla de Expedientes -->
+            <div class="crud-table-container">
+                <table id="expedientes-table" class="crud-table">
+                    <thead>
+                        <tr>
+                            <th>N° Expediente</th>
+                            <th>Año</th>
+                            <th>Fecha</th>
+                            <th>N° Resolución</th>
+                            <th>Empresa</th>
+                            <th>Unidad</th>
+                            <th>Tarjetas</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="expedientes-tbody">
+                        <!-- Los expedientes se cargarán aquí -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginación -->
+            <div class="crud-pagination">
+                <div class="pagination-info">
+                    <span id="pagination-info">Mostrando 0 de 0 expedientes</span>
+                </div>
+                <div class="pagination-controls">
+                    <button id="prev-page" class="btn-outline" disabled>« Anterior</button>
+                    <span id="page-info">Página 1 de 1</span>
+                    <button id="next-page" class="btn-outline" disabled>Siguiente »</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Editar Expediente -->
+    <div id="modal-expediente" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Editar Expediente</h3>
+                <button id="modal-close" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="modal-expediente-form">
+                    <!-- Los campos del formulario se cargarán aquí -->
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="modal-cancelar" class="btn-outline">Cancelar</button>
+                <button id="modal-guardar" class="btn-primary">Guardar Cambios</button>
+                <button id="modal-eliminar" class="btn-danger">Eliminar</button>
             </div>
         </div>
     </div>
