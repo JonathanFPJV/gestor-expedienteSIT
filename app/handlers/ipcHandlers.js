@@ -2,10 +2,12 @@
 const { ipcMain, BrowserWindow } = require('electron');
 const db = require('../db/database');
 const FileHandlers = require('./fileHandlers');
+const DeletionService = require('../services/deletionService');
 const fs = require('fs'); // Añadir 'fs' para manejar archivos
 
 exports.registerIpcHandlers = (appInstance) => {
     const fileHandlers = new FileHandlers(appInstance);
+    const deletionService = new DeletionService(appInstance);
 
     // Manejador para el diálogo de selección de PDF
     ipcMain.handle('abrir-dialogo-pdf', async () => {
@@ -23,8 +25,33 @@ exports.registerIpcHandlers = (appInstance) => {
     // Obtener todos los expedientes
     ipcMain.handle('obtener-todos-expedientes', async () => {
         try {
-            const expedientes = await db.expedientes.find({}).sort({ fechaCreacion: -1 });
-            return expedientes;
+            const expedientes = await db.expedientes.find({});
+            console.log('📊 Expedientes obtenidos de la BD:', expedientes.length);
+            
+            // Para cada expediente, obtener sus tarjetas asociadas
+            const expedientesConTarjetas = await Promise.all(
+                expedientes.map(async (expediente) => {
+                    try {
+                        // Buscar tarjetas asociadas a este expediente
+                        const tarjetasAsociadas = await db.tarjetas.find({ expedienteId: expediente._id });
+                        console.log(`🎫 Expediente ${expediente.numeroExpediente}: ${tarjetasAsociadas.length} tarjetas`);
+                        
+                        return {
+                            ...expediente,
+                            tarjetasAsociadas: tarjetasAsociadas || []
+                        };
+                    } catch (error) {
+                        console.error(`❌ Error obteniendo tarjetas para expediente ${expediente._id}:`, error);
+                        return {
+                            ...expediente,
+                            tarjetasAsociadas: []
+                        };
+                    }
+                })
+            );
+            
+            console.log('✅ Expedientes con tarjetas procesados:', expedientesConTarjetas.length);
+            return expedientesConTarjetas;
         } catch (error) {
             console.error('Error al obtener expedientes:', error);
             throw error;
@@ -35,9 +62,16 @@ exports.registerIpcHandlers = (appInstance) => {
     ipcMain.handle('crear-expediente', async (event, expedienteData) => {
         try {
             if (expedienteData.pdfSourcePath) {
-                const fileName = `expediente-${Date.now()}.pdf`;
-                await fileHandlers.savePdf(expedienteData.pdfSourcePath, fileName);
-                expedienteData.pdfPath = fileName;
+                const fileName = `resolucion-${Date.now()}.pdf`;
+                const saveResult = await fileHandlers.savePdf(
+                    expedienteData.pdfSourcePath,
+                    fileName,
+                    {
+                        resolutionNumber: expedienteData.numeroResolucion,
+                        expedienteNumero: expedienteData.numeroExpediente
+                    }
+                );
+                expedienteData.pdfPath = saveResult.path;
                 delete expedienteData.pdfSourcePath;
             }
 
@@ -64,9 +98,16 @@ exports.registerIpcHandlers = (appInstance) => {
             }
 
             if (expedienteData.pdfSourcePath) {
-                const fileName = `expediente-${Date.now()}.pdf`;
-                await fileHandlers.savePdf(expedienteData.pdfSourcePath, fileName);
-                expedienteData.pdfPath = fileName;
+                const fileName = `resolucion-${Date.now()}.pdf`;
+                const saveResult = await fileHandlers.savePdf(
+                    expedienteData.pdfSourcePath,
+                    fileName,
+                    {
+                        resolutionNumber: expedienteData.numeroResolucion || expedienteExistente.numeroResolucion,
+                        expedienteNumero: expedienteData.numeroExpediente || expedienteExistente.numeroExpediente
+                    }
+                );
+                expedienteData.pdfPath = saveResult.path;
                 delete expedienteData.pdfSourcePath;
             }
 
@@ -88,28 +129,42 @@ exports.registerIpcHandlers = (appInstance) => {
         }
     });
 
-    // Eliminar expediente
+    // Eliminar expediente con eliminación en cascada usando DeletionService
     ipcMain.handle('eliminar-expediente', async (event, expedienteId) => {
         try {
-            const expediente = await db.expedientes.findOne({ _id: expedienteId });
-            if (!expediente) {
-                throw new Error('Expediente no encontrado');
-            }
-
-            // Eliminar archivo PDF si existe
-            if (expediente.pdfPath) {
-                try {
-                    await fileHandlers.deletePdf(expediente.pdfPath);
-                } catch (pdfError) {
-                    console.warn('No se pudo eliminar el archivo PDF:', pdfError);
-                }
-            }
-
-            const result = await db.expedientes.remove({ _id: expedienteId });
+            console.log(`🗑️ Iniciando eliminación del expediente: ${expedienteId}`);
+            const result = await deletionService.deleteExpedienteWithCascade(expedienteId);
+            console.log(`✅ Eliminación exitosa:`, result.summary);
             return result;
         } catch (error) {
-            console.error('Error al eliminar expediente:', error);
-            throw error;
+            console.error('❌ Error en eliminación:', error);
+            
+            // En lugar de throw, retornar un objeto con error
+            // Si el error ya tiene la estructura correcta, retornarlo
+            if (error && typeof error === 'object' && error.hasOwnProperty('success')) {
+                console.log('📦 Retornando error estructurado del servicio');
+                return error;
+            }
+            
+            // Si no, crear un objeto de error estructurado
+            return {
+                success: false,
+                error: error.message || 'Error desconocido',
+                message: `Error al eliminar expediente: ${error.message || 'Error desconocido'}`,
+                operation: error.operation || null
+            };
+        }
+    });
+
+    // Obtener información detallada para confirmación de eliminación
+    ipcMain.handle('obtener-info-eliminacion', async (event, expedienteId) => {
+        try {
+            console.log(`📋 Obteniendo información para eliminación: ${expedienteId}`);
+            const info = await deletionService.getExpedienteDeleteInfo(expedienteId);
+            return { success: true, data: info };
+        } catch (error) {
+            console.error('❌ Error obteniendo información para eliminación:', error);
+            return { success: false, error: error.message };
         }
     });
 
@@ -117,9 +172,16 @@ exports.registerIpcHandlers = (appInstance) => {
     ipcMain.handle('guardar-expediente', async (event, expedienteData) => {
         try {
             if (expedienteData.pdfSourcePath) {
-                const fileName = `expediente-${Date.now()}.pdf`;
-                await fileHandlers.savePdf(expedienteData.pdfSourcePath, fileName);
-                expedienteData.pdfPath = fileName;
+                const fileName = `resolucion-${Date.now()}.pdf`;
+                const saveResult = await fileHandlers.savePdf(
+                    expedienteData.pdfSourcePath,
+                    fileName,
+                    {
+                        resolutionNumber: expedienteData.numeroResolucion,
+                        expedienteNumero: expedienteData.numeroExpediente
+                    }
+                );
+                expedienteData.pdfPath = saveResult.path;
                 delete expedienteData.pdfSourcePath;
             }
             const newExpediente = await db.expedientes.insert({
@@ -146,7 +208,16 @@ exports.registerIpcHandlers = (appInstance) => {
             for (const tarjeta of expedienteData.tarjetas) {
                 // Guardar PDF de la tarjeta si existe
                 if (tarjeta.pdfSourcePath) {
-                    await fileHandlers.savePdf(tarjeta.pdfSourcePath, tarjeta.pdfPath);
+                    const tarjetaFileName = tarjeta.pdfPath || `tarjeta-${Date.now()}.pdf`;
+                    const saveResult = await fileHandlers.savePdf(
+                        tarjeta.pdfSourcePath,
+                        tarjetaFileName,
+                        {
+                            resolutionNumber: expedienteData.numeroResolucion,
+                            expedienteNumero: expedienteData.numeroExpediente
+                        }
+                    );
+                    tarjeta.pdfPath = saveResult.path;
                     delete tarjeta.pdfSourcePath; // Limpiar la ruta temporal
                 }
                 

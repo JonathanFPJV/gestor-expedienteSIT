@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prueba de Eliminación - Gestor Electron</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #007acc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .test-button:hover {
+            background: #005999;
+        }
+        .test-button.danger {
+            background: #dc3545;
+        }
+        .test-button.danger:hover {
+            background: #c82333;
+        }
+        .result {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 4px solid #007acc;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .expediente-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #e9ecef;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .expediente-info {
+            flex-grow: 1;
+        }
+        .expediente-actions {
+            display: flex;
+            gap: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Prueba de Nueva Lógica de Eliminación</h1>
+    
+    <div class="test-section">
+        <h2>1. 📊 Estado Actual de la Base de Datos</h2>
+        <button class="test-button" onclick="loadExpedientes()">Cargar Expedientes</button>
+        <div id="expedientes-list"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. 🔍 Probar Información de Eliminación</h2>
+        <p>Selecciona un expediente arriba, luego haz clic en "Obtener Info"</p>
+        <button class="test-button" onclick="testDeleteInfo()" disabled id="btn-info">Obtener Info de Eliminación</button>
+        <div id="delete-info-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. ⚠️ Probar Eliminación Completa</h2>
+        <p><strong>CUIDADO:</strong> Esto eliminará datos reales. Solo usar en datos de prueba.</p>
+        <button class="test-button danger" onclick="testDelete()" disabled id="btn-delete">🗑️ ELIMINAR EXPEDIENTE SELECCIONADO</button>
+        <div id="delete-result" class="result"></div>
+    </div>
+
+    <script>
+        let selectedExpedienteId = null;
+        let expedientes = [];
+
+        // Verificar que el API esté disponible
+        console.log('API disponible:', !!window.api);
+        console.log('API invoke disponible:', !!window.api?.invoke);
+
+        async function loadExpedientes() {
+            const listDiv = document.getElementById('expedientes-list');
+            listDiv.innerHTML = '<p>🔄 Cargando expedientes...</p>';
+            
+            try {
+                expedientes = await window.api.invoke('obtener-todos-expedientes');
+                
+                if (expedientes.length === 0) {
+                    listDiv.innerHTML = '<p>📭 No hay expedientes en la base de datos.</p>';
+                    return;
+                }
+
+                let html = `<h3>📋 Expedientes encontrados: ${expedientes.length}</h3>`;
+                
+                expedientes.forEach(exp => {
+                    const expedienteCompleto = `${exp.numeroExpediente}-${exp.anioExpediente}`;
+                    const tarjetasCount = exp.tarjetasAsociadas ? exp.tarjetasAsociadas.length : 0;
+                    
+                    html += `
+                        <div class="expediente-item">
+                            <div class="expediente-info">
+                                <strong>📄 ${expedienteCompleto}</strong><br>
+                                🏢 ${exp.nombreEmpresa || 'Sin empresa'}<br>
+                                📄 Resolución: ${exp.numeroResolucion || 'Sin resolución'}<br>
+                                🎫 Tarjetas: ${tarjetasCount}
+                                ${exp.pdfPath ? '<br>📎 Con PDF' : ''}
+                            </div>
+                            <div class="expediente-actions">
+                                <button class="test-button" onclick="selectExpediente('${exp._id}', '${expedienteCompleto}')">
+                                    Seleccionar
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                listDiv.innerHTML = html;
+                
+            } catch (error) {
+                listDiv.innerHTML = `❌ Error: ${error.message}`;
+            }
+        }
+
+        function selectExpediente(expedienteId, expedienteCompleto) {
+            selectedExpedienteId = expedienteId;
+            
+            // Actualizar UI
+            document.querySelectorAll('.expediente-item').forEach(item => {
+                item.style.background = '#e9ecef';
+            });
+            
+            event.target.closest('.expediente-item').style.background = '#d4edda';
+            
+            // Habilitar botones
+            document.getElementById('btn-info').disabled = false;
+            document.getElementById('btn-delete').disabled = false;
+            
+            console.log('✅ Expediente seleccionado:', expedienteId, expedienteCompleto);
+        }
+
+        async function testDeleteInfo() {
+            if (!selectedExpedienteId) {
+                alert('❌ Selecciona un expediente primero');
+                return;
+            }
+
+            const resultDiv = document.getElementById('delete-info-result');
+            resultDiv.textContent = '🔍 Obteniendo información de eliminación...';
+            
+            try {
+                const result = await window.api.invoke('obtener-info-eliminacion', selectedExpedienteId);
+                
+                if (result.success) {
+                    const { expediente, tarjetas, summary } = result.data;
+                    
+                    let output = `✅ INFORMACIÓN DE ELIMINACIÓN\n\n`;
+                    output += `📄 Expediente: ${expediente.numero}\n`;
+                    output += `🏢 Empresa: ${expediente.empresa}\n`;
+                    output += `📄 Resolución: ${expediente.resolucion}\n`;
+                    output += `📅 Fecha: ${expediente.fecha}\n`;
+                    output += `📎 PDF Expediente: ${expediente.pdfPath ? 'SÍ' : 'NO'}\n\n`;
+                    
+                    output += `🎫 TARJETAS (${summary.totalTarjetas}):\n`;
+                    if (tarjetas.length > 0) {
+                        tarjetas.forEach((tarjeta, index) => {
+                            output += `  ${index + 1}. Placa: ${tarjeta.placa}`;
+                            if (tarjeta.tarjeta) output += ` | Tarjeta: ${tarjeta.tarjeta}`;
+                            if (tarjeta.pdfPath) output += ` | 📎 Con PDF`;
+                            output += `\n`;
+                        });
+                    } else {
+                        output += `  Sin tarjetas asociadas\n`;
+                    }
+                    
+                    output += `\n📊 RESUMEN:\n`;
+                    output += `  • Total tarjetas: ${summary.totalTarjetas}\n`;
+                    output += `  • Tarjetas con PDF: ${summary.tarjetasConPDF}\n`;
+                    output += `  • Expediente con PDF: ${summary.expedienteConPDF ? 'SÍ' : 'NO'}\n`;
+                    output += `  • Total archivos a eliminar: ${summary.totalArchivos}\n`;
+                    
+                    resultDiv.textContent = output;
+                } else {
+                    resultDiv.textContent = `❌ Error: ${result.error}`;
+                }
+                
+            } catch (error) {
+                resultDiv.textContent = `❌ Error: ${error.message}`;
+            }
+        }
+
+        async function testDelete() {
+            if (!selectedExpedienteId) {
+                alert('❌ Selecciona un expediente primero');
+                return;
+            }
+
+            // Confirmación adicional
+            const expediente = expedientes.find(exp => exp._id === selectedExpedienteId);
+            const expedienteCompleto = `${expediente.numeroExpediente}-${expediente.anioExpediente}`;
+            
+            const confirmed = confirm(
+                `⚠️ ADVERTENCIA: VAS A ELIMINAR DATOS REALES\n\n` +
+                `Expediente: ${expedienteCompleto}\n` +
+                `Empresa: ${expediente.nombreEmpresa || 'Sin empresa'}\n` +
+                `Tarjetas: ${expediente.tarjetasAsociadas?.length || 0}\n\n` +
+                `Esta acción NO se puede deshacer.\n\n` +
+                `¿Estás seguro de continuar?`
+            );
+
+            if (!confirmed) return;
+
+            const resultDiv = document.getElementById('delete-result');
+            resultDiv.textContent = '🗑️ Ejecutando eliminación en cascada...';
+            
+            try {
+                const result = await window.api.invoke('eliminar-expediente', selectedExpedienteId);
+                
+                if (result.success) {
+                    let output = `✅ ELIMINACIÓN EXITOSA\n\n`;
+                    output += `📄 Expediente: ${result.summary.expediente}\n`;
+                    output += `🏢 Empresa: ${result.summary.empresa}\n`;
+                    output += `🎫 Tarjetas eliminadas: ${result.summary.tarjetasEliminadas}\n`;
+                    output += `📎 Archivos eliminados: ${result.summary.archivosEliminados}\n`;
+                    output += `⚠️ Advertencias: ${result.summary.warnings}\n`;
+                    output += `⏱️ Duración: ${result.summary.duration}ms\n\n`;
+                    output += `Mensaje: ${result.message}\n\n`;
+                    
+                    if (result.operation && result.operation.steps) {
+                        output += `📝 PASOS EJECUTADOS:\n`;
+                        result.operation.steps.forEach((step, index) => {
+                            const status = step.status === 'completed' ? '✅' : 
+                                          step.status === 'failed' ? '❌' : '🔄';
+                            output += `  ${index + 1}. ${status} ${step.step}\n`;
+                        });
+                    }
+                    
+                    resultDiv.textContent = output;
+                    
+                    // Recargar lista
+                    selectedExpedienteId = null;
+                    document.getElementById('btn-info').disabled = true;
+                    document.getElementById('btn-delete').disabled = true;
+                    await loadExpedientes();
+                    
+                } else {
+                    resultDiv.textContent = `❌ Error: ${result.message}`;
+                }
+                
+            } catch (error) {
+                resultDiv.textContent = `❌ Error: ${error.message}`;
+            }
+        }
+
+        // Cargar expedientes al inicio
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(loadExpedientes, 1000);
+        });
+    </script>
+</body>
+</html>

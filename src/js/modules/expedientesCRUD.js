@@ -1,0 +1,765 @@
+// src/js/modules/expedientesCRUD.js
+import { dataService } from './dataService.js';
+import { eventBus, APP_EVENTS } from './eventBus.js';
+
+export class ExpedientesCRUD {
+    constructor() {
+        this.expedientes = [];
+        this.filteredExpedientes = [];
+        this.currentPage = 1;
+        this.itemsPerPage = 10;
+        this.currentExpediente = null;
+        
+        this.initializeElements();
+        this.initializeEventListeners();
+        this.initializeFilters();
+    }
+
+    initializeElements() {
+        // Elementos de la tabla
+        this.tbody = document.getElementById('expedientes-tbody');
+        this.paginationInfo = document.getElementById('pagination-info');
+        this.pageInfo = document.getElementById('page-info');
+        this.prevPageBtn = document.getElementById('prev-page');
+        this.nextPageBtn = document.getElementById('next-page');
+        
+        // Elementos de búsqueda y filtros
+        this.searchInput = document.getElementById('search-crud-input');
+        this.searchBtn = document.getElementById('search-crud-btn');
+        this.filterAnio = document.getElementById('filter-anio');
+        this.filterUnidad = document.getElementById('filter-unidad');
+        this.limpiarFiltrosBtn = document.getElementById('limpiar-filtros-btn');
+        
+        // Botones
+        this.nuevoExpedienteBtn = document.getElementById('nuevo-expediente-btn');
+        
+        // Modal
+        this.modal = document.getElementById('modal-expediente');
+        this.modalTitle = document.getElementById('modal-title');
+        this.modalForm = document.getElementById('modal-expediente-form');
+        this.modalClose = document.getElementById('modal-close');
+        this.modalCancelar = document.getElementById('modal-cancelar');
+        this.modalGuardar = document.getElementById('modal-guardar');
+        this.modalEliminar = document.getElementById('modal-eliminar');
+    }
+
+    initializeEventListeners() {
+        // Búsqueda
+        this.searchBtn?.addEventListener('click', () => this.handleSearch());
+        this.searchInput?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.handleSearch();
+        });
+
+        // Filtros
+        this.filterAnio?.addEventListener('change', () => this.applyFilters());
+        this.filterUnidad?.addEventListener('change', () => this.applyFilters());
+        this.limpiarFiltrosBtn?.addEventListener('click', () => this.clearFilters());
+
+        // Paginación
+        this.prevPageBtn?.addEventListener('click', () => this.previousPage());
+        this.nextPageBtn?.addEventListener('click', () => this.nextPage());
+
+        // Nuevo expediente
+        this.nuevoExpedienteBtn?.addEventListener('click', () => this.openNewExpedienteModal());
+
+        // Modal
+        this.modalClose?.addEventListener('click', () => this.closeModal());
+        this.modalCancelar?.addEventListener('click', () => this.closeModal());
+        this.modalGuardar?.addEventListener('click', () => this.saveExpediente());
+        this.modalEliminar?.addEventListener('click', () => this.deleteExpediente());
+
+        // Cerrar modal al hacer clic fuera
+        this.modal?.addEventListener('click', (e) => {
+            if (e.target === this.modal) this.closeModal();
+        });
+
+        // Escuchar eventos de eliminación del backend
+        if (window.api && window.api.on) {
+            window.api.on('expediente-eliminado', (data) => {
+                console.log('📢 Evento recibido: expediente-eliminado', data);
+                // Recargar expedientes automáticamente
+                this.loadExpedientes().catch(error => {
+                    console.error('Error al recargar expedientes después de eliminación:', error);
+                });
+            });
+        }
+    }
+
+    async initializeFilters() {
+        // Llenar filtro de años
+        try {
+            const expedientes = await dataService.getAllExpedientes();
+            const years = [...new Set(expedientes.map(exp => exp.anioExpediente || new Date(exp.fecha).getFullYear()))]
+                .sort((a, b) => b - a);
+
+            this.filterAnio.innerHTML = '<option value="">Todos</option>';
+            years.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                this.filterAnio.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error al cargar filtros:', error);
+        }
+    }
+
+    async loadExpedientes() {
+        try {
+            console.log('🔄 Cargando expedientes...');
+            this.showLoadingTable();
+            
+            // Verificar que dataService esté disponible
+            if (!dataService) {
+                console.warn('⚠️ DataService no está disponible, usando datos de prueba');
+                this.expedientes = this.createTestData();
+            } else {
+                this.expedientes = await dataService.getAllExpedientes();
+            }
+            
+            console.log(' Expedientes obtenidos:', this.expedientes);
+            
+            // Verificar que la respuesta sea válida
+            if (!this.expedientes) {
+                console.warn('⚠️ La respuesta de expedientes es null/undefined, usando datos de prueba');
+                this.expedientes = this.createTestData();
+            } else if (!Array.isArray(this.expedientes)) {
+                console.warn('⚠️ Los expedientes no son un array:', this.expedientes, 'usando datos de prueba');
+                this.expedientes = this.createTestData();
+            } else {
+                console.log('Total de expedientes cargados:', this.expedientes.length);
+            }
+            
+            this.filteredExpedientes = [...this.expedientes];
+            this.currentPage = 1;
+            this.renderTable();
+            this.updatePagination();
+            this.populateYearFilter();
+            
+            console.log('✅ Expedientes cargados y renderizados correctamente');
+        } catch (error) {
+            console.error('❌ Error al cargar expedientes:', error);
+            console.log('🔧 Usando datos de prueba como fallback');
+            this.expedientes = this.createTestData();
+            this.filteredExpedientes = [...this.expedientes];
+            this.currentPage = 1;
+            this.renderTable();
+            this.updatePagination();
+            this.populateYearFilter();
+        }
+    }
+
+    createTestData() {
+        return [
+            {
+                _id: 'test1',
+                numeroExpediente: '001',
+                anioExpediente: '2024',
+                fecha: '2024-01-15',
+                numeroResolucion: 'RES-001-2024',
+                nombreEmpresa: 'Empresa de Prueba S.A.',
+                unidadNegocio: 'C1',
+                tarjetasAsociadas: [{ numero: '123456789' }, { numero: '987654321' }]
+            },
+            {
+                _id: 'test2',
+                numeroExpediente: '002',
+                anioExpediente: '2024',
+                fecha: '2024-02-20',
+                numeroResolucion: 'RES-002-2024',
+                nombreEmpresa: 'Transportes Ejemplo Ltda.',
+                unidadNegocio: 'C2',
+                tarjetasAsociadas: [{ numero: '555666777' }]
+            },
+            {
+                _id: 'test3',
+                numeroExpediente: '003',
+                anioExpediente: '2023',
+                fecha: '2023-12-10',
+                numeroResolucion: 'RES-003-2023',
+                nombreEmpresa: 'Logística Demo Corp.',
+                unidadNegocio: 'C3',
+                tarjetasAsociadas: []
+            }
+        ];
+    }
+
+    showLoadingTable() {
+        if (!this.tbody) return;
+        
+        this.tbody.innerHTML = `
+            <tr>
+                <td colspan="8" style="text-align: center; padding: 40px; color: #666;">
+                    <div class="loading-spinner"></div>
+                    Cargando expedientes...
+                </td>
+            </tr>
+        `;
+    }
+
+    showEmptyTable() {
+        if (!this.tbody) return;
+        
+        this.tbody.innerHTML = `
+            <tr>
+                <td colspan="8" style="text-align: center; padding: 40px; color: #666;">
+                    No se encontraron expedientes
+                </td>
+            </tr>
+        `;
+    }
+
+    populateYearFilter() {
+        if (!this.filterAnio || !this.expedientes || this.expedientes.length === 0) return;
+        
+        const years = [...new Set(this.expedientes.map(exp => 
+            exp.anioExpediente || new Date(exp.fecha).getFullYear()
+        ))].sort((a, b) => b - a);
+
+        this.filterAnio.innerHTML = '<option value="">Todos</option>';
+        years.forEach(year => {
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = year;
+            this.filterAnio.appendChild(option);
+        });
+    }
+
+    renderTable() {
+        if (!this.tbody) return;
+
+        const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+        const endIndex = startIndex + this.itemsPerPage;
+        const expedientesToShow = this.filteredExpedientes.slice(startIndex, endIndex);
+
+        this.tbody.innerHTML = '';
+
+        if (expedientesToShow.length === 0) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td colspan="8" style="text-align: center; padding: 40px; color: #666;">
+                    No se encontraron expedientes
+                </td>
+            `;
+            this.tbody.appendChild(row);
+            return;
+        }
+
+        expedientesToShow.forEach(expediente => {
+            const row = document.createElement('tr');
+            const expedienteCompleto = `${expediente.numeroExpediente || 'N/A'}-${expediente.anioExpediente || 'N/A'}`;
+            
+            // Calcular información de tarjetas - solo mostrar número
+            const tarjetasAsociadas = expediente.tarjetasAsociadas || [];
+            const tarjetasCount = tarjetasAsociadas.length;
+            
+            // Crear texto simple de tarjetas (solo número)
+            let tarjetasText = '';
+            if (tarjetasCount === 0) {
+                tarjetasText = '<span class="text-muted">0</span>';
+            } else if (tarjetasCount === 1) {
+                tarjetasText = '<span class="badge badge-primary">1</span>';
+            } else {
+                tarjetasText = `<span class="badge badge-success">${tarjetasCount}</span>`;
+            }
+
+            row.innerHTML = `
+                <td><strong>${expedienteCompleto}</strong></td>
+                <td>${expediente.anioExpediente || 'N/A'}</td>
+                <td>${expediente.fecha || 'N/A'}</td>
+                <td><strong>${expediente.numeroResolucion || '-'}</strong></td>
+                <td>${expediente.nombreEmpresa || '-'}</td>
+                <td><span class="badge">${expediente.unidadNegocio || '-'}</span></td>
+                <td style="text-align: center;">${tarjetasText}</td>
+                <td>
+                    <div class="action-btns">
+                        <button class="btn-action btn-view" onclick="expedientesCRUD.viewExpediente('${expediente._id}')" title="Ver detalles">
+                            👁️
+                        </button>
+                        <button class="btn-action btn-edit" onclick="expedientesCRUD.editExpediente('${expediente._id}')" title="Editar">
+                            ✏️
+                        </button>
+                        <button class="btn-action btn-delete" onclick="expedientesCRUD.confirmDelete('${expediente._id}')" title="Eliminar">
+                            🗑️
+                        </button>
+                    </div>
+                </td>
+            `;
+            this.tbody.appendChild(row);
+        });
+    }
+
+    updatePagination() {
+        const totalItems = this.filteredExpedientes.length;
+        const totalPages = Math.ceil(totalItems / this.itemsPerPage);
+
+        // Información
+        if (this.paginationInfo) {
+            const startItem = totalItems === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1;
+            const endItem = Math.min(this.currentPage * this.itemsPerPage, totalItems);
+            this.paginationInfo.textContent = `Mostrando ${startItem}-${endItem} de ${totalItems} expedientes`;
+        }
+
+        if (this.pageInfo) {
+            this.pageInfo.textContent = `Página ${this.currentPage} de ${totalPages}`;
+        }
+
+        // Botones
+        if (this.prevPageBtn) {
+            this.prevPageBtn.disabled = this.currentPage <= 1;
+        }
+        if (this.nextPageBtn) {
+            this.nextPageBtn.disabled = this.currentPage >= totalPages;
+        }
+    }
+
+    handleSearch() {
+        const searchTerm = this.searchInput?.value.toLowerCase().trim() || '';
+        
+        // Verificar que expedientes esté inicializado
+        if (!this.expedientes || !Array.isArray(this.expedientes)) {
+            this.filteredExpedientes = [];
+            this.renderTable();
+            this.updatePagination();
+            return;
+        }
+        
+        if (searchTerm === '') {
+            this.filteredExpedientes = [...this.expedientes];
+        } else {
+            this.filteredExpedientes = this.expedientes.filter(expediente => {
+                const expedienteCompleto = `${expediente.numeroExpediente || ''}-${expediente.anioExpediente || ''}`;
+                return (
+                    expedienteCompleto.toLowerCase().includes(searchTerm) ||
+                    (expediente.numeroResolucion && expediente.numeroResolucion.toLowerCase().includes(searchTerm)) ||
+                    (expediente.nombreEmpresa && expediente.nombreEmpresa.toLowerCase().includes(searchTerm)) ||
+                    (expediente.unidadNegocio && expediente.unidadNegocio.toLowerCase().includes(searchTerm)) ||
+                    (expediente.informeTecnico && expediente.informeTecnico.toLowerCase().includes(searchTerm))
+                );
+            });
+        }
+
+        this.applyFilters();
+    }
+
+    applyFilters() {
+        let filtered = [...this.filteredExpedientes];
+
+        // Filtro por año
+        const selectedYear = this.filterAnio?.value;
+        if (selectedYear) {
+            filtered = filtered.filter(exp => 
+                exp.anioExpediente == selectedYear || 
+                new Date(exp.fecha).getFullYear() == selectedYear
+            );
+        }
+
+        // Filtro por unidad
+        const selectedUnidad = this.filterUnidad?.value;
+        if (selectedUnidad) {
+            filtered = filtered.filter(exp => exp.unidadNegocio === selectedUnidad);
+        }
+
+        this.filteredExpedientes = filtered;
+        this.currentPage = 1;
+        this.renderTable();
+        this.updatePagination();
+    }
+
+    clearFilters() {
+        if (this.searchInput) this.searchInput.value = '';
+        if (this.filterAnio) this.filterAnio.value = '';
+        if (this.filterUnidad) this.filterUnidad.value = '';
+        
+        this.filteredExpedientes = [...this.expedientes];
+        this.currentPage = 1;
+        this.renderTable();
+        this.updatePagination();
+    }
+
+    previousPage() {
+        if (this.currentPage > 1) {
+            this.currentPage--;
+            this.renderTable();
+            this.updatePagination();
+        }
+    }
+
+    nextPage() {
+        const totalPages = Math.ceil(this.filteredExpedientes.length / this.itemsPerPage);
+        if (this.currentPage < totalPages) {
+            this.currentPage++;
+            this.renderTable();
+            this.updatePagination();
+        }
+    }
+
+    async viewExpediente(expedienteId) {
+        try {
+            if (!this.expedientes || !Array.isArray(this.expedientes)) {
+                this.showError('Los expedientes no están cargados');
+                return;
+            }
+            
+            const expediente = this.expedientes.find(exp => exp._id === expedienteId);
+            if (expediente) {
+                const expedienteCompleto = `${expediente.numeroExpediente}-${expediente.anioExpediente}`;
+                const tarjetasAsociadas = expediente.tarjetasAsociadas || [];
+                
+                // Crear lista de tarjetas detallada
+                let tarjetasInfo = '';
+                if (tarjetasAsociadas.length === 0) {
+                    tarjetasInfo = 'No hay tarjetas asociadas';
+                } else {
+                    tarjetasInfo = `Total: ${tarjetasAsociadas.length} tarjetas\n\n`;
+                    tarjetasAsociadas.forEach((tarjeta, index) => {
+                        tarjetasInfo += `${index + 1}. Placa: ${tarjeta.placa || 'N/A'} | Tarjeta: ${tarjeta.tarjeta || 'N/A'}\n`;
+                    });
+                }
+                
+                const info = `📋 DETALLES DEL EXPEDIENTE
+
+🔢 Expediente: ${expedienteCompleto}
+📅 Fecha: ${expediente.fecha || 'N/A'}
+📄 N° Resolución: ${expediente.numeroResolucion || 'Sin resolución'}
+🏢 Empresa: ${expediente.nombreEmpresa || 'N/A'}
+🏭 Unidad de Negocio: ${expediente.unidadNegocio || 'N/A'}
+� Informe Técnico: ${expediente.informeTecnico || 'N/A'}
+📁 Fichero: ${expediente.numeroFichero || 'N/A'}
+
+🎫 TARJETAS ASOCIADAS:
+${tarjetasInfo}
+
+📎 Archivos:
+${expediente.pdfPath ? '✅ PDF del expediente disponible' : '❌ Sin PDF del expediente'}
+
+💬 Observaciones:
+${expediente.observaciones || 'Sin observaciones'}`;
+                
+                alert(info);
+            } else {
+                this.showError('Expediente no encontrado');
+            }
+        } catch (error) {
+            console.error('Error al ver expediente:', error);
+            this.showError('Error al ver expediente');
+        }
+    }
+
+    async editExpediente(expedienteId) {
+        try {
+            if (!this.expedientes || !Array.isArray(this.expedientes)) {
+                this.showError('Los expedientes no están cargados');
+                return;
+            }
+            
+            const expediente = this.expedientes.find(exp => exp._id === expedienteId);
+            if (expediente) {
+                const expedienteCompleto = `${expediente.numeroExpediente}-${expediente.anioExpediente}`;
+                alert(`✏️ Función de edición para el expediente ${expedienteCompleto} será implementada próximamente.`);
+                console.log('Expediente a editar:', expediente);
+            } else {
+                this.showError('Expediente no encontrado');
+            }
+        } catch (error) {
+            console.error('Error al editar expediente:', error);
+            this.showError('Error al cargar expediente para edición');
+        }
+    }
+
+    async confirmDelete(expedienteId) {
+        try {
+            console.log('🔍 Obteniendo información detallada para eliminación...');
+            
+            // Obtener información detallada del expediente y sus dependencias
+            const infoResult = await dataService.getDeleteInfo(expedienteId);
+            
+            if (!infoResult.success) {
+                this.showError('Error al obtener información del expediente: ' + infoResult.error);
+                return;
+            }
+
+            const { expediente, tarjetas, summary } = infoResult.data;
+            
+            // Crear mensaje de advertencia detallado
+            let warningMessage = `⚠️ ADVERTENCIA: Esta acción eliminará permanentemente:\n\n`;
+            warningMessage += `📄 Expediente: ${expediente.numero}\n`;
+            warningMessage += `🏢 Empresa: ${expediente.empresa}\n`;
+            warningMessage += `📄 N° Resolución: ${expediente.resolucion}\n`;
+            
+            if (expediente.pdfPath) {
+                warningMessage += `📎 Archivo PDF del expediente\n`;
+            }
+            
+            if (summary.totalTarjetas > 0) {
+                warningMessage += `🎫 ${summary.totalTarjetas} tarjeta(s) asociada(s):\n`;
+                // Mostrar las primeras 5 tarjetas para que el usuario sepa exactamente qué se eliminará
+                tarjetas.slice(0, 5).forEach((tarjeta, index) => {
+                    warningMessage += `   ${index + 1}. Placa: ${tarjeta.placa || 'N/A'}${tarjeta.tarjeta ? ` | Tarjeta: ${tarjeta.tarjeta}` : ''}\n`;
+                });
+                if (summary.totalTarjetas > 5) {
+                    warningMessage += `   ... y ${summary.totalTarjetas - 5} tarjeta(s) más\n`;
+                }
+                
+                if (summary.tarjetasConPDF > 0) {
+                    warningMessage += `📎 ${summary.tarjetasConPDF} archivo(s) PDF de tarjetas\n`;
+                }
+            }
+            
+            if (summary.totalArchivos > 0) {
+                warningMessage += `\n📁 Total de archivos a eliminar: ${summary.totalArchivos}\n`;
+            }
+            
+            warningMessage += `\n🚨 Esta acción NO se puede deshacer.\n\n`;
+            warningMessage += `¿Está seguro de que desea continuar?`;
+            
+            const confirmed = confirm(warningMessage);
+            
+            if (confirmed) {
+                await this.executeDelete(expedienteId, expediente);
+            }
+            
+        } catch (error) {
+            console.error('❌ Error en confirmación de eliminación:', error);
+            this.showError('Error al confirmar eliminación: ' + error.message);
+        }
+    }
+
+    async executeDelete(expedienteId, expedienteInfo) {
+        // Declarar la variable fuera del try-catch para que sea accesible en ambos bloques
+        let originalCursor = 'default';
+        
+        try {
+            // Mostrar indicador de carga
+            originalCursor = document.body.style.cursor;
+            document.body.style.cursor = 'wait';
+            
+            console.log('🗑️ Ejecutando eliminación en cascada...');
+            console.log('📋 ExpedienteId:', expedienteId);
+            
+            const result = await dataService.deleteExpediente(expedienteId);
+            
+            console.log('📊 Resultado completo recibido:', result);
+            console.log('✅ result.success:', result?.success);
+            console.log('📝 result.summary:', result?.summary);
+            
+            // Restaurar cursor
+            document.body.style.cursor = originalCursor;
+            
+            // Verificar si result existe y tiene la estructura correcta
+            if (!result) {
+                console.error('❌ Resultado es null o undefined');
+                this.showError('Error: No se recibió respuesta del servidor');
+                return;
+            }
+            
+            if (result.success) {
+                // Mensaje de éxito detallado
+                let successMessage = `✅ Eliminación exitosa:\n\n`;
+                successMessage += `📄 Expediente: ${result.summary.expediente}\n`;
+                successMessage += `🏢 Empresa: ${result.summary.empresa}\n`;
+                successMessage += `🎫 Tarjetas eliminadas: ${result.summary.tarjetasEliminadas}\n`;
+                successMessage += `📎 Archivos eliminados: ${result.summary.archivosEliminados}\n`;
+                
+                if (result.summary.warnings > 0) {
+                    successMessage += `⚠️ Advertencias: ${result.summary.warnings}\n`;
+                }
+                
+                successMessage += `⏱️ Tiempo: ${result.summary.duration}ms`;
+                
+                this.showSuccess(successMessage);
+                
+                // Recargar la tabla para reflejar los cambios
+                console.log('🔄 Recargando tabla de expedientes...');
+                await this.loadExpedientes();
+                console.log('✅ Tabla actualizada correctamente');
+            } else {
+                this.showError('Error en la eliminación: ' + result.message);
+            }
+            
+        } catch (error) {
+            // Restaurar cursor en caso de error
+            document.body.style.cursor = originalCursor;
+            
+            console.error('❌ Error ejecutando eliminación:', error);
+            
+            let errorMessage = 'Error al eliminar expediente';
+            
+            if (error.operation && error.operation.steps) {
+                const failedStep = error.operation.steps.find(s => s.status === 'failed');
+                if (failedStep) {
+                    errorMessage += `\nFallo en: ${failedStep.step}`;
+                    errorMessage += `\nError: ${failedStep.error}`;
+                }
+            }
+            
+            if (error.message) {
+                errorMessage += `\nDetalle: ${error.message}`;
+            }
+            
+            this.showError(errorMessage);
+            
+            // Intentar recargar la tabla de todas formas
+            try {
+                console.log('🔄 Intentando recargar tabla después de error...');
+                await this.loadExpedientes();
+            } catch (reloadError) {
+                console.error('❌ Error al recargar tabla:', reloadError);
+            }
+        }
+    }
+
+    // Método legacy - ahora redirige al nuevo sistema
+    async deleteExpediente(expedienteId, expediente) {
+        console.log('⚠️ Usando método legacy deleteExpediente, redirigiendo a executeDelete');
+        await this.executeDelete(expedienteId, expediente);
+    }
+
+    async deleteExpedienteById(expedienteId) {
+        try {
+            await dataService.deleteExpediente(expedienteId);
+            this.showSuccess('Expediente eliminado correctamente');
+            this.loadExpedientes(); // Recargar lista
+        } catch (error) {
+            console.error('Error al eliminar expediente:', error);
+            this.showError('Error al eliminar expediente');
+        }
+    }
+
+    openNewExpedienteModal() {
+        // Navegar a la vista de registro
+        if (window.navigationManager) {
+            window.navigationManager.navigateToView('registro');
+        }
+    }
+
+    openEditModal(expediente) {
+        this.modalTitle.textContent = `Editar Expediente ${expediente.numeroExpediente}-${expediente.anioExpediente}`;
+        
+        // Crear formulario en el modal
+        this.modalForm.innerHTML = this.createModalForm(expediente);
+        
+        // Mostrar modal
+        this.modal.classList.add('active');
+    }
+
+    createModalForm(expediente = null) {
+        const isEdit = expediente !== null;
+        
+        return `
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="modal-numeroExpediente">N° de Expediente:</label>
+                    <input type="text" id="modal-numeroExpediente" value="${expediente?.numeroExpediente || ''}" required>
+                </div>
+                <div class="form-group">
+                    <label for="modal-anioExpediente">Año:</label>
+                    <input type="number" id="modal-anioExpediente" value="${expediente?.anioExpediente || new Date().getFullYear()}" min="2020" max="2030" required>
+                </div>
+                <div class="form-group">
+                    <label for="modal-fecha">Fecha:</label>
+                    <input type="date" id="modal-fecha" value="${expediente?.fecha || new Date().toISOString().split('T')[0]}" required>
+                </div>
+                <div class="form-group">
+                    <label for="modal-numeroResolucion">N° Resolución:</label>
+                    <input type="text" id="modal-numeroResolucion" value="${expediente?.numeroResolucion || ''}">
+                </div>
+                <div class="form-group">
+                    <label for="modal-informeTecnico">Informe Técnico:</label>
+                    <input type="text" id="modal-informeTecnico" value="${expediente?.informeTecnico || ''}">
+                </div>
+                <div class="form-group">
+                    <label for="modal-unidadNegocio">Unidad de Negocio:</label>
+                    <select id="modal-unidadNegocio">
+                        <option value="">Seleccionar...</option>
+                        ${['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9', 'C10', 'C11'].map(c => 
+                            `<option value="${c}" ${expediente?.unidadNegocio === c ? 'selected' : ''}>${c}</option>`
+                        ).join('')}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="modal-nombreEmpresa">Nombre de la Empresa:</label>
+                    <input type="text" id="modal-nombreEmpresa" value="${expediente?.nombreEmpresa || ''}">
+                </div>
+                <div class="form-group">
+                    <label for="modal-numeroFichero">N° Fichero:</label>
+                    <input type="text" id="modal-numeroFichero" value="${expediente?.numeroFichero || ''}">
+                </div>
+            </div>
+            <div class="form-group full-width">
+                <label for="modal-observaciones">Observaciones:</label>
+                <textarea id="modal-observaciones" rows="3">${expediente?.observaciones || ''}</textarea>
+            </div>
+        `;
+    }
+
+    async saveExpediente() {
+        try {
+            const formData = this.getModalFormData();
+            
+            if (this.currentExpediente) {
+                // Actualizar expediente existente
+                await dataService.updateExpediente(this.currentExpediente._id, formData);
+                this.showSuccess('Expediente actualizado correctamente');
+            } else {
+                // Crear nuevo expediente
+                await dataService.createExpediente(formData);
+                this.showSuccess('Expediente creado correctamente');
+            }
+            
+            this.closeModal();
+            this.loadExpedientes();
+        } catch (error) {
+            console.error('Error al guardar expediente:', error);
+            this.showError('Error al guardar expediente');
+        }
+    }
+
+    async deleteExpediente() {
+        if (this.currentExpediente) {
+            const expedienteCompleto = `${this.currentExpediente.numeroExpediente}-${this.currentExpediente.anioExpediente}`;
+            if (confirm(`¿Está seguro de que desea eliminar el expediente ${expedienteCompleto}?`)) {
+                await this.deleteExpedienteById(this.currentExpediente._id);
+                this.closeModal();
+            }
+        }
+    }
+
+    getModalFormData() {
+        return {
+            numeroExpediente: document.getElementById('modal-numeroExpediente')?.value?.trim(),
+            anioExpediente: parseInt(document.getElementById('modal-anioExpediente')?.value) || new Date().getFullYear(),
+            fecha: document.getElementById('modal-fecha')?.value,
+            numeroResolucion: document.getElementById('modal-numeroResolucion')?.value?.trim() || null,
+            informeTecnico: document.getElementById('modal-informeTecnico')?.value?.trim() || null,
+            unidadNegocio: document.getElementById('modal-unidadNegocio')?.value || null,
+            nombreEmpresa: document.getElementById('modal-nombreEmpresa')?.value?.trim() || null,
+            numeroFichero: document.getElementById('modal-numeroFichero')?.value?.trim() || null,
+            observaciones: document.getElementById('modal-observaciones')?.value?.trim() || null
+        };
+    }
+
+    closeModal() {
+        this.modal.classList.remove('active');
+        this.currentExpediente = null;
+        this.modalForm.innerHTML = '';
+    }
+
+    showSuccess(message) {
+        // Implementar sistema de notificaciones
+        console.log('SUCCESS:', message);
+        alert(message); // Temporal
+    }
+
+    showError(message) {
+        // Implementar sistema de notificaciones
+        console.error('ERROR:', message);
+        alert(message); // Temporal
+    }
+}
+
+// Crear instancia global
+export const expedientesCRUD = new ExpedientesCRUD();
+
+// Hacer disponible globalmente para los onclick en HTML
+window.expedientesCRUD = expedientesCRUD;

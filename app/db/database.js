@@ -1,10 +1,16 @@
 // app/db/database.js
 const Datastore = require('nedb');
 const path = require('path');
+const fs = require('fs');
 const { app } = require('electron');
 
 // Define la ruta del directorio de datos de la aplicación
 const dbDir = path.join(app.getPath('userData'), 'database');
+
+// Asegura que el directorio de la base de datos exista
+if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+}
 
 
 // Inicializa las bases de datos para expedientes y tarjetas

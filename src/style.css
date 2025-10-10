@@ -971,3 +971,51 @@ fieldset legend {
 #seleccionar-pdf-btn:hover {
     background-color: #5a6268;
 }
+
+/* === ESTILOS PARA TARJETAS EN TABLA === */
+.badge-primary {
+    background-color: #007bff;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: bold;
+    display: inline-block;
+    min-width: 20px;
+    text-align: center;
+}
+
+.badge-success {
+    background-color: #28a745;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: bold;
+    display: inline-block;
+    min-width: 20px;
+    text-align: center;
+}
+
+.text-muted {
+    color: #6c757d;
+    font-style: italic;
+    font-size: 13px;
+    font-weight: normal;
+}
+
+.crud-table td {
+    vertical-align: middle;
+}
+
+/* Columna de tarjetas centrada */
+.crud-table td:nth-child(7) {
+    text-align: center !important;
+    width: 80px;
+}
+
+/* Mejorar visualización de números de resolución */
+.crud-table td:nth-child(4) {
+    font-weight: bold;
+    color: #007bff;
+}

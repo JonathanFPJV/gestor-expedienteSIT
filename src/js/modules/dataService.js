@@ -43,17 +43,20 @@ class DataService {
     
     async getAllExpedientes() {
         try {
-            return await window.api.enviar('obtener-todos-expedientes');
+            console.log('🔄 Solicitando expedientes al backend...');
+            const expedientes = await window.api.invoke('obtener-todos-expedientes');
+            console.log('📊 Expedientes recibidos del backend:', expedientes);
+            return expedientes;
         } catch (error) {
-            console.error('Error al obtener todos los expedientes:', error);
+            console.error('❌ Error al obtener todos los expedientes:', error);
             throw error;
         }
     }
 
     async createExpediente(expedienteData) {
         try {
-            const result = await window.api.enviar('crear-expediente', expedienteData);
-            this.emit(APP_EVENTS.EXPEDIENTE_CREATED, result);
+            const result = await window.api.invoke('crear-expediente', expedienteData);
+            eventBus.emit(APP_EVENTS.EXPEDIENTE_CREATED, result);
             return result;
         } catch (error) {
             console.error('Error al crear expediente:', error);
@@ -63,8 +66,8 @@ class DataService {
 
     async updateExpediente(expedienteId, expedienteData) {
         try {
-            const result = await window.api.enviar('actualizar-expediente', expedienteId, expedienteData);
-            this.emit(APP_EVENTS.EXPEDIENTE_UPDATED, result);
+            const result = await window.api.invoke('actualizar-expediente', expedienteId, expedienteData);
+            eventBus.emit(APP_EVENTS.EXPEDIENTE_UPDATED, result);
             return result;
         } catch (error) {
             console.error('Error al actualizar expediente:', error);
@@ -74,45 +77,61 @@ class DataService {
 
     async deleteExpediente(expedienteId) {
         try {
-            const result = await window.api.enviar('eliminar-expediente', expedienteId);
-            this.emit(APP_EVENTS.EXPEDIENTE_DELETED, { id: expedienteId });
+            console.log('🗑️ Enviando solicitud de eliminación al backend:', expedienteId);
+            const result = await window.api.invoke('eliminar-expediente', expedienteId);
+            console.log('📊 Resultado RAW de eliminación:', JSON.stringify(result, null, 2));
+            
+            // Verificar que result existe
+            if (!result) {
+                console.error('❌ Resultado es null o undefined');
+                return {
+                    success: false,
+                    error: 'No se recibió respuesta del servidor',
+                    message: 'No se recibió respuesta del servidor'
+                };
+            }
+            
+            // Si la eliminación fue exitosa, emitir evento usando eventBus
+            if (result.success) {
+                console.log('✅ Eliminación exitosa, emitiendo evento');
+                eventBus.emit(APP_EVENTS.EXPEDIENTE_DELETED, { 
+                    id: expedienteId,
+                    summary: result.summary 
+                });
+            } else {
+                console.warn('⚠️ Eliminación no exitosa:', result.message || result.error);
+            }
+            
             return result;
         } catch (error) {
-            console.error('Error al eliminar expediente:', error);
-            throw error;
+            console.error('❌ Error CATCH al eliminar expediente:', error);
+            console.error('❌ Error tipo:', typeof error);
+            console.error('❌ Error contenido:', JSON.stringify(error, null, 2));
+            
+            // Si el error es un objeto con success: false, retornarlo en lugar de lanzar
+            if (error && typeof error === 'object' && error.success === false) {
+                console.warn('⚠️ Retornando error estructurado del backend');
+                return error;
+            }
+            
+            // Para otros errores, crear un objeto de respuesta
+            return {
+                success: false,
+                error: error.message || 'Error desconocido',
+                message: error.message || 'Error al eliminar expediente'
+            };
         }
     }
 
-    // Manejo de expedientes (compatibilidad)
-    async createExpediente(expedienteData) {
-        // Validar que el API esté disponible
-        if (!window.api || !window.api.invoke) {
-            const error = 'API del proceso principal no disponible';
-            console.error(error);
-            eventBus.emit(APP_EVENTS.UI_ERROR, { message: error });
-            return { success: false, message: error };
-        }
-
+    async getDeleteInfo(expedienteId) {
         try {
-            eventBus.emit(APP_EVENTS.UI_LOADING, { operation: 'createExpediente' });
-            
-            const result = await window.api.invoke('guardar-expediente', expedienteData);
-            
-            if (result.success) {
-                eventBus.emit(APP_EVENTS.EXPEDIENTE_CREATED, result.data || expedienteData);
-                eventBus.emit(APP_EVENTS.DATA_SYNC_REQUIRED);
-                return result;
-            } else {
-                eventBus.emit(APP_EVENTS.UI_ERROR, { message: result.message });
-                return result;
-            }
+            console.log('📋 Obteniendo información para eliminación:', expedienteId);
+            const result = await window.api.invoke('obtener-info-eliminacion', expedienteId);
+            console.log('📊 Información de eliminación obtenida:', result);
+            return result;
         } catch (error) {
-            console.error('Error al crear expediente:', error);
-            const errorMessage = error.message || 'Error inesperado al guardar el expediente';
-            eventBus.emit(APP_EVENTS.UI_ERROR, { message: errorMessage });
-            return { success: false, message: errorMessage };
-        } finally {
-            eventBus.emit(APP_EVENTS.UI_LOADED, { operation: 'createExpediente' });
+            console.error('❌ Error al obtener información de eliminación:', error);
+            throw error;
         }
     }
 

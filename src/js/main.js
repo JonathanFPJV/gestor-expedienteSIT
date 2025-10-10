@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.navigationManager = navigationManager;
     window.expedientesCRUD = expedientesCRUD;
     window.searchManager = searchManager;
+    window.dataService = dataService;
     window.ui = ui;
     
     // Hacer disponibles las funciones de búsqueda para searchManager
