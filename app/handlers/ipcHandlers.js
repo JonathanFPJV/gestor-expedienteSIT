@@ -217,11 +217,22 @@ exports.registerIpcHandlers = (appInstance) => {
             const resultados = await Promise.all(expedientes.map(async (expediente) => {
                 // Buscar tarjetas asociadas a este expediente
                 const tarjetasAsociadas = await db.tarjetas.find({ expedienteId: expediente._id });
+
+                const [fallbackNumero, fallbackAnio] = (expediente.expediente || '').split('-');
+
                 return {
                     _id: expediente._id,
                     expediente: expediente.expediente,
                     fecha: expediente.fecha,
                     pdfPath: expediente.pdfPath,
+                    numeroExpediente: expediente.numeroExpediente || fallbackNumero || null,
+                    anioExpediente: expediente.anioExpediente || fallbackAnio || null,
+                    numeroResolucion: expediente.numeroResolucion || null,
+                    informeTecnico: expediente.informeTecnico || null,
+                    unidadNegocio: expediente.unidadNegocio || null,
+                    nombreEmpresa: expediente.nombreEmpresa || null,
+                    numeroFichero: expediente.numeroFichero || null,
+                    observaciones: expediente.observaciones || null,
                     tarjetasAsociadas: tarjetasAsociadas.map(t => ({
                         placa: t.placa,
                         tarjeta: t.tarjeta,
