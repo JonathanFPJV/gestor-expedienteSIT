@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Editar Expediente</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/components.css">
+    <style>
+        body {
+            background: #f5f7fb;
+        }
+        .editor-container {
+            max-width: 960px;
+            margin: 24px auto;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 12px 32px rgba(15, 30, 80, 0.12);
+            padding: 32px;
+        }
+        .editor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .editor-actions {
+            display: flex;
+            gap: 12px;
+        }
+        .tarjetas-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+        }
+        .tarjetas-table th,
+        .tarjetas-table td {
+            border-bottom: 1px solid #e6e9f2;
+            padding: 12px;
+            text-align: left;
+        }
+        .tarjetas-table th {
+            background: #f0f4ff;
+            font-weight: 600;
+            color: #29324a;
+        }
+        .tarjeta-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .btn-secondary {
+            background: #eef1ff;
+            border: 1px solid #c6cff7;
+            color: #394fa1;
+            border-radius: 8px;
+            padding: 8px 16px;
+            cursor: pointer;
+        }
+        .btn-secondary:hover {
+            background: #dfe6ff;
+        }
+        .badge-outline {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 2px 10px;
+            border-radius: 14px;
+            border: 1px dashed #9aa5d6;
+            font-size: 12px;
+            color: #5b6aa1;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 24px;
+            color: #7581ad;
+            border: 1px dashed #c8d0f0;
+            border-radius: 12px;
+            margin-top: 16px;
+        }
+        .form-grid .form-group input[readonly] {
+            background: #f8f9fd;
+            color: #4a5675;
+        }
+    </style>
+</head>
+<body>
+    <div class="editor-container">
+        <div class="editor-header">
+            <div>
+                <h1 id="editor-title">Editar Expediente</h1>
+                <p class="badge-outline" id="editor-subtitle">Cargando datos...</p>
+            </div>
+            <div class="editor-actions">
+                <button id="btn-cancelar" class="btn-outline">Cancelar</button>
+                <button id="btn-guardar" class="btn-primary">Guardar cambios</button>
+            </div>
+        </div>
+
+        <form id="editor-form">
+            <fieldset class="form-section">
+                <legend>Información principal</legend>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="editor-numeroExpediente">N° de Expediente</label>
+                        <input type="text" id="editor-numeroExpediente" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editor-anioExpediente">Año</label>
+                        <input type="number" id="editor-anioExpediente" min="2000" max="2100" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editor-numeroResolucion">N° Resolución</label>
+                        <input type="text" id="editor-numeroResolucion">
+                    </div>
+                    <div class="form-group">
+                        <label for="editor-fecha">Fecha del Expediente</label>
+                        <input type="date" id="editor-fecha" required>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Detalles técnicos</legend>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="editor-informeTecnico">Informe Técnico</label>
+                        <input type="text" id="editor-informeTecnico">
+                    </div>
+                    <div class="form-group">
+                        <label for="editor-numeroFichero">N° Fichero</label>
+                        <input type="text" id="editor-numeroFichero">
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Información de empresa</legend>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="editor-nombreEmpresa">Nombre de la empresa</label>
+                        <input type="text" id="editor-nombreEmpresa">
+                    </div>
+                    <div class="form-group">
+                        <label for="editor-unidadNegocio">Unidad de negocio</label>
+                        <select id="editor-unidadNegocio">
+                            <option value="">Seleccionar...</option>
+                            <option value="C1">C1</option>
+                            <option value="C2">C2</option>
+                            <option value="C3">C3</option>
+                            <option value="C4">C4</option>
+                            <option value="C5">C5</option>
+                            <option value="C6">C6</option>
+                            <option value="C7">C7</option>
+                            <option value="C8">C8</option>
+                            <option value="C9">C9</option>
+                            <option value="C10">C10</option>
+                            <option value="C11">C11</option>
+                        </select>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Observaciones</legend>
+                <div class="form-group">
+                    <textarea id="editor-observaciones" rows="3" placeholder="Información adicional..."></textarea>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Documento del expediente</legend>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="editor-expediente-pdf">Archivo PDF</label>
+                        <input type="text" id="editor-expediente-pdf" placeholder="Sin archivo" readonly>
+                    </div>
+                    <div class="form-group">
+                        <button type="button" id="btn-seleccionar-expediente" class="btn-secondary">Seleccionar nuevo PDF</button>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Tarjetas asociadas</legend>
+                <div id="tarjetas-container"></div>
+                <div class="empty-state" id="tarjetas-empty-state" style="display: none;">
+                    No hay tarjetas asociadas.
+                </div>
+                <button type="button" id="btn-agregar-tarjeta" class="btn-secondary">Agregar tarjeta</button>
+            </fieldset>
+        </form>
+    </div>
+
+    <template id="tarjeta-row-template">
+        <div class="tarjeta-row">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Placa</label>
+                    <input type="text" class="tarjeta-placa" required>
+                </div>
+                <div class="form-group">
+                    <label>N° Tarjeta</label>
+                    <input type="text" class="tarjeta-numero" required>
+                </div>
+                <div class="form-group">
+                    <label>PDF asociado</label>
+                    <input type="text" class="tarjeta-pdf" readonly>
+                </div>
+                <div class="form-group tarjeta-actions">
+                    <button type="button" class="btn-secondary btn-tarjeta-pdf">Seleccionar PDF</button>
+                    <button type="button" class="btn-danger btn-tarjeta-eliminar">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <script type="module" src="js/editor/expedienteEditor.js"></script>
+</body>
+</html>

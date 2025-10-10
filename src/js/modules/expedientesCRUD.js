@@ -455,9 +455,11 @@ ${expediente.observaciones || 'Sin observaciones'}`;
             
             const expediente = this.expedientes.find(exp => exp._id === expedienteId);
             if (expediente) {
-                const expedienteCompleto = `${expediente.numeroExpediente}-${expediente.anioExpediente}`;
-                alert(`✏️ Función de edición para el expediente ${expedienteCompleto} será implementada próximamente.`);
-                console.log('Expediente a editar:', expediente);
+                if (window.api) {
+                    window.api.enviar('abrir-editor-expediente', expedienteId);
+                } else {
+                    console.warn('window.api no disponible; no se puede abrir el editor');
+                }
             } else {
                 this.showError('Expediente no encontrado');
             }

@@ -29,6 +29,9 @@ class DataService {
                 window.api.on('expediente-guardado', (expedienteData) => {
                     this.handleExpedienteCreated(expedienteData);
                 });
+                window.api.on('expediente-actualizado', (expedienteData) => {
+                    this.handleExpedienteUpdated(expedienteData);
+                });
                 
                 window.api.on('tarjetas-actualizadas', (tarjetas) => {
                     this.updateTarjetasCache(tarjetas);
@@ -260,6 +263,12 @@ class DataService {
         this.cache.lastSearchExpedientes = null;
         
         // Emitir evento para que la UI se actualice automáticamente
+        eventBus.emit(APP_EVENTS.DATA_REFRESHED, { type: 'expediente', data: expedienteData });
+    }
+
+    handleExpedienteUpdated(expedienteData) {
+        this.cache.lastSearchTarjetas = null;
+        this.cache.lastSearchExpedientes = null;
         eventBus.emit(APP_EVENTS.DATA_REFRESHED, { type: 'expediente', data: expedienteData });
     }
 

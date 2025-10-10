@@ -48,8 +48,11 @@ class ExpedienteService {
         }
 
         const expedienteData = { ...rawData };
-        const tarjetas = Array.isArray(expedienteData.tarjetas) ? expedienteData.tarjetas : [];
-        delete expedienteData.tarjetas;
+        const tarjetasProvided = Object.prototype.hasOwnProperty.call(expedienteData, 'tarjetas');
+        const tarjetas = tarjetasProvided && Array.isArray(expedienteData.tarjetas) ? expedienteData.tarjetas : [];
+        if (tarjetasProvided) {
+            delete expedienteData.tarjetas;
+        }
 
         const numeroResolucion = expedienteData.numeroResolucion || expedienteExistente.numeroResolucion;
         const numeroExpediente = expedienteData.numeroExpediente || expedienteExistente.numeroExpediente;
@@ -78,10 +81,11 @@ class ExpedienteService {
         const expedienteActualizado = await this.db.expedientes.findOne({ _id: expedienteId });
 
         let tarjetasGuardadas = [];
-        if (tarjetas.length > 0) {
-            tarjetasGuardadas = await this.saveTarjetasParaExpediente(expedienteActualizado, tarjetas, {
-                replaceExisting: true
-            });
+        if (tarjetasProvided) {
+            await this.db.tarjetas.remove({ expedienteId }, { multi: true });
+            if (tarjetas.length > 0) {
+                tarjetasGuardadas = await this.saveTarjetasParaExpediente(expedienteActualizado, tarjetas);
+            }
         }
 
         return {
@@ -89,6 +93,21 @@ class ExpedienteService {
             message: 'Expediente actualizado exitosamente.',
             expediente: expedienteActualizado,
             tarjetas: tarjetasGuardadas
+        };
+    }
+
+    async getExpedienteDetalle(expedienteId) {
+        const expediente = await this.db.expedientes.findOne({ _id: expedienteId });
+        if (!expediente) {
+            throw new Error('Expediente no encontrado');
+        }
+
+        const tarjetas = await this.db.tarjetas.find({ expedienteId });
+
+        return {
+            success: true,
+            expediente,
+            tarjetas
         };
     }
 

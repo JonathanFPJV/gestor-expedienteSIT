@@ -3,6 +3,7 @@ const { ipcMain, BrowserWindow } = require('electron');
 const db = require('../db/database');
 const FileHandlers = require('./fileHandlers');
 const DeletionService = require('../services/deletionService');
+const { createExpedienteEditorWindow } = require('../windows/expedienteEditorWindow');
 const ExpedienteService = require('../services/expedienteService');
 const fs = require('fs'); // Añadir 'fs' para manejar archivos
 
@@ -10,6 +11,39 @@ exports.registerIpcHandlers = (appInstance) => {
     const fileHandlers = new FileHandlers(appInstance);
     const deletionService = new DeletionService(appInstance);
     const expedienteService = new ExpedienteService(db, fileHandlers);
+    const editorWindows = new Map();
+    // Abrir ventana de edición de expedientes
+    ipcMain.on('abrir-editor-expediente', (event, expedienteId) => {
+        if (!expedienteId) {
+            console.warn('abrir-editor-expediente llamado sin expedienteId');
+            return;
+        }
+
+        const existingWindow = editorWindows.get(expedienteId);
+        if (existingWindow && !existingWindow.isDestroyed()) {
+            existingWindow.focus();
+            return;
+        }
+
+        const window = createExpedienteEditorWindow(appInstance, expedienteId);
+        editorWindows.set(expedienteId, window);
+
+        window.on('closed', () => {
+            editorWindows.delete(expedienteId);
+        });
+    });
+
+    ipcMain.handle('obtener-expediente-detalle', async (event, expedienteId) => {
+        try {
+            return await expedienteService.getExpedienteDetalle(expedienteId);
+        } catch (error) {
+            console.error('Error al obtener detalle de expediente:', error);
+            return {
+                success: false,
+                message: error.message || 'Error al obtener detalle de expediente'
+            };
+        }
+    });
 
     // Manejador para el diálogo de selección de PDF
     ipcMain.handle('abrir-dialogo-pdf', async () => {
