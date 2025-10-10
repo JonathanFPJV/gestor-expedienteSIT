@@ -3,11 +3,13 @@ const { ipcMain, BrowserWindow } = require('electron');
 const db = require('../db/database');
 const FileHandlers = require('./fileHandlers');
 const DeletionService = require('../services/deletionService');
+const ExpedienteService = require('../services/expedienteService');
 const fs = require('fs'); // Añadir 'fs' para manejar archivos
 
 exports.registerIpcHandlers = (appInstance) => {
     const fileHandlers = new FileHandlers(appInstance);
     const deletionService = new DeletionService(appInstance);
+    const expedienteService = new ExpedienteService(db, fileHandlers);
 
     // Manejador para el diálogo de selección de PDF
     ipcMain.handle('abrir-dialogo-pdf', async () => {
@@ -61,71 +63,50 @@ exports.registerIpcHandlers = (appInstance) => {
     // Crear nuevo expediente
     ipcMain.handle('crear-expediente', async (event, expedienteData) => {
         try {
-            if (expedienteData.pdfSourcePath) {
-                const fileName = `resolucion-${Date.now()}.pdf`;
-                const saveResult = await fileHandlers.savePdf(
-                    expedienteData.pdfSourcePath,
-                    fileName,
-                    {
-                        resolutionNumber: expedienteData.numeroResolucion,
-                        expedienteNumero: expedienteData.numeroExpediente
-                    }
-                );
-                expedienteData.pdfPath = saveResult.path;
-                delete expedienteData.pdfSourcePath;
-            }
+            const result = await expedienteService.createExpediente(expedienteData);
 
-            const fechaActual = new Date().toISOString();
-            const newExpediente = await db.expedientes.insert({
-                ...expedienteData,
-                expediente: `${expedienteData.numeroExpediente}-${expedienteData.anioExpediente}`,
-                fechaCreacion: fechaActual,
-                fechaActualizacion: fechaActual
+            const payload = {
+                expediente: result.expediente,
+                tarjetas: result.tarjetas
+            };
+
+            BrowserWindow.getAllWindows().forEach(win => {
+                win.webContents.send('expediente-guardado', payload);
             });
-            return newExpediente;
+
+            return result;
         } catch (error) {
             console.error('Error al crear expediente:', error);
-            throw error;
+            return {
+                success: false,
+                message: error.message || 'Error al crear expediente',
+                error
+            };
         }
     });
 
     // Actualizar expediente
     ipcMain.handle('actualizar-expediente', async (event, expedienteId, expedienteData) => {
         try {
-            const expedienteExistente = await db.expedientes.findOne({ _id: expedienteId });
-            if (!expedienteExistente) {
-                throw new Error('Expediente no encontrado');
-            }
+            const result = await expedienteService.updateExpediente(expedienteId, expedienteData);
 
-            if (expedienteData.pdfSourcePath) {
-                const fileName = `resolucion-${Date.now()}.pdf`;
-                const saveResult = await fileHandlers.savePdf(
-                    expedienteData.pdfSourcePath,
-                    fileName,
-                    {
-                        resolutionNumber: expedienteData.numeroResolucion || expedienteExistente.numeroResolucion,
-                        expedienteNumero: expedienteData.numeroExpediente || expedienteExistente.numeroExpediente
-                    }
-                );
-                expedienteData.pdfPath = saveResult.path;
-                delete expedienteData.pdfSourcePath;
-            }
+            const payload = {
+                expediente: result.expediente,
+                tarjetas: result.tarjetas
+            };
 
-            const updatedExpediente = await db.expedientes.update(
-                { _id: expedienteId },
-                {
-                    $set: {
-                        ...expedienteData,
-                        expediente: `${expedienteData.numeroExpediente}-${expedienteData.anioExpediente}`,
-                        fechaActualizacion: new Date().toISOString()
-                    }
-                },
-                { returnUpdatedDocs: true }
-            );
-            return updatedExpediente;
+            BrowserWindow.getAllWindows().forEach(win => {
+                win.webContents.send('expediente-actualizado', payload);
+            });
+
+            return result;
         } catch (error) {
             console.error('Error al actualizar expediente:', error);
-            throw error;
+            return {
+                success: false,
+                message: error.message || 'Error al actualizar expediente',
+                error
+            };
         }
     });
 
@@ -171,81 +152,18 @@ exports.registerIpcHandlers = (appInstance) => {
     // Guardar expediente (mantener para compatibilidad)
     ipcMain.handle('guardar-expediente', async (event, expedienteData) => {
         try {
-            if (expedienteData.pdfSourcePath) {
-                const fileName = `resolucion-${Date.now()}.pdf`;
-                const saveResult = await fileHandlers.savePdf(
-                    expedienteData.pdfSourcePath,
-                    fileName,
-                    {
-                        resolutionNumber: expedienteData.numeroResolucion,
-                        expedienteNumero: expedienteData.numeroExpediente
-                    }
-                );
-                expedienteData.pdfPath = saveResult.path;
-                delete expedienteData.pdfSourcePath;
-            }
-            const newExpediente = await db.expedientes.insert({
-                // Campos existentes
-                expediente: expedienteData.expediente, // Mantenemos para compatibilidad
-                fecha: expedienteData.fecha,
-                pdfPath: expedienteData.pdfPath,
-                
-                // Nuevos campos
-                numeroExpediente: expedienteData.numeroExpediente || null,
-                anioExpediente: expedienteData.anioExpediente || new Date().getFullYear(),
-                numeroResolucion: expedienteData.numeroResolucion || null,
-                informeTecnico: expedienteData.informeTecnico || null,
-                unidadNegocio: expedienteData.unidadNegocio || null,
-                nombreEmpresa: expedienteData.nombreEmpresa || null,
-                numeroFichero: expedienteData.numeroFichero || null,
-                observaciones: expedienteData.observaciones || null,
-                
-                // Metadatos
-                fechaCreacion: new Date().toISOString(),
-                fechaActualizacion: new Date().toISOString()
-            });
-            const tarjetasGuardadas = [];
-            for (const tarjeta of expedienteData.tarjetas) {
-                // Guardar PDF de la tarjeta si existe
-                if (tarjeta.pdfSourcePath) {
-                    const tarjetaFileName = tarjeta.pdfPath || `tarjeta-${Date.now()}.pdf`;
-                    const saveResult = await fileHandlers.savePdf(
-                        tarjeta.pdfSourcePath,
-                        tarjetaFileName,
-                        {
-                            resolutionNumber: expedienteData.numeroResolucion,
-                            expedienteNumero: expedienteData.numeroExpediente
-                        }
-                    );
-                    tarjeta.pdfPath = saveResult.path;
-                    delete tarjeta.pdfSourcePath; // Limpiar la ruta temporal
-                }
-                
-                const tarjetaGuardada = await db.tarjetas.insert({
-                    placa: tarjeta.placa,
-                    tarjeta: tarjeta.tarjeta,
-                    pdfPath: tarjeta.pdfPath,
-                    expedienteId: newExpediente._id
-                });
-                
-                tarjetasGuardadas.push(tarjetaGuardada);
-            }
-            
-            // Enviar evento a todas las ventanas con los datos completos
+            const result = await expedienteService.createExpediente(expedienteData);
+
             const datosCompletos = {
-                expediente: newExpediente,
-                tarjetas: tarjetasGuardadas
+                expediente: result.expediente,
+                tarjetas: result.tarjetas
             };
-            
+
             BrowserWindow.getAllWindows().forEach(win => {
                 win.webContents.send('expediente-guardado', datosCompletos);
             });
-            
-            return { 
-                success: true, 
-                message: 'Expediente y tarjetas guardados exitosamente.',
-                data: datosCompletos
-            };
+
+            return result;
         } catch (error) {
             console.error('Error al guardar el expediente:', error);
             return { success: false, message: 'Error al guardar el expediente.' };

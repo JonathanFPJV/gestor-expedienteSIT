@@ -38,8 +38,8 @@ module.exports = {
                 resolve(numUpdated);
             });
         }),
-        remove: (query) => new Promise((resolve, reject) => {
-            expedientesDb.remove(query, {}, (err, numRemoved) => {
+        remove: (query, options = {}) => new Promise((resolve, reject) => {
+            expedientesDb.remove(query, options, (err, numRemoved) => {
                 if (err) return reject(err);
                 resolve(numRemoved);
             });
@@ -79,8 +79,8 @@ module.exports = {
                 resolve(numUpdated);
             });
         }),
-        remove: (query) => new Promise((resolve, reject) => {
-            tarjetasDb.remove(query, {}, (err, numRemoved) => {
+        remove: (query, options = {}) => new Promise((resolve, reject) => {
+            tarjetasDb.remove(query, options, (err, numRemoved) => {
                 if (err) return reject(err);
                 resolve(numRemoved);
             });
