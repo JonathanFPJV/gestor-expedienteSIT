@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paleta de Colores - SITransporte Arequipa</title>
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/typography.css">
+    <style>
+        body {
+            font-family: var(--fuente-principal);
+            padding: var(--espacio-2xl);
+            background: var(--color-fondo-plataforma);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: var(--color-acento);
+            text-align: center;
+            margin-bottom: var(--espacio-2xl);
+        }
+
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--espacio-lg);
+            margin-bottom: var(--espacio-2xl);
+        }
+
+        .color-card {
+            background: var(--color-fondo-contenedor);
+            border-radius: var(--radio-medio);
+            overflow: hidden;
+            box-shadow: var(--sombra-tarjeta);
+            transition: all var(--transicion-rapida);
+        }
+
+        .color-card:hover {
+            box-shadow: var(--sombra-elevada);
+            transform: translateY(-4px);
+        }
+
+        .color-swatch {
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-texto-principal);
+            font-weight: var(--peso-semibold);
+            font-size: var(--tamano-lg);
+        }
+        /* For dark-colored swatches where light text is appropriate */
+        .swatch-dark {
+            color: var(--color-texto-blanco) !important;
+        }
+        /* For very light swatches (white / gray) force dark text */
+        .swatch-light {
+            color: var(--color-texto-principal) !important;
+        }
+
+        .color-info {
+            padding: var(--espacio-md);
+            color: var(--color-texto-principal);
+        }
+
+        .color-name {
+            font-size: var(--tamano-lg);
+            font-weight: var(--peso-semibold);
+            color: var(--color-texto-principal);
+            margin-bottom: var(--espacio-xs);
+        }
+
+        .color-hex {
+            font-family: 'Courier New', monospace;
+            color: var(--color-texto-secundario);
+            margin-bottom: var(--espacio-sm);
+        }
+
+        .color-usage {
+            font-size: var(--tamano-sm);
+            color: var(--color-texto-principal);
+            background: var(--color-fondo-contenedor);
+            padding: var(--espacio-sm);
+            border-radius: var(--radio-pequeno);
+            border: 1px solid var(--borde-suave);
+        }
+
+        .button-showcase {
+            background: var(--color-fondo-contenedor);
+            padding: var(--espacio-xl);
+            border-radius: var(--radio-medio);
+            box-shadow: var(--sombra-tarjeta);
+            margin-bottom: var(--espacio-2xl);
+        }
+
+        .button-showcase h2 {
+            color: var(--color-acento);
+            margin-bottom: var(--espacio-lg);
+        }
+
+        .button-row {
+            display: flex;
+            gap: var(--espacio-md);
+            flex-wrap: wrap;
+            margin-bottom: var(--espacio-md);
+        }
+
+        .btn {
+            padding: var(--espacio-sm) var(--espacio-lg);
+            border: none;
+            border-radius: var(--radio-medio);
+            font-weight: var(--peso-medio);
+            font-family: var(--fuente-principal);
+            cursor: pointer;
+            transition: all var(--transicion-rapida);
+        }
+
+        .btn-primary {
+            background: var(--color-primario);
+            color: var(--color-texto-blanco);
+        }
+
+        .btn-primary:hover {
+            background: var(--color-primario-hover);
+            transform: translateY(-1px);
+            box-shadow: var(--sombra-elevada);
+        }
+
+        .btn-success {
+            background: var(--color-secundario);
+            color: var(--color-texto-blanco);
+        }
+
+        .btn-success:hover {
+            background: var(--color-secundario-hover);
+            transform: translateY(-1px);
+            box-shadow: var(--sombra-elevada);
+        }
+
+        .btn-accent {
+            background: var(--color-acento);
+            color: var(--color-texto-blanco);
+        }
+
+        .btn-accent:hover {
+            background: var(--color-acento-hover);
+            transform: translateY(-1px);
+            box-shadow: var(--sombra-elevada);
+        }
+
+        .btn-secondary {
+            background: var(--color-fondo-plataforma);
+            color: var(--color-texto-principal);
+            border: 2px solid var(--borde-suave);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--color-primario);
+            color: var(--color-primario);
+        }
+
+        .card-showcase {
+            background: var(--color-fondo-contenedor);
+            padding: var(--espacio-xl);
+            border-radius: var(--radio-medio);
+            box-shadow: var(--sombra-tarjeta);
+        }
+
+        .card-showcase h2 {
+            color: var(--color-acento);
+            margin-bottom: var(--espacio-lg);
+        }
+
+        .sample-card {
+            background: var(--color-fondo-contenedor);
+            padding: var(--espacio-md);
+            border-radius: var(--radio-medio);
+            border-left: 4px solid var(--color-primario);
+            box-shadow: var(--sombra-tarjeta);
+            margin-bottom: var(--espacio-md);
+            transition: all var(--transicion-rapida);
+        }
+
+        .sample-card:hover {
+            box-shadow: var(--sombra-elevada);
+            transform: translateY(-2px);
+        }
+
+        .sample-card h3 {
+            color: var(--color-primario);
+            margin: 0 0 var(--espacio-sm) 0;
+        }
+
+        .sample-card p {
+            color: var(--color-texto-secundario);
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎨 Paleta de Colores SITransporte Arequipa</h1>
+
+    <div class="color-grid">
+        <!-- Color Primario -->
+        <div class="color-card">
+            <div class="color-swatch swatch-dark" style="background: #FF7F27;">
+                🟠 PRIMARIO
+            </div>
+            <div class="color-info">
+                <div class="color-name">Naranja SITransporte</div>
+                <div class="color-hex">#FF7F27</div>
+                <div class="color-usage">
+                    <strong>Uso:</strong> Botones principales, acciones primarias, enlaces destacados, elementos interactivos
+                </div>
+            </div>
+        </div>
+
+        <!-- Color Secundario -->
+        <div class="color-card">
+            <div class="color-swatch swatch-dark" style="background: #00A651;">
+                🟢 SECUNDARIO
+            </div>
+            <div class="color-info">
+                <div class="color-name">Verde SITransporte</div>
+                <div class="color-hex">#00A651</div>
+                <div class="color-usage">
+                    <strong>Uso:</strong> Estados de éxito, botones de PDF, confirmaciones, tarjetas asociadas
+                </div>
+            </div>
+        </div>
+
+        <!-- Color Acento -->
+        <div class="color-card">
+            <div class="color-swatch swatch-dark" style="background: #006699;">
+                🔵 ACENTO
+            </div>
+            <div class="color-info">
+                <div class="color-name">Azul SITransporte</div>
+                <div class="color-hex">#006699</div>
+                <div class="color-usage">
+                    <strong>Uso:</strong> Headers, navegación principal, títulos, elementos de estructura estable
+                </div>
+            </div>
+        </div>
+
+        <!-- Primario Hover -->
+        <div class="color-card">
+            <div class="color-swatch swatch-dark" style="background: #E66A1A;">
+                🟠 HOVER
+            </div>
+            <div class="color-info">
+                <div class="color-name">Naranja Oscuro</div>
+                <div class="color-hex">#E66A1A</div>
+                <div class="color-usage">
+                    <strong>Uso:</strong> Estado hover de botones primarios
+                </div>
+            </div>
+        </div>
+
+        <!-- Secundario Hover -->
+        <div class="color-card">
+            <div class="color-swatch swatch-dark" style="background: #008A42;">
+                🟢 HOVER
+            </div>
+            <div class="color-info">
+                <div class="color-name">Verde Oscuro</div>
+                <div class="color-hex">#008A42</div>
+                <div class="color-usage">
+                    <strong>Uso:</strong> Estado hover de botones secundarios/éxito
+                </div>
+            </div>
+        </div>
+
+        <!-- Acento Hover -->
+        <div class="color-card">
+            <div class="color-swatch swatch-dark" style="background: #004D73;">
+                🔵 HOVER
+            </div>
+            <div class="color-info">
+                <div class="color-name">Azul Oscuro</div>
+                <div class="color-hex">#004D73</div>
+                <div class="color-usage">
+                    <strong>Uso:</strong> Estado hover de elementos con acento azul
+                </div>
+            </div>
+        </div>
+
+        <!-- Background Contenedor -->
+        <div class="color-card">
+            <div class="color-swatch swatch-light" style="background: #FFFFFF; border: 2px solid #E0E4E8;">
+                ⚪ FONDO
+            </div>
+            <div class="color-info">
+                <div class="color-name">Blanco Contenedor</div>
+                <div class="color-hex">#FFFFFF</div>
+                <div class="color-usage">
+                    <strong>Uso:</strong> Fondo de cards, formularios, modales, contenedores principales
+                </div>
+            </div>
+        </div>
+
+        <!-- Background Plataforma -->
+        <div class="color-card">
+            <div class="color-swatch swatch-light" style="background: #F5F7FA;">
+                ⚪ PLATAFORMA
+            </div>
+            <div class="color-info">
+                <div class="color-name">Gris Claro</div>
+                <div class="color-hex">#F5F7FA</div>
+                <div class="color-usage">
+                    <strong>Uso:</strong> Fondo general de la aplicación, áreas secundarias
+                </div>
+            </div>
+        </div>
+
+        <!-- Error -->
+        <div class="color-card">
+            <div class="color-swatch swatch-dark" style="background: #DC2626;">
+                🔴 ERROR
+            </div>
+            <div class="color-info">
+                <div class="color-name">Rojo Error</div>
+                <div class="color-hex">#DC2626</div>
+                <div class="color-usage">
+                    <strong>Uso:</strong> Botones de eliminación, mensajes de error, alertas críticas
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="button-showcase">
+        <h2>🔘 Showcase de Botones</h2>
+        
+        <div class="button-row">
+            <button class="btn btn-primary">Guardar Cambios</button>
+            <button class="btn btn-success">Ver PDF</button>
+            <button class="btn btn-accent">Gestión</button>
+            <button class="btn btn-secondary">Cancelar</button>
+        </div>
+
+        <div class="button-row">
+            <button class="btn btn-primary">Crear Expediente</button>
+            <button class="btn btn-success">Confirmar</button>
+            <button class="btn btn-accent">Búsqueda</button>
+            <button class="btn btn-secondary">Volver</button>
+        </div>
+    </div>
+
+    <div class="card-showcase">
+        <h2>📋 Showcase de Tarjetas</h2>
+        
+        <div class="sample-card">
+            <h3>Expediente N° 123-2024</h3>
+            <p><strong>Placa:</strong> ABC-123 | <strong>Resolución:</strong> 2024-04-001</p>
+            <p>Ejemplo de tarjeta con borde naranja y sombra al hacer hover</p>
+        </div>
+
+        <div class="sample-card">
+            <h3>Expediente N° 124-2024</h3>
+            <p><strong>Placa:</strong> XYZ-789 | <strong>Resolución:</strong> 2024-04-002</p>
+            <p>Las tarjetas se elevan ligeramente al pasar el cursor</p>
+        </div>
+    </div>
+
+    <script>
+        // Log de colores para referencia rápida en consola
+        console.log('%c SITransporte Arequipa - Paleta de Colores ', 'background: #006699; color: white; font-size: 16px; padding: 10px;');
+        console.log('%c 🟠 Primario: #FF7F27 ', 'background: #FF7F27; color: white; padding: 5px;');
+        console.log('%c 🟢 Secundario: #00A651 ', 'background: #00A651; color: white; padding: 5px;');
+        console.log('%c 🔵 Acento: #006699 ', 'background: #006699; color: white; padding: 5px;');
+    </script>
+</body>
+</html>

@@ -1,0 +1,155 @@
+/* Tipografía - SITransporte Arequipa */
+
+/* Importar fuentes desde Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap');
+
+/* Estilos base de tipografía */
+body {
+    font-family: var(--fuente-principal);
+    font-size: var(--tamano-base);
+    font-weight: var(--peso-normal);
+    line-height: 1.6;
+    color: var(--color-texto-principal);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Encabezados */
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--fuente-principal);
+    font-weight: var(--peso-semibold);
+    line-height: 1.3;
+    margin: 0 0 var(--espacio-md) 0;
+    color: var(--color-acento);
+}
+
+h1 {
+    font-size: var(--tamano-2xl);
+    font-weight: var(--peso-bold);
+    color: var(--color-acento);
+}
+
+h2 {
+    font-size: var(--tamano-xl);
+    color: var(--color-acento);
+}
+
+h3 {
+    font-size: var(--tamano-lg);
+    color: var(--color-texto-principal);
+}
+
+h4 {
+    font-size: var(--tamano-md);
+    color: var(--color-texto-principal);
+}
+
+h5, h6 {
+    font-size: var(--tamano-base);
+    color: var(--color-texto-secundario);
+}
+
+/* Párrafos y texto */
+p {
+    margin: 0 0 var(--espacio-md) 0;
+    color: var(--color-texto-principal);
+}
+
+/* Enlaces */
+a {
+    color: var(--color-primario);
+    text-decoration: none;
+    transition: color var(--transicion-rapida);
+}
+
+a:hover {
+    color: var(--color-primario-hover);
+    text-decoration: underline;
+}
+
+/* Etiquetas (labels) */
+label {
+    display: block;
+    margin-bottom: var(--espacio-xs);
+    font-weight: var(--peso-medio);
+    font-size: var(--tamano-sm);
+    color: var(--color-texto-principal);
+}
+
+/* Texto pequeño */
+small {
+    font-size: var(--tamano-sm);
+    color: var(--color-texto-secundario);
+}
+
+/* Énfasis y negrita */
+strong, b {
+    font-weight: var(--peso-semibold);
+}
+
+em, i {
+    font-style: italic;
+}
+
+/* Código */
+code, pre {
+    font-family: 'Courier New', monospace;
+    font-size: var(--tamano-sm);
+    background-color: var(--color-fondo-tarjeta);
+    padding: var(--espacio-xs);
+    border-radius: var(--radio-pequeno);
+}
+
+/* Clases utilitarias de texto */
+.text-muted {
+    color: var(--color-texto-claro) !important;
+    font-size: var(--tamano-sm);
+}
+
+.text-primary {
+    color: var(--color-primario) !important;
+}
+
+.text-secondary {
+    color: var(--color-texto-secundario) !important;
+}
+
+.text-success {
+    color: var(--color-exito) !important;
+}
+
+.text-error {
+    color: var(--color-error) !important;
+}
+
+.text-center {
+    text-align: center !important;
+}
+
+.text-left {
+    text-align: left !important;
+}
+
+.text-right {
+    text-align: right !important;
+}
+
+.font-light {
+    font-weight: var(--peso-ligero) !important;
+}
+
+.font-normal {
+    font-weight: var(--peso-normal) !important;
+}
+
+.font-medium {
+    font-weight: var(--peso-medio) !important;
+}
+
+.font-semibold {
+    font-weight: var(--peso-semibold) !important;
+}
+
+.font-bold {
+    font-weight: var(--peso-bold) !important;
+}

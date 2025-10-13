@@ -1,0 +1,75 @@
+/* Variables CSS - Identidad Visual SITransporte Arequipa */
+:root {
+    /* Paleta de Colores Principal */
+    --color-primario: #FF7F27;           /* Naranja - Acción */
+    --color-primario-hover: #E6721F;     /* Naranja oscuro */
+    --color-primario-light: #FFA055;     /* Naranja claro */
+    
+    --color-secundario: #00A651;         /* Verde - Éxito */
+    --color-secundario-hover: #008F46;   /* Verde oscuro */
+    --color-secundario-light: #00C75F;   /* Verde claro */
+    
+    --color-acento: #006699;             /* Azul - Estable */
+    --color-acento-hover: #005580;       /* Azul oscuro */
+    --color-acento-light: #0080BB;       /* Azul claro */
+    
+    /* Colores de Fondo */
+    --color-fondo-plataforma: #F4F4F9;   /* Gris suave */
+    --color-fondo-contenedor: #FFFFFF;   /* Blanco puro */
+    --color-fondo-tarjeta: #FAFBFC;      /* Blanco grisáceo */
+    
+    /* Colores de Texto */
+    --color-texto-principal: #333333;
+    --color-texto-secundario: #6C757D;
+    --color-texto-claro: #999999;
+    --color-texto-blanco: #FFFFFF;
+    
+    /* Colores de Estado */
+    --color-exito: #00A651;
+    --color-error: #DC3545;
+    --color-advertencia: #FFC107;
+    --color-info: #17A2B8;
+    
+    /* Bordes y Sombras */
+    --borde-suave: #E6E9F2;
+    --borde-medio: #DEE2E6;
+    --sombra-tarjeta: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --sombra-elevada: 0 4px 12px rgba(0, 0, 0, 0.15);
+    --sombra-flotante: 0 8px 24px rgba(0, 0, 0, 0.2);
+    
+    /* Radio de Bordes */
+    --radio-pequeno: 4px;
+    --radio-medio: 6px;
+    --radio-grande: 8px;
+    --radio-completo: 50%;
+    
+    /* Espaciado */
+    --espacio-xs: 4px;
+    --espacio-sm: 8px;
+    --espacio-md: 16px;
+    --espacio-lg: 24px;
+    --espacio-xl: 32px;
+    
+    /* Transiciones */
+    --transicion-rapida: 0.15s ease;
+    --transicion-normal: 0.3s ease;
+    --transicion-lenta: 0.5s ease;
+    
+    /* Tipografía */
+    --fuente-principal: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --fuente-secundaria: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    
+    --peso-ligero: 300;
+    --peso-normal: 400;
+    --peso-medio: 500;
+    --peso-semibold: 600;
+    --peso-bold: 700;
+    
+    --tamano-xs: 0.75rem;    /* 12px */
+    --tamano-sm: 0.875rem;   /* 14px */
+    --tamano-base: 1rem;     /* 16px */
+    --tamano-md: 1.125rem;   /* 18px */
+    --tamano-lg: 1.25rem;    /* 20px */
+    --tamano-xl: 1.5rem;     /* 24px */
+    --tamano-2xl: 2rem;      /* 32px */
+}
