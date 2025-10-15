@@ -84,6 +84,13 @@ module.exports = {
                 if (err) return reject(err);
                 resolve(numRemoved);
             });
+        }),
+        // Método para encontrar un solo documento
+        findOne: (query) => new Promise((resolve, reject) => {
+            tarjetasDb.findOne(query, (err, doc) => {
+                if (err) return reject(err);
+                resolve(doc);
+            });
         })
     }
 };

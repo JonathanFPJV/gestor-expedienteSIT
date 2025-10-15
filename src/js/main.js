@@ -7,6 +7,7 @@ import { eventBus, APP_EVENTS } from './modules/eventBus.js';
 import { debounceSearch } from './modules/debounce.js';
 import { navigationManager } from './modules/navigation.js';
 import { expedientesCRUD } from './modules/expedientesCRUD.js';
+import { tarjetasCRUD } from './modules/tarjetasCRUD.js';
 import { searchManager } from './modules/searchManager.js';
 
 let selectedPdfPath = null;
@@ -19,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Hacer disponibles globalmente
     window.navigationManager = navigationManager;
     window.expedientesCRUD = expedientesCRUD;
+    window.tarjetasCRUD = tarjetasCRUD;
     window.searchManager = searchManager;
     window.dataService = dataService;
     window.ui = ui;
@@ -231,8 +233,9 @@ function initializeApp() {
     // Configurar event listeners reactivos
     setupReactiveListeners();
     
-    // Inicializar módulos CRUD - ya está instanciado en su módulo
-    console.log('Módulos CRUD disponibles');
+    // Inicializar módulo de tarjetas (expedientes se inicializa en su constructor)
+    tarjetasCRUD.init();
+    console.log('Módulos CRUD disponibles e inicializados');
     
     // Limpiar cualquier estado de carga residual
     loadingManager.clearAll();

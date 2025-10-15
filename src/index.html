@@ -20,7 +20,10 @@
                 ➕ Nuevo Expediente
             </button>
             <button id="nav-crud" class="nav-btn">
-                � Gestión de Expedientes
+                📂 Gestión de Expedientes
+            </button>
+            <button id="nav-tarjetas" class="nav-btn">
+                🎫 Gestión de Tarjetas
             </button>
         </div>
     </nav>
@@ -111,17 +114,17 @@
                             <label for="unidadNegocio">Unidad de Negocio:</label>
                             <select id="unidadNegocio">
                                 <option value="">Seleccionar...</option>
-                                <option value="C1">C1</option>
-                                <option value="C2">C2</option>
-                                <option value="C3">C3</option>
-                                <option value="C4">C4</option>
-                                <option value="C5">C5</option>
-                                <option value="C6">C6</option>
-                                <option value="C7">C7</option>
-                                <option value="C8">C8</option>
-                                <option value="C9">C9</option>
-                                <option value="C10">C10</option>
-                                <option value="C11">C11</option>
+                                <option value="C1">C-1</option>
+                                <option value="C2">C-2</option>
+                                <option value="C3">C-3</option>
+                                <option value="C4">C-4</option>
+                                <option value="C5">C-5</option>
+                                <option value="C6">C-6</option>
+                                <option value="C7">C-7</option>
+                                <option value="C8">C-8</option>
+                                <option value="C9">C-9</option>
+                                <option value="C10">C-10</option>
+                                <option value="C11">C-11</option>
                             </select>
                         </div>
                     </div>
@@ -156,7 +159,7 @@
                     <div class="form-group">
                         <label for="pdf-file-path">Adjuntar Expediente (PDF):</label>
                         <input type="text" id="pdf-file-path" placeholder="Ningún archivo seleccionado" readonly>
-                        <button type="button" id="seleccionar-pdf-btn">Seleccionar Archivo</button>
+                        <button type="button" id="seleccionar-pdf-btn" class="toggle-btn">Seleccionar Archivo</button>
                     </div>
                 </fieldset>
 
@@ -196,17 +199,17 @@
                     <label for="filter-unidad">Unidad:</label>
                     <select id="filter-unidad">
                         <option value="">Todas</option>
-                        <option value="C1">C1</option>
-                        <option value="C2">C2</option>
-                        <option value="C3">C3</option>
-                        <option value="C4">C4</option>
-                        <option value="C5">C5</option>
-                        <option value="C6">C6</option>
-                        <option value="C7">C7</option>
-                        <option value="C8">C8</option>
-                        <option value="C9">C9</option>
-                        <option value="C10">C10</option>
-                        <option value="C11">C11</option>
+                        <option value="C1">C-1</option>
+                        <option value="C2">C-2</option>
+                        <option value="C3">C-3</option>
+                        <option value="C4">C-4</option>
+                        <option value="C5">C-5</option>
+                        <option value="C6">C-6</option>
+                        <option value="C7">C-7</option>
+                        <option value="C8">C-8</option>
+                        <option value="C9">C-9</option>
+                        <option value="C10">C-10</option>
+                        <option value="C11">C-11</option>
                     </select>
                 </div>
                 <button id="limpiar-filtros-btn" class="btn-outline">Limpiar Filtros</button>
@@ -247,6 +250,62 @@
         </div>
     </div>
 
+    <!-- Sección de Gestión de Tarjetas -->
+    <div id="vista-tarjetas-crud" class="vista-container">
+        <div class="crud-container">
+            <div class="crud-header">
+                <h2>🎫 Gestión de Tarjetas</h2>
+                <div class="crud-actions">
+                    <button id="nueva-tarjeta-btn" class="btn-primary">
+                        ➕ Nueva Tarjeta
+                    </button>
+                    <div class="search-crud">
+                        <input type="text" id="search-crud-tarjetas-input" placeholder="Buscar por placa o número..." />
+                        <button id="search-crud-tarjetas-btn" class="btn-secondary">🔍</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class="crud-filters">
+                <button id="limpiar-filtros-tarjetas-btn" class="btn-outline">Limpiar Filtros</button>
+                <div class="filter-stats">
+                    <span id="stats-tarjetas">Total: 0 tarjetas</span>
+                </div>
+            </div>
+
+            <!-- Tabla de Tarjetas -->
+            <div class="crud-table-container">
+                <table id="tarjetas-table" class="crud-table">
+                    <thead>
+                        <tr>
+                            <th>Placa</th>
+                            <th>N° Tarjeta</th>
+                            <th>Expediente</th>
+                            <th>Fecha Creación</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tarjetas-tbody">
+                        <!-- Las tarjetas se cargarán aquí -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginación -->
+            <div class="crud-pagination">
+                <div class="pagination-info">
+                    <span id="pagination-info-tarjetas">Mostrando 0 de 0 tarjetas</span>
+                </div>
+                <div class="pagination-controls">
+                    <button id="prev-page-tarjetas" class="btn-outline" disabled>« Anterior</button>
+                    <span id="page-info-tarjetas">Página 1 de 1</span>
+                    <button id="next-page-tarjetas" class="btn-outline" disabled>Siguiente »</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal para Editar Expediente -->
     <div id="modal-expediente" class="modal">
         <div class="modal-content">
@@ -266,12 +325,33 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal para Tarjeta -->
+    <div id="modal-tarjeta" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-tarjeta-title">Nueva Tarjeta</h3>
+                <button id="modal-tarjeta-close" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="modal-tarjeta-form">
+                    <!-- Los campos del formulario se cargarán dinámicamente -->
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="modal-tarjeta-cancelar" class="btn-outline">Cancelar</button>
+                <button id="modal-tarjeta-guardar" class="btn-primary">Guardar</button>
+                <button id="modal-tarjeta-eliminar" class="btn-danger" style="display: none;">Eliminar</button>
+            </div>
+        </div>
+    </div>
     
     <!-- Scripts de prueba y diagnóstico -->
     <script src="../scripts/test-connection.js"></script>
     <script src="../scripts/test-tarjetas.js"></script>
     <script src="../scripts/test-delete.js"></script>
     <script src="../scripts/diagnostico-db.js"></script>
+    <script src="../scripts/auto-migrate-tarjetas.js"></script>
     <script type="module" src="js/main.js"></script>
     <script>
         // Configuración de PDF.js worker

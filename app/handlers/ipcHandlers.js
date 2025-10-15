@@ -5,6 +5,7 @@ const FileHandlers = require('./fileHandlers');
 const DeletionService = require('../services/deletionService');
 const { createExpedienteEditorWindow } = require('../windows/expedienteEditorWindow');
 const ExpedienteService = require('../services/expedienteService');
+const TarjetaHandlers = require('./tarjetaHandlers');
 const fs = require('fs'); // Añadir 'fs' para manejar archivos
 
 exports.registerIpcHandlers = (appInstance) => {
@@ -12,6 +13,10 @@ exports.registerIpcHandlers = (appInstance) => {
     const deletionService = new DeletionService(appInstance);
     const expedienteService = new ExpedienteService(db, fileHandlers);
     const editorWindows = new Map();
+    
+    // Registrar handlers de Tarjetas con fileHandlers
+    const tarjetaHandlers = new TarjetaHandlers(db, fileHandlers);
+    tarjetaHandlers.registerHandlers();
     // Abrir ventana de edición de expedientes
     ipcMain.on('abrir-editor-expediente', (event, expedienteId) => {
         if (!expedienteId) {

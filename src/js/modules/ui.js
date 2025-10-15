@@ -309,7 +309,7 @@ export const displayTarjetasResults = (results) => {
                     <div class="result-header">
                         <p><strong>Placa:</strong> ${r.placa}</p>
                         <p><strong>N° Expediente:</strong> ${r.expediente}</p>
-                        <p><strong>N° Tarjeta:</strong> ${r.tarjeta || 'N/A'}</p>
+                        <p><strong>N° Tarjeta:</strong> ${r.numeroTarjeta || r.tarjeta || 'N/A'}</p>
                         <p><strong>Fecha:</strong> ${r.fecha}</p>
                     </div>
                     <div class="result-actions">

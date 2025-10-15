@@ -5,12 +5,14 @@ export class NavigationManager {
         this.views = {
             'busqueda': document.getElementById('vista-busqueda'),
             'registro': document.getElementById('vista-registro'),
-            'crud': document.getElementById('vista-crud')
+            'crud': document.getElementById('vista-crud'),
+            'tarjetas-crud': document.getElementById('vista-tarjetas-crud')
         };
         this.navButtons = {
             'busqueda': document.getElementById('nav-busqueda'),
             'registro': document.getElementById('nav-registro'),
-            'crud': document.getElementById('nav-crud')
+            'crud': document.getElementById('nav-crud'),
+            'tarjetas-crud': document.getElementById('nav-tarjetas')
         };
         
         this.initializeNavigation();
@@ -64,6 +66,12 @@ export class NavigationManager {
                 // Cargar expedientes cuando se accede al CRUD
                 if (window.expedientesCRUD) {
                     window.expedientesCRUD.loadExpedientes();
+                }
+                break;
+            case 'tarjetas-crud':
+                // Cargar tarjetas cuando se accede al CRUD de tarjetas
+                if (window.tarjetasCRUD) {
+                    window.tarjetasCRUD.cargarTarjetas();
                 }
                 break;
             case 'busqueda':
