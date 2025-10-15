@@ -75,17 +75,12 @@ function initializeTables() {
             placa TEXT NOT NULL,
             numeroTarjeta TEXT,
             pdfPath TEXT,
-            
-            -- FK a ActasResolucion: Si se borra el acta, se borran las tarjetas asociadas
             resolucionId INTEGER,
-            FOREIGN KEY(resolucionId) REFERENCES ActasResolucion(_id) ON DELETE CASCADE,
-            
-            -- FK a ActasEntrega: Si se borra el acta de entrega, la tarjeta queda sin vínculo
             actaEntregaId INTEGER,
-            FOREIGN KEY(actaEntregaId) REFERENCES ActasEntrega(_id) ON DELETE SET NULL,
-            
             fechaCreacion DATETIME DEFAULT CURRENT_TIMESTAMP,
-            fechaModificacion DATETIME DEFAULT CURRENT_TIMESTAMP
+            fechaModificacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(resolucionId) REFERENCES ActasResolucion(_id) ON DELETE CASCADE,
+            FOREIGN KEY(actaEntregaId) REFERENCES ActasEntrega(_id) ON DELETE SET NULL
         );
     `);
 
