@@ -13,6 +13,7 @@ export class ExpedientesCRUD {
         this.initializeElements();
         this.initializeEventListeners();
         this.initializeFilters();
+        this.subscribeToEvents(); // 🔄 Suscribirse a eventos para reactividad
     }
 
     initializeElements() {
@@ -82,6 +83,106 @@ export class ExpedientesCRUD {
                     console.error('Error al recargar expedientes después de eliminación:', error);
                 });
             });
+        }
+    }
+
+    // 🔄 Suscribirse a eventos para actualización reactiva
+    subscribeToEvents() {
+        console.log('🔔 Suscribiendo ExpedientesCRUD a eventos del sistema...');
+        
+        // Escuchar cuando se actualiza un expediente
+        eventBus.on(APP_EVENTS.EXPEDIENTE_UPDATED, (data) => {
+            console.log('📢 Evento EXPEDIENTE_UPDATED recibido:', data);
+            this.refreshExpedienteInTable(data.expediente);
+        });
+
+        // Escuchar cuando se elimina un expediente
+        eventBus.on(APP_EVENTS.EXPEDIENTE_DELETED, (data) => {
+            console.log('📢 Evento EXPEDIENTE_DELETED recibido:', data);
+            this.removeExpedienteFromTable(data.expedienteId);
+        });
+
+        // Escuchar cuando se crea un expediente
+        eventBus.on(APP_EVENTS.EXPEDIENTE_CREATED, (data) => {
+            console.log('📢 Evento EXPEDIENTE_CREATED recibido:', data);
+            this.addExpedienteToTable(data.expediente);
+        });
+
+        console.log('✅ Suscripción a eventos completada');
+    }
+
+    // 🔄 Actualizar un expediente específico en la tabla sin recargar todo
+    async refreshExpedienteInTable(updatedExpediente) {
+        try {
+            console.log('🔄 Actualizando expediente en tabla local:', updatedExpediente);
+            
+            // Buscar y actualizar en el array principal
+            const index = this.expedientes.findIndex(e => e._id === updatedExpediente._id);
+            if (index !== -1) {
+                this.expedientes[index] = { ...this.expedientes[index], ...updatedExpediente };
+                console.log('✅ Expediente actualizado en array principal');
+            } else {
+                console.warn('⚠️ Expediente no encontrado en array principal, recargaremos todo');
+                await this.loadExpedientes();
+                return;
+            }
+
+            // Actualizar en el array filtrado si existe
+            const filteredIndex = this.filteredExpedientes.findIndex(e => e._id === updatedExpediente._id);
+            if (filteredIndex !== -1) {
+                this.filteredExpedientes[filteredIndex] = { ...this.filteredExpedientes[filteredIndex], ...updatedExpediente };
+                console.log('✅ Expediente actualizado en array filtrado');
+            }
+
+            // Re-renderizar solo la tabla (no hace llamada al backend)
+            this.renderTable();
+            this.updatePagination();
+            
+            console.log('✨ Tabla actualizada exitosamente sin recargar desde API');
+        } catch (error) {
+            console.error('❌ Error al actualizar expediente en tabla:', error);
+        }
+    }
+
+    // 🗑️ Eliminar un expediente de la tabla sin recargar todo
+    removeExpedienteFromTable(expedienteId) {
+        try {
+            console.log('🗑️ Eliminando expediente de tabla local:', expedienteId);
+            
+            // Eliminar del array principal
+            this.expedientes = this.expedientes.filter(e => e._id !== expedienteId);
+            
+            // Eliminar del array filtrado
+            this.filteredExpedientes = this.filteredExpedientes.filter(e => e._id !== expedienteId);
+            
+            // Re-renderizar tabla
+            this.renderTable();
+            this.updatePagination();
+            
+            console.log('✨ Expediente eliminado de la tabla exitosamente');
+        } catch (error) {
+            console.error('❌ Error al eliminar expediente de tabla:', error);
+        }
+    }
+
+    // ➕ Agregar un nuevo expediente a la tabla sin recargar todo
+    addExpedienteToTable(newExpediente) {
+        try {
+            console.log('➕ Agregando nuevo expediente a tabla local:', newExpediente);
+            
+            // Agregar al principio del array principal
+            this.expedientes.unshift(newExpediente);
+            
+            // Aplicar filtros para ver si el nuevo expediente debe aparecer
+            this.applyFilters();
+            
+            // Re-renderizar tabla
+            this.renderTable();
+            this.updatePagination();
+            
+            console.log('✨ Nuevo expediente agregado a la tabla exitosamente');
+        } catch (error) {
+            console.error('❌ Error al agregar expediente a tabla:', error);
         }
     }
 
@@ -273,13 +374,13 @@ export class ExpedientesCRUD {
                 <td style="text-align: center;">${tarjetasText}</td>
                 <td>
                     <div class="action-btns">
-                        <button class="btn-action btn-view" onclick="expedientesCRUD.viewExpediente('${expediente._id}')" title="Ver detalles">
+                        <button class="btn-action btn-view" onclick="expedientesCRUD.viewExpediente(${expediente._id})" title="Ver detalles">
                             👁️
                         </button>
-                        <button class="btn-action btn-edit" onclick="expedientesCRUD.editExpediente('${expediente._id}')" title="Editar">
+                        <button class="btn-action btn-edit" onclick="expedientesCRUD.editExpediente(${expediente._id})" title="Editar">
                             ✏️
                         </button>
-                        <button class="btn-action btn-delete" onclick="expedientesCRUD.confirmDelete('${expediente._id}')" title="Eliminar">
+                        <button class="btn-action btn-delete" onclick="expedientesCRUD.confirmDelete(${expediente._id})" title="Eliminar">
                             🗑️
                         </button>
                     </div>
@@ -413,7 +514,7 @@ export class ExpedientesCRUD {
                 } else {
                     tarjetasInfo = `Total: ${tarjetasAsociadas.length} tarjetas\n\n`;
                     tarjetasAsociadas.forEach((tarjeta, index) => {
-                        tarjetasInfo += `${index + 1}. Placa: ${tarjeta.placa || 'N/A'} | Tarjeta: ${tarjeta.tarjeta || 'N/A'}\n`;
+                        tarjetasInfo += `${index + 1}. Placa: ${tarjeta.placa || 'N/A'} | Tarjeta: ${tarjeta.numeroTarjeta || tarjeta.tarjeta || 'N/A'}\n`;
                     });
                 }
                 
@@ -453,14 +554,21 @@ ${expediente.observaciones || 'Sin observaciones'}`;
                 return;
             }
             
+            console.log('🔍 editExpediente llamado con ID:', expedienteId, `(tipo: ${typeof expedienteId})`);
+            console.log('📊 Expedientes disponibles:', this.expedientes.map(e => ({ _id: e._id, tipo: typeof e._id, numero: e.numeroExpediente })));
+            
             const expediente = this.expedientes.find(exp => exp._id === expedienteId);
+            console.log('🔎 Expediente encontrado en array:', expediente ? 'SÍ' : 'NO');
+            
             if (expediente) {
+                console.log('📤 Enviando ID al editor:', expedienteId, `(tipo: ${typeof expedienteId})`);
                 if (window.api) {
                     window.api.enviar('abrir-editor-expediente', expedienteId);
                 } else {
                     console.warn('window.api no disponible; no se puede abrir el editor');
                 }
             } else {
+                console.error('❌ Expediente NO encontrado en el array local');
                 this.showError('Expediente no encontrado');
             }
         } catch (error) {
@@ -528,25 +636,27 @@ ${expediente.observaciones || 'Sin observaciones'}`;
     }
 
     async executeDelete(expedienteId, expedienteInfo) {
-        // Declarar la variable fuera del try-catch para que sea accesible en ambos bloques
-        let originalCursor = 'default';
+        const operacion = 'eliminar-expediente';
         
         try {
             // Mostrar indicador de carga
-            originalCursor = document.body.style.cursor;
-            document.body.style.cursor = 'wait';
+            if (window.loadingManager) {
+                window.loadingManager.show(operacion, 'Eliminando expediente...');
+            }
             
             console.log('🗑️ Ejecutando eliminación en cascada...');
             console.log('📋 ExpedienteId:', expedienteId);
             
             const result = await dataService.deleteExpediente(expedienteId);
             
+            // ✅ OPTIMIZACIÓN: Ocultar loading INMEDIATAMENTE después de recibir respuesta
+            if (window.loadingManager) {
+                window.loadingManager.hide(operacion);
+            }
+            
             console.log('📊 Resultado completo recibido:', result);
             console.log('✅ result.success:', result?.success);
             console.log('📝 result.summary:', result?.summary);
-            
-            // Restaurar cursor
-            document.body.style.cursor = originalCursor;
             
             // Verificar si result existe y tiene la estructura correcta
             if (!result) {
@@ -571,17 +681,22 @@ ${expediente.observaciones || 'Sin observaciones'}`;
                 
                 this.showSuccess(successMessage);
                 
-                // Recargar la tabla para reflejar los cambios
-                console.log('🔄 Recargando tabla de expedientes...');
-                await this.loadExpedientes();
-                console.log('✅ Tabla actualizada correctamente');
+                // 🔔 EMITIR EVENTO para actualización reactiva
+                console.log('� Emitiendo evento EXPEDIENTE_DELETED...');
+                eventBus.emit(APP_EVENTS.EXPEDIENTE_DELETED, { 
+                    expedienteId: expedienteId,
+                    summary: result.summary 
+                });
+                console.log('✅ Evento emitido - la tabla se actualizará automáticamente');
             } else {
                 this.showError('Error en la eliminación: ' + result.message);
             }
             
         } catch (error) {
-            // Restaurar cursor en caso de error
-            document.body.style.cursor = originalCursor;
+            // Ocultar loading en caso de error
+            if (window.loadingManager) {
+                window.loadingManager.hide(operacion);
+            }
             
             console.error('❌ Error ejecutando eliminación:', error);
             
@@ -600,14 +715,6 @@ ${expediente.observaciones || 'Sin observaciones'}`;
             }
             
             this.showError(errorMessage);
-            
-            // Intentar recargar la tabla de todas formas
-            try {
-                console.log('🔄 Intentando recargar tabla después de error...');
-                await this.loadExpedientes();
-            } catch (reloadError) {
-                console.error('❌ Error al recargar tabla:', reloadError);
-            }
         }
     }
 
@@ -696,25 +803,122 @@ ${expediente.observaciones || 'Sin observaciones'}`;
     }
 
     async saveExpediente() {
+        const operacion = this.currentExpediente ? 'actualizar-expediente' : 'crear-expediente';
+        
         try {
+            if (window.loadingManager) {
+                window.loadingManager.show(operacion, this.currentExpediente ? 'Actualizando expediente...' : 'Creando expediente...');
+            }
+
             const formData = this.getModalFormData();
             
             if (this.currentExpediente) {
                 // Actualizar expediente existente
-                await dataService.updateExpediente(this.currentExpediente._id, formData);
-                this.showSuccess('Expediente actualizado correctamente');
+                const resultado = await dataService.updateExpediente(this.currentExpediente._id, formData);
+                
+                // ✅ OPTIMIZACIÓN: Ocultar loading INMEDIATAMENTE
+                if (window.loadingManager) {
+                    window.loadingManager.hide(operacion);
+                }
+                
+                if (resultado.success) {
+                    this.showSuccess('Expediente actualizado correctamente');
+                    this.closeModal();
+                    // ✅ OPTIMIZACIÓN: Actualizar solo la fila modificada, sin recargar
+                    await this.actualizarExpedienteEnTabla(resultado.expediente);
+                } else {
+                    this.showError(resultado.message || 'Error al actualizar expediente');
+                }
             } else {
                 // Crear nuevo expediente
-                await dataService.createExpediente(formData);
-                this.showSuccess('Expediente creado correctamente');
+                const resultado = await dataService.createExpediente(formData);
+                
+                // ✅ OPTIMIZACIÓN: Ocultar loading INMEDIATAMENTE
+                if (window.loadingManager) {
+                    window.loadingManager.hide(operacion);
+                }
+                
+                if (resultado.success) {
+                    this.showSuccess('Expediente creado correctamente');
+                    this.closeModal();
+                    // ✅ OPTIMIZACIÓN: Agregar al inicio del array, sin recargar
+                    await this.agregarExpedienteATabla(resultado.expediente);
+                } else {
+                    this.showError(resultado.message || 'Error al crear expediente');
+                }
             }
             
-            this.closeModal();
-            this.loadExpedientes();
         } catch (error) {
+            // Ocultar loading en caso de error
+            if (window.loadingManager) {
+                window.loadingManager.hide(operacion);
+            }
+            
             console.error('Error al guardar expediente:', error);
-            this.showError('Error al guardar expediente');
+            this.showError('Error al guardar expediente: ' + error.message);
         }
+    }
+
+    /**
+     * Actualizar expediente en el array local y re-renderizar (optimización sin API)
+     * @param {Object} expedienteActualizado - Expediente actualizado desde la API
+     */
+    async actualizarExpedienteEnTabla(expedienteActualizado) {
+        const index = this.expedientes.findIndex(exp => exp._id === expedienteActualizado._id);
+        
+        if (index !== -1) {
+            // Obtener tarjetas actualizadas
+            const resultadoTarjetas = await window.api.invoke('tarjeta:obtener-por-expediente', expedienteActualizado._id);
+            const tarjetas = resultadoTarjetas?.success ? resultadoTarjetas.tarjetas : [];
+            
+            // Preparar expediente completo con tarjetas
+            const expedienteCompleto = {
+                ...expedienteActualizado,
+                expediente: expedienteActualizado.numeroExpediente,
+                fecha: expedienteActualizado.fechaExpediente,
+                pdfPath: expedienteActualizado.pdfPathActa,
+                tarjetasAsociadas: tarjetas
+            };
+            
+            // Actualizar en ambos arrays
+            this.expedientes[index] = expedienteCompleto;
+            
+            const filteredIndex = this.filteredExpedientes.findIndex(exp => exp._id === expedienteActualizado._id);
+            if (filteredIndex !== -1) {
+                this.filteredExpedientes[filteredIndex] = expedienteCompleto;
+            }
+            
+            // Re-renderizar sin llamar a la API
+            this.renderTable();
+            console.log('✅ Expediente actualizado en tabla sin recargar');
+        }
+    }
+
+    /**
+     * Agregar nuevo expediente al array local y re-renderizar (optimización sin API)
+     * @param {Object} nuevoExpediente - Expediente recién creado desde la API
+     */
+    async agregarExpedienteATabla(nuevoExpediente) {
+        // Obtener tarjetas del expediente
+        const resultadoTarjetas = await window.api.invoke('tarjeta:obtener-por-expediente', nuevoExpediente._id);
+        const tarjetas = resultadoTarjetas?.success ? resultadoTarjetas.tarjetas : [];
+        
+        // Preparar expediente completo con tarjetas
+        const expedienteCompleto = {
+            ...nuevoExpediente,
+            expediente: nuevoExpediente.numeroExpediente,
+            fecha: nuevoExpediente.fechaExpediente,
+            pdfPath: nuevoExpediente.pdfPathActa,
+            tarjetasAsociadas: tarjetas
+        };
+        
+        // Agregar al inicio de ambos arrays
+        this.expedientes.unshift(expedienteCompleto);
+        this.filteredExpedientes.unshift(expedienteCompleto);
+        
+        // Re-renderizar sin llamar a la API
+        this.renderTable();
+        console.log('✅ Expediente agregado a tabla sin recargar');
     }
 
     async deleteExpediente() {
@@ -744,7 +948,16 @@ ${expediente.observaciones || 'Sin observaciones'}`;
     closeModal() {
         this.modal.classList.remove('active');
         this.currentExpediente = null;
-        this.modalForm.innerHTML = '';
+        
+        // ✅ OPTIMIZACIÓN: Limpiar formulario completamente
+        if (this.modalForm) {
+            this.modalForm.innerHTML = '';
+        }
+        
+        // ✅ OPTIMIZACIÓN: Forzar limpieza de loadings para evitar bloqueos
+        if (window.loadingManager) {
+            window.loadingManager.clearAll();
+        }
     }
 
     showSuccess(message) {

@@ -1,3 +1,4 @@
+// Estado del editor
 const state = {
     expedienteId: null,
     expediente: null,
@@ -54,11 +55,22 @@ async function initialize() {
         return;
     }
 
-    state.expedienteId = expedienteId;
+    // Convertir ID a número (SQLite usa INTEGER)
+    const numericId = parseInt(expedienteId, 10);
+    if (isNaN(numericId)) {
+        alert('ID de expediente inválido.');
+        window.close();
+        return;
+    }
+    
+    state.expedienteId = numericId;
+    console.log('📝 Editor inicializado con ID:', numericId, `(tipo: ${typeof numericId})`);
 
     try {
             setLoading(true, 'Cargando expediente...', 'Cargando...');
-        const result = await window.api.invoke('obtener-expediente-detalle', expedienteId);
+        const result = await window.api.invoke('obtener-expediente-detalle', numericId);
+        console.log('📥 Respuesta de obtener-expediente-detalle:', result);
+        
         if (!result || result.success === false) {
             throw new Error(result?.message || 'No se pudo cargar el expediente.');
         }
@@ -69,7 +81,7 @@ async function initialize() {
         state.tarjetas = (result.tarjetas || []).map(t => ({
             uid: generateUid(),
             placa: t.placa || '',
-            numero: t.tarjeta || '',
+            numero: t.numeroTarjeta || t.tarjeta || '',  // ✅ Primero intenta numeroTarjeta (SQLite), luego tarjeta (compatibilidad)
             pdfPath: t.pdfPath || '',
             pdfSourcePath: null
         }));
@@ -245,10 +257,19 @@ async function handleSave(event) {
 
     try {
         setLoading(true, 'Guardando cambios...');
+        console.log('💾 Guardando expediente ID:', state.expedienteId, `(tipo: ${typeof state.expedienteId})`);
+        console.log('📤 Payload a enviar:', payload);
+        
         const result = await window.api.invoke('actualizar-expediente', state.expedienteId, payload);
+        console.log('📥 Respuesta de actualización:', result);
+        
         if (!result || result.success === false) {
             throw new Error(result?.message || 'No se pudo guardar el expediente');
         }
+
+        // ✅ El backend ya notifica a todas las ventanas vía IPC
+        // La ventana principal escuchará 'expediente-actualizado' y actualizará la tabla
+        console.log('✅ Expediente guardado - el backend notificará a todas las ventanas');
 
         alert('Expediente actualizado correctamente.');
         window.close();

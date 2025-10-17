@@ -9,6 +9,10 @@ import { navigationManager } from './modules/navigation.js';
 import { expedientesCRUD } from './modules/expedientesCRUD.js';
 import { tarjetasCRUD } from './modules/tarjetasCRUD.js';
 import { searchManager } from './modules/searchManager.js';
+import { SimplePDFViewer } from './modules/simplePdfViewer.js';
+
+// Inicializar visualizador de PDFs
+const simplePdfViewer = new SimplePDFViewer();
 
 let selectedPdfPath = null;
 let tarjetas = []; // Array para manejar las tarjetas a guardar
@@ -24,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.searchManager = searchManager;
     window.dataService = dataService;
     window.ui = ui;
+    window.simplePdfViewer = simplePdfViewer; // ✅ Visualizador de PDFs
     
     // Hacer disponibles las funciones de búsqueda para searchManager
     window.performTarjetasSearch = performTarjetasSearch;
@@ -80,6 +85,42 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Toggle para mostrar/ocultar campos de Acta de Entrega
+    const incluirActaEntregaCheckbox = document.getElementById('incluir-acta-entrega');
+    const actaEntregaFields = document.getElementById('acta-entrega-fields');
+    let selectedActaPdfPath = null;
+    
+    incluirActaEntregaCheckbox.addEventListener('change', (e) => {
+        if (e.target.checked) {
+            actaEntregaFields.style.display = 'block';
+        } else {
+            actaEntregaFields.style.display = 'none';
+            // Limpiar campos cuando se desmarca
+            document.getElementById('fechaEntrega').value = '';
+            document.getElementById('n_tarjetas_entregadas').value = '';
+            document.getElementById('observacionesActa').value = '';
+            document.getElementById('pdf-acta-path').value = '';
+            selectedActaPdfPath = null;
+        }
+    });
+
+    // Botón para seleccionar PDF del Acta de Entrega
+    const seleccionarPdfActaBtn = document.getElementById('seleccionar-pdf-acta-btn');
+    seleccionarPdfActaBtn.addEventListener('click', async () => {
+        loadingManager.showButtonLoading(seleccionarPdfActaBtn, 'Seleccionando...');
+        try {
+            selectedActaPdfPath = await window.api.abrirDialogoPdf();
+            if (selectedActaPdfPath) {
+                document.getElementById('pdf-acta-path').value = selectedActaPdfPath.split(/[\/\\]/).pop();
+            }
+        } catch (error) {
+            console.error('Error al seleccionar PDF del Acta:', error);
+            ui.showNotification('Error al seleccionar el archivo PDF del Acta.', 'error');
+        } finally {
+            loadingManager.hideButtonLoading(seleccionarPdfActaBtn);
+        }
+    });
+
     // -- Lógica para agregar tarjetas dinámicamente --
     agregarTarjetaBtn.addEventListener('click', () => {
         ui.addTarjetaInput();
@@ -94,32 +135,65 @@ document.addEventListener('DOMContentLoaded', () => {
         loadingManager.showButtonLoading(submitBtn, 'Guardando...');
         
         try {
+            // Obtener datos del expediente
             const expedienteData = ui.getExpedienteData();
+            
+            // Obtener tarjetas asociadas
             expedienteData.tarjetas = ui.getTarjetaData();
-
+            
+            // Validaciones básicas
+            if (!expedienteData.numeroExpediente) {
+                ui.showNotification('El número de expediente es requerido.', 'warning');
+                return;
+            }
+            
+            if (!expedienteData.fechaExpediente) {
+                ui.showNotification('La fecha del expediente es requerida.', 'warning');
+                return;
+            }
+            
+            // Si hay PDF del expediente seleccionado
             if (selectedPdfPath) {
                 expedienteData.pdfSourcePath = selectedPdfPath;
             }
 
-            // Adjuntar PDF por cada tarjeta
-            for (let tarjeta of expedienteData.tarjetas) {
-                if (tarjeta.selectedPdfPath) {
-                    const fileName = `tarjeta-${tarjeta.placa}-${Date.now()}.pdf`;
-                    tarjeta.pdfPath = fileName;
-                    tarjeta.pdfSourcePath = tarjeta.selectedPdfPath;
+            // Si se marcó incluir acta de entrega, agregarla
+            if (incluirActaEntregaCheckbox.checked) {
+                const fechaEntrega = document.getElementById('fechaEntrega').value;
+                
+                if (!fechaEntrega) {
+                    ui.showNotification('La fecha de entrega del acta es requerida.', 'warning');
+                    return;
                 }
-            }
 
+                expedienteData.actaEntrega = {
+                    fechaEntrega: fechaEntrega,
+                    n_tarjetas_entregadas: parseInt(document.getElementById('n_tarjetas_entregadas').value) || 0,
+                    observaciones: document.getElementById('observacionesActa').value || null,
+                    pdfSourcePath: selectedActaPdfPath
+                };
+                console.log('📋 Acta de entrega incluida:', expedienteData.actaEntrega);
+            }
+            
+            console.log('📤 Enviando datos al backend:', expedienteData);
+
+            // Enviar al backend
             const result = await dataService.createExpediente(expedienteData);
+            
+            console.log('📥 Respuesta del backend:', result);
+            
             if (result.success) {
                 ui.showNotification('Expediente guardado exitosamente.', 'success');
                 ui.resetExpedienteForm();
                 selectedPdfPath = null;
+                
+                // Opcional: cambiar a vista de gestión
+                // navigationManager.showView('vista-crud');
             } else {
-                ui.showNotification('Error: ' + result.message, 'error');
+                ui.showNotification('Error: ' + (result.message || 'Error desconocido'), 'error');
             }
         } catch (error) {
-            console.error('Error al procesar el formulario:', error);
+            console.error('❌ Error al procesar el formulario:', error);
             ui.showNotification('Error inesperado al guardar el expediente.', 'error');
         } finally {
             loadingManager.hideButtonLoading(submitBtn);
@@ -233,6 +307,9 @@ function initializeApp() {
     // Configurar event listeners reactivos
     setupReactiveListeners();
     
+    // Configurar listeners de IPC para comunicación entre ventanas
+    setupIPCListeners();
+    
     // Inicializar módulo de tarjetas (expedientes se inicializa en su constructor)
     tarjetasCRUD.init();
     console.log('Módulos CRUD disponibles e inicializados');
@@ -241,6 +318,52 @@ function initializeApp() {
     loadingManager.clearAll();
     
     console.log('Aplicación inicializada con sistema reactivo');
+}
+
+// 🔔 Configurar listeners de IPC para comunicación entre ventanas
+function setupIPCListeners() {
+    // Escuchar cuando se actualiza un expediente desde el editor (otra ventana)
+    if (window.api && window.api.on) {
+        window.api.on('expediente-actualizado', (payload) => {
+            console.log('📡 IPC: expediente-actualizado recibido:', payload);
+            
+            // Emitir evento local para que la tabla se actualice
+            if (payload && payload.expediente) {
+                eventBus.emit(APP_EVENTS.EXPEDIENTE_UPDATED, { 
+                    expediente: payload.expediente
+                });
+                console.log('✅ Evento EXPEDIENTE_UPDATED emitido desde IPC');
+            }
+        });
+
+        // Escuchar cuando se elimina un expediente
+        window.api.on('expediente-eliminado', (payload) => {
+            console.log('📡 IPC: expediente-eliminado recibido:', payload);
+            
+            if (payload && payload.expedienteId) {
+                eventBus.emit(APP_EVENTS.EXPEDIENTE_DELETED, { 
+                    expedienteId: payload.expedienteId
+                });
+                console.log('✅ Evento EXPEDIENTE_DELETED emitido desde IPC');
+            }
+        });
+
+        // Escuchar cuando se crea un expediente
+        window.api.on('expediente-guardado', (payload) => {
+            console.log('📡 IPC: expediente-guardado recibido:', payload);
+            
+            if (payload && payload.expediente) {
+                eventBus.emit(APP_EVENTS.EXPEDIENTE_CREATED, { 
+                    expediente: payload.expediente
+                });
+                console.log('✅ Evento EXPEDIENTE_CREATED emitido desde IPC');
+            }
+        });
+
+        console.log('✅ Listeners de IPC configurados');
+    } else {
+        console.warn('⚠️ window.api no está disponible');
+    }
 }
 
 function setupReactiveListeners() {

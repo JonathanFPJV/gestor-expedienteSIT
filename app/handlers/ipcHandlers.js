@@ -1,155 +1,196 @@
 // app/handlers/ipcHandlers.js
+/**
+ * Orquestador de Handlers IPC
+ * 
+ * Este archivo actúa como punto de entrada único para registrar todos los handlers IPC.
+ * No debe contener lógica de negocio, solo orquestación.
+ * 
+ * Arquitectura:
+ * - Handlers modulares: ExpedienteHandlers, TarjetaHandlers
+ * - Servicios especializados: DeletionService, FileHandlers
+ * - Gestión de ventanas: Editor de expedientes
+ * 
+ * @module ipcHandlers
+ */
+
 const { ipcMain, BrowserWindow } = require('electron');
 const db = require('../db/database');
 const FileHandlers = require('./fileHandlers');
 const DeletionService = require('../services/deletionService');
 const { createExpedienteEditorWindow } = require('../windows/expedienteEditorWindow');
-const ExpedienteService = require('../services/expedienteService');
+const ExpedienteHandlers = require('./expedienteHandlers');
 const TarjetaHandlers = require('./tarjetaHandlers');
-const fs = require('fs'); // Añadir 'fs' para manejar archivos
+const ActaEntregaHandlers = require('./actaEntregaHandlers');
+const fs = require('fs');
 
+/**
+ * Registra todos los handlers IPC de la aplicación
+ * 
+ * @param {Electron.App} appInstance - Instancia de la aplicación Electron
+ */
 exports.registerIpcHandlers = (appInstance) => {
+    // ============================================
+    // 1. INICIALIZACIÓN DE SERVICIOS
+    // ============================================
     const fileHandlers = new FileHandlers(appInstance);
     const deletionService = new DeletionService(appInstance);
-    const expedienteService = new ExpedienteService(db, fileHandlers);
     const editorWindows = new Map();
     
-    // Registrar handlers de Tarjetas con fileHandlers
+    // ============================================
+    // 2. REGISTRAR HANDLERS MODULARES
+    // ============================================
+    // Handlers de Expedientes (CRUD completo)
+    const expedienteHandlers = new ExpedienteHandlers(db, fileHandlers);
+    expedienteHandlers.registerHandlers();
+    
+    // Handlers de Tarjetas (CRUD completo + búsquedas)
     const tarjetaHandlers = new TarjetaHandlers(db, fileHandlers);
     tarjetaHandlers.registerHandlers();
-    // Abrir ventana de edición de expedientes
+    
+    // Handlers de Actas de Entrega (CRUD completo)
+    const actaEntregaHandlers = new ActaEntregaHandlers(db, fileHandlers);
+    actaEntregaHandlers.registerHandlers();
+    
+    console.log('✅ Handlers modulares registrados:');
+    console.log('   - ExpedienteHandlers (7 canales IPC)');
+    console.log('   - TarjetaHandlers (13+ canales IPC)');
+    console.log('   - ActaEntregaHandlers (6 canales IPC)');
+    
+    // ============================================
+    // 3. HANDLERS DE VENTANAS
+    // ============================================
+    
+    /**
+     * Abre una ventana de edición para un expediente específico
+     * Gestiona ventanas únicas por expediente (no duplicados)
+     */
     ipcMain.on('abrir-editor-expediente', (event, expedienteId) => {
         if (!expedienteId) {
-            console.warn('abrir-editor-expediente llamado sin expedienteId');
+            console.warn('⚠️ abrir-editor-expediente llamado sin expedienteId');
             return;
         }
 
+        // Verificar si ya existe una ventana para este expediente
         const existingWindow = editorWindows.get(expedienteId);
         if (existingWindow && !existingWindow.isDestroyed()) {
             existingWindow.focus();
+            console.log(`📌 Ventana existente enfocada para expediente: ${expedienteId}`);
             return;
         }
 
+        // Crear nueva ventana de edición
         const window = createExpedienteEditorWindow(appInstance, expedienteId);
         editorWindows.set(expedienteId, window);
+        console.log(`🪟 Nueva ventana de edición creada para expediente: ${expedienteId}`);
 
+        // Limpiar del mapa cuando se cierra
         window.on('closed', () => {
             editorWindows.delete(expedienteId);
+            console.log(`🗑️ Ventana cerrada para expediente: ${expedienteId}`);
         });
     });
 
-    ipcMain.handle('obtener-expediente-detalle', async (event, expedienteId) => {
-        try {
-            return await expedienteService.getExpedienteDetalle(expedienteId);
-        } catch (error) {
-            console.error('Error al obtener detalle de expediente:', error);
-            return {
-                success: false,
-                message: error.message || 'Error al obtener detalle de expediente'
-            };
-        }
-    });
-
-    // Manejador para el diálogo de selección de PDF
+    // ============================================
+    // 4. HANDLERS DE ARCHIVOS PDF
+    // ============================================
+    
+    /**
+     * Abre un diálogo para seleccionar un archivo PDF
+     * Usado por los formularios de expedientes y tarjetas
+     */
     ipcMain.handle('abrir-dialogo-pdf', async () => {
         try {
             const result = await fileHandlers.openPdfDialog();
+            console.log('📂 Diálogo PDF abierto:', result ? 'Archivo seleccionado' : 'Cancelado');
             return result;
         } catch (error) {
-            console.error('Error en el manejador abrir-dialogo-pdf:', error);
+            console.error('❌ Error en el diálogo de PDF:', error);
             return null;
         }
     });
 
-    // -- CRUD para Expedientes --
+    /**
+     * Obtiene los datos binarios de un archivo PDF
+     * Usado para visualizar PDFs en el renderer
+     */
+    ipcMain.handle('obtener-pdf-data', async (event, fileName) => {
+        try {
+            const filePath = fileHandlers.getFullPath(fileName);
+            if (fs.existsSync(filePath)) {
+                console.log('📄 PDF leído:', fileName);
+                return fs.promises.readFile(filePath);
+            }
+            console.warn('⚠️ PDF no encontrado:', fileName);
+            return null;
+        } catch (error) {
+            console.error('❌ Error al obtener datos del PDF:', error);
+            return null;
+        }
+    });
+
+    /**
+     * Abre un archivo PDF con la aplicación predeterminada del sistema
+     */
+    ipcMain.on('abrir-pdf', (event, fileName) => {
+        console.log('🔗 Abriendo PDF con shell:', fileName);
+        fileHandlers.openPdf(fileName);
+    });
+
+    /**
+     * Descarga un PDF con diálogo de guardar
+     * Copia el archivo a la ubicación seleccionada por el usuario
+     */
+    ipcMain.on('descargar-pdf', async (event, fileName) => {
+        try {
+            const { dialog, shell } = require('electron');
+            
+            // Mostrar diálogo para guardar archivo
+            const result = await dialog.showSaveDialog({
+                title: 'Guardar PDF',
+                defaultPath: fileName.replace(/^.*[\\\/]/, ''), // Solo el nombre del archivo
+                filters: [
+                    { name: 'Archivos PDF', extensions: ['pdf'] }
+                ]
+            });
+            
+            if (!result.canceled && result.filePath) {
+                const sourcePath = fileHandlers.getFullPath(fileName);
+                
+                // Copiar archivo al destino seleccionado
+                await fs.promises.copyFile(sourcePath, result.filePath);
+                console.log('💾 PDF descargado:', result.filePath);
+                
+                // Notificar éxito
+                const response = await dialog.showMessageBox({
+                    type: 'info',
+                    title: 'Descarga Completa',
+                    message: 'El PDF se ha guardado exitosamente.',
+                    buttons: ['OK', 'Abrir carpeta'],
+                    defaultId: 0
+                });
+                
+                // Abrir carpeta si el usuario lo solicita
+                if (response.response === 1) {
+                    shell.showItemInFolder(result.filePath);
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error al descargar PDF:', error);
+            const { dialog } = require('electron');
+            dialog.showErrorBox('Error', 'No se pudo descargar el archivo PDF.');
+        }
+    });
+
+    // ============================================
+    // 5. HANDLERS DE ELIMINACIÓN (DELETION SERVICE)
+    // ============================================
     
-    // Obtener todos los expedientes
-    ipcMain.handle('obtener-todos-expedientes', async () => {
-        try {
-            const expedientes = await db.expedientes.find({});
-            console.log('📊 Expedientes obtenidos de la BD:', expedientes.length);
-            
-            // Para cada expediente, obtener sus tarjetas asociadas
-            const expedientesConTarjetas = await Promise.all(
-                expedientes.map(async (expediente) => {
-                    try {
-                        // Buscar tarjetas asociadas a este expediente
-                        const tarjetasAsociadas = await db.tarjetas.find({ expedienteId: expediente._id });
-                        console.log(`🎫 Expediente ${expediente.numeroExpediente}: ${tarjetasAsociadas.length} tarjetas`);
-                        
-                        return {
-                            ...expediente,
-                            tarjetasAsociadas: tarjetasAsociadas || []
-                        };
-                    } catch (error) {
-                        console.error(`❌ Error obteniendo tarjetas para expediente ${expediente._id}:`, error);
-                        return {
-                            ...expediente,
-                            tarjetasAsociadas: []
-                        };
-                    }
-                })
-            );
-            
-            console.log('✅ Expedientes con tarjetas procesados:', expedientesConTarjetas.length);
-            return expedientesConTarjetas;
-        } catch (error) {
-            console.error('Error al obtener expedientes:', error);
-            throw error;
-        }
-    });
-
-    // Crear nuevo expediente
-    ipcMain.handle('crear-expediente', async (event, expedienteData) => {
-        try {
-            const result = await expedienteService.createExpediente(expedienteData);
-
-            const payload = {
-                expediente: result.expediente,
-                tarjetas: result.tarjetas
-            };
-
-            BrowserWindow.getAllWindows().forEach(win => {
-                win.webContents.send('expediente-guardado', payload);
-            });
-
-            return result;
-        } catch (error) {
-            console.error('Error al crear expediente:', error);
-            return {
-                success: false,
-                message: error.message || 'Error al crear expediente',
-                error
-            };
-        }
-    });
-
-    // Actualizar expediente
-    ipcMain.handle('actualizar-expediente', async (event, expedienteId, expedienteData) => {
-        try {
-            const result = await expedienteService.updateExpediente(expedienteId, expedienteData);
-
-            const payload = {
-                expediente: result.expediente,
-                tarjetas: result.tarjetas
-            };
-
-            BrowserWindow.getAllWindows().forEach(win => {
-                win.webContents.send('expediente-actualizado', payload);
-            });
-
-            return result;
-        } catch (error) {
-            console.error('Error al actualizar expediente:', error);
-            return {
-                success: false,
-                message: error.message || 'Error al actualizar expediente',
-                error
-            };
-        }
-    });
-
-    // Eliminar expediente con eliminación en cascada usando DeletionService
+    /**
+     * Elimina un expediente con cascada (tarjetas y archivos asociados)
+     * Usa DeletionService para garantizar eliminación completa
+     * 
+     * TODO: Migrar DeletionService a SQLite3
+     */
     ipcMain.handle('eliminar-expediente', async (event, expedienteId) => {
         try {
             console.log(`🗑️ Iniciando eliminación del expediente: ${expedienteId}`);
@@ -159,14 +200,12 @@ exports.registerIpcHandlers = (appInstance) => {
         } catch (error) {
             console.error('❌ Error en eliminación:', error);
             
-            // En lugar de throw, retornar un objeto con error
-            // Si el error ya tiene la estructura correcta, retornarlo
+            // Retornar error estructurado
             if (error && typeof error === 'object' && error.hasOwnProperty('success')) {
                 console.log('📦 Retornando error estructurado del servicio');
                 return error;
             }
             
-            // Si no, crear un objeto de error estructurado
             return {
                 success: false,
                 error: error.message || 'Error desconocido',
@@ -176,7 +215,12 @@ exports.registerIpcHandlers = (appInstance) => {
         }
     });
 
-    // Obtener información detallada para confirmación de eliminación
+    /**
+     * Obtiene información detallada antes de eliminar (confirmación)
+     * Muestra cuántas tarjetas y archivos se eliminarán
+     * 
+     * TODO: Migrar DeletionService a SQLite3
+     */
     ipcMain.handle('obtener-info-eliminacion', async (event, expedienteId) => {
         try {
             console.log(`📋 Obteniendo información para eliminación: ${expedienteId}`);
@@ -188,171 +232,5 @@ exports.registerIpcHandlers = (appInstance) => {
         }
     });
 
-    // Guardar expediente (mantener para compatibilidad)
-    ipcMain.handle('guardar-expediente', async (event, expedienteData) => {
-        try {
-            const result = await expedienteService.createExpediente(expedienteData);
-
-            const datosCompletos = {
-                expediente: result.expediente,
-                tarjetas: result.tarjetas
-            };
-
-            BrowserWindow.getAllWindows().forEach(win => {
-                win.webContents.send('expediente-guardado', datosCompletos);
-            });
-
-            return result;
-        } catch (error) {
-            console.error('Error al guardar el expediente:', error);
-            return { success: false, message: 'Error al guardar el expediente.' };
-        }
-    });
-
-    // -- Búsqueda de expedientes --
-    ipcMain.handle('buscar-expediente', async (event, searchTerm) => {
-        try {
-            const query = { expediente: new RegExp(searchTerm, 'i') };
-            const expedientes = await db.expedientes.find(query);
-            
-            if (expedientes.length === 0) {
-                return { success: true, data: [] };
-            }
-            
-            const resultados = await Promise.all(expedientes.map(async (expediente) => {
-                // Buscar tarjetas asociadas a este expediente
-                const tarjetasAsociadas = await db.tarjetas.find({ expedienteId: expediente._id });
-
-                const [fallbackNumero, fallbackAnio] = (expediente.expediente || '').split('-');
-
-                return {
-                    _id: expediente._id,
-                    expediente: expediente.expediente,
-                    fecha: expediente.fecha,
-                    pdfPath: expediente.pdfPath,
-                    numeroExpediente: expediente.numeroExpediente || fallbackNumero || null,
-                    anioExpediente: expediente.anioExpediente || fallbackAnio || null,
-                    numeroResolucion: expediente.numeroResolucion || null,
-                    informeTecnico: expediente.informeTecnico || null,
-                    unidadNegocio: expediente.unidadNegocio || null,
-                    nombreEmpresa: expediente.nombreEmpresa || null,
-                    numeroFichero: expediente.numeroFichero || null,
-                    observaciones: expediente.observaciones || null,
-                    tarjetasAsociadas: tarjetasAsociadas.map(t => ({
-                        placa: t.placa,
-                        tarjeta: t.tarjeta,
-                        pdfPath: t.pdfPath
-                    }))
-                };
-            }));
-            
-            return { success: true, data: resultados };
-        } catch (error) {
-            console.error('Error al buscar expediente:', error);
-            return { success: false, message: 'Error al buscar expediente.' };
-        }
-    });
-
-    // -- Búsqueda de tarjeta --
-    ipcMain.handle('buscar-tarjeta', async (event, searchTerm) => {
-        try {
-            const query = {
-                $or: [
-                    { placa: new RegExp(searchTerm, 'i') },
-                    { tarjeta: new RegExp(searchTerm, 'i') }
-                ]
-            };
-            const tarjetas = await db.tarjetas.find(query);
-            if (tarjetas.length === 0) {
-                return { success: true, data: [] };
-            }
-            const resultados = await Promise.all(tarjetas.map(async (tarjeta) => {
-                const expediente = await db.expedientes.findOne({ _id: tarjeta.expedienteId });
-                return {
-                    placa: tarjeta.placa,
-                    tarjeta: tarjeta.tarjeta,
-                    expediente: expediente ? expediente.expediente : 'N/A',
-                    fecha: expediente ? expediente.fecha : 'N/A',
-                    pdfPath: tarjeta.pdfPath || null,
-                    expedientePdfPath: expediente ? expediente.pdfPath : null
-                };
-            }));
-            return { success: true, data: resultados };
-        } catch (error) {
-            console.error('Error al buscar tarjeta:', error);
-            return { success: false, message: 'Error al buscar tarjeta.' };
-        }
-    });
-
-    // -- Manejador para obtener el PDF --
-    ipcMain.handle('obtener-pdf-data', async (event, fileName) => {
-        try {
-            const filePath = fileHandlers.getFullPath(fileName);
-            if (fs.existsSync(filePath)) {
-                return fs.promises.readFile(filePath);
-            }
-            return null;
-        } catch (error) {
-            console.error('Error al obtener datos del PDF:', error);
-            return null;
-        }
-    });
-
-    // Manejador para abrir el PDF (usando shell)
-    ipcMain.on('abrir-pdf', (event, fileName) => {
-        fileHandlers.openPdf(fileName);
-    });
-
-    // Manejador para cargar todas las tarjetas
-    ipcMain.on('cargar-tarjetas', async (event) => {
-        try {
-            const tarjetas = await db.tarjetas.find({});
-            event.sender.send('tarjetas-actualizadas', tarjetas);
-        } catch (error) {
-            console.error('Error al cargar tarjetas:', error);
-        }
-    });
-
-    // Manejador para descargar PDF
-    ipcMain.on('descargar-pdf', async (event, fileName) => {
-        try {
-            const { dialog } = require('electron');
-            const path = require('path');
-            
-            // Mostrar diálogo para guardar archivo
-            const result = await dialog.showSaveDialog({
-                title: 'Guardar PDF',
-                defaultPath: fileName.replace(/^.*[\\\/]/, ''), // Solo el nombre del archivo
-                filters: [
-                    { name: 'PDF Files', extensions: ['pdf'] }
-                ]
-            });
-            
-            if (!result.canceled && result.filePath) {
-                const sourcePath = fileHandlers.getFullPath(fileName);
-                const fs = require('fs').promises;
-                
-                // Copiar archivo al destino seleccionado
-                await fs.copyFile(sourcePath, result.filePath);
-                
-                // Notificar éxito
-                const { shell } = require('electron');
-                const response = await dialog.showMessageBox({
-                    type: 'info',
-                    title: 'Descarga Completa',
-                    message: 'El PDF se ha guardado exitosamente.',
-                    buttons: ['OK', 'Abrir carpeta'],
-                    defaultId: 0
-                });
-                
-                if (response.response === 1) {
-                    shell.showItemInFolder(result.filePath);
-                }
-            }
-        } catch (error) {
-            console.error('Error al descargar PDF:', error);
-            const { dialog } = require('electron');
-            dialog.showErrorBox('Error', 'No se pudo descargar el archivo PDF.');
-        }
-    });
+    console.log('✅ ipcHandlers.js - Todos los handlers registrados correctamente');
 };
