@@ -15,7 +15,7 @@ export const getExpedienteData = () => {
     // Campos principales
     const numeroExpediente = document.getElementById('numeroExpediente').value.trim();
     const anioExpediente = parseInt(document.getElementById('anioExpediente').value) || new Date().getFullYear();
-    const fecha = document.getElementById('fecha').value;
+    const fechaExpediente = document.getElementById('fecha').value;
     
     // Campos adicionales
     const numeroResolucion = document.getElementById('numeroResolucion').value.trim() || null;
@@ -35,14 +35,11 @@ export const getExpedienteData = () => {
     // Actualizar campo oculto para compatibilidad
     document.getElementById('expediente').value = expedienteCompleto;
     
+    // Retornar datos en formato SQLite3 (campos nuevos)
     return { 
-        // Compatibilidad
-        expediente: expedienteCompleto,
-        fecha,
-        
-        // Nuevos campos estructurados
         numeroExpediente,
         anioExpediente,
+        fechaExpediente,  // Cambio de 'fecha' a 'fechaExpediente'
         numeroResolucion,
         informeTecnico,
         unidadNegocio,
@@ -55,15 +52,22 @@ export const getExpedienteData = () => {
 export const getTarjetaData = () => {
     const tarjetas = [];
     const tarjetaItems = tarjetasList.querySelectorAll('.tarjeta-item');
+    
     tarjetaItems.forEach(item => {
-        const placa = item.querySelector('.placa-input').value;
-        const tarjeta = item.querySelector('.tarjeta-input').value;
+        const placa = item.querySelector('.placa-input').value.trim();
+        const numeroTarjeta = item.querySelector('.tarjeta-input').value.trim();
         const pdfInput = item.querySelector('.pdf-tarjeta-path');
         const selectedPdfPath = pdfInput ? pdfInput.value : '';
+        
         if (placa) {
-            tarjetas.push({ placa, tarjeta, selectedPdfPath });
+            tarjetas.push({ 
+                placa, 
+                numeroTarjeta: numeroTarjeta || null,  // Nombre correcto del campo
+                pdfSourcePath: selectedPdfPath || null  // Ruta temporal del PDF seleccionado
+            });
         }
     });
+    
     return tarjetas;
 };
 

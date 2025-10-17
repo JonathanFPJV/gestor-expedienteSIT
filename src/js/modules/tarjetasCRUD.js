@@ -240,7 +240,7 @@ class TarjetasCRUD {
         if (tarjetasPagina.length === 0) {
             this.elements.tarjetasTbody.innerHTML = `
                 <tr>
-                    <td colspan="5" style="text-align: center; padding: 2rem;">
+                    <td colspan="6" style="text-align: center; padding: 2rem;">
                         No se encontraron tarjetas
                     </td>
                 </tr>
@@ -262,13 +262,26 @@ class TarjetasCRUD {
     crearFilaTarjeta(tarjeta) {
         const tr = document.createElement('tr');
         
+        // Determinar el estado del acta de entrega
+        let actaEntregaHtml = '❌ No';
+        if (tarjeta.actaEntregaId) {
+            actaEntregaHtml = `<span style="color: #28a745; font-weight: bold;" title="Acta ID: ${tarjeta.actaEntregaId}">✅ Sí (#${tarjeta.actaEntregaId})</span>`;
+        }
+        
+        // Determinar el estado del expediente
+        let expedienteHtml = '❌ No';
+        if (tarjeta.resolucionId || tarjeta.expedienteId) {
+            expedienteHtml = '✅ Sí';
+        }
+        
         tr.innerHTML = `
             <td>${tarjeta.placa || '-'}</td>
             <td>${tarjeta.numeroTarjeta || '-'}</td>
-            <td>${tarjeta.expedienteId ? '✅ Sí' : '❌ No'}</td>
+            <td>${expedienteHtml}</td>
+            <td>${actaEntregaHtml}</td>
             <td>${this.formatearFecha(tarjeta.fechaCreacion)}</td>
             <td>
-                ${tarjeta.pdfPath ? '<button class="btn-action" data-id="' + tarjeta._id + '" data-pdf="' + tarjeta.pdfPath + '" title="Ver PDF">📄</button>' : ''}
+                ${tarjeta.pdfPath ? '<button class="btn-action" data-id="' + tarjeta._id + '" data-pdf="' + tarjeta.pdfPath + '" title="Ver PDF Tarjeta">📄</button>' : ''}
                 <button class="btn-action btn-edit" data-id="${tarjeta._id}" title="Editar">
                     ✏️
                 </button>
@@ -347,8 +360,8 @@ class TarjetasCRUD {
         // Limpiar formulario
         this.elements.modalForm.innerHTML = `
             <div class="form-group">
-                <label for="modal-placa">Placa del Vehículo:</label>
-                <input type="text" id="modal-placa" placeholder="Ej: ABC-123" style="text-transform: uppercase;">
+                <label for="modal-placa">Placa del Vehículo: <span style="color: red;">*</span></label>
+                <input type="text" id="modal-placa" placeholder="Ej: ABC-123" style="text-transform: uppercase;" required>
             </div>
             <div class="form-group">
                 <label for="modal-numero-tarjeta">Número de Tarjeta:</label>
@@ -361,10 +374,19 @@ class TarjetasCRUD {
                 </label>
             </div>
             <div class="form-group" id="expediente-select-container" style="display: none;">
-                <label for="modal-expediente-id">Seleccionar Expediente:</label>
+                <label for="modal-expediente-id">Seleccionar Expediente (Resolución): <span style="color: red;">*</span></label>
                 <select id="modal-expediente-id">
                     <option value="">Seleccionar...</option>
                 </select>
+            </div>
+            <div class="form-group" id="acta-entrega-select-container" style="display: none;">
+                <label for="modal-acta-entrega-id">Acta de Entrega (Opcional):</label>
+                <select id="modal-acta-entrega-id">
+                    <option value="">Ninguna</option>
+                </select>
+                <small style="color: #666; margin-top: 0.25rem; display: block;">
+                    Seleccione un acta de entrega si la tarjeta ya fue entregada
+                </small>
             </div>
             <div class="form-group" id="pdf-select-container" style="display: none;">
                 <label for="modal-pdf-path">Documento PDF de la Tarjeta:</label>
@@ -381,16 +403,20 @@ class TarjetasCRUD {
         // Event listener para checkbox de asociar expediente
         const checkboxAsociar = document.getElementById('modal-asociar-expediente');
         const expedienteContainer = document.getElementById('expediente-select-container');
+        const actaEntregaContainer = document.getElementById('acta-entrega-select-container');
         const pdfContainer = document.getElementById('pdf-select-container');
         
         if (checkboxAsociar) {
             checkboxAsociar.addEventListener('change', async (e) => {
                 if (e.target.checked) {
                     expedienteContainer.style.display = 'block';
+                    actaEntregaContainer.style.display = 'block';
                     pdfContainer.style.display = 'block';
                     await this.cargarExpedientesEnSelect();
+                    await this.cargarActasEntregaEnSelect();
                 } else {
                     expedienteContainer.style.display = 'none';
+                    actaEntregaContainer.style.display = 'none';
                     pdfContainer.style.display = 'none';
                     this.selectedPdfPath = null;
                     const pdfPathInput = document.getElementById('modal-pdf-path');
@@ -430,8 +456,8 @@ class TarjetasCRUD {
                 // Llenar formulario
                 this.elements.modalForm.innerHTML = `
                     <div class="form-group">
-                        <label for="modal-placa">Placa del Vehículo:</label>
-                        <input type="text" id="modal-placa" value="${tarjeta.placa || ''}" placeholder="Ej: ABC-123" style="text-transform: uppercase;">
+                        <label for="modal-placa">Placa del Vehículo: <span style="color: red;">*</span></label>
+                        <input type="text" id="modal-placa" value="${tarjeta.placa || ''}" placeholder="Ej: ABC-123" style="text-transform: uppercase;" required>
                     </div>
                     <div class="form-group">
                         <label for="modal-numero-tarjeta">Número de Tarjeta:</label>
@@ -439,17 +465,26 @@ class TarjetasCRUD {
                     </div>
                     <div class="form-group">
                         <label>
-                            <input type="checkbox" id="modal-asociar-expediente" ${tarjeta.expedienteId ? 'checked' : ''}>
+                            <input type="checkbox" id="modal-asociar-expediente" ${tarjeta.resolucionId ? 'checked' : ''}>
                             Asociar a un expediente existente
                         </label>
                     </div>
-                    <div class="form-group" id="expediente-select-container" style="display: ${tarjeta.expedienteId ? 'block' : 'none'};">
-                        <label for="modal-expediente-id">Seleccionar Expediente:</label>
+                    <div class="form-group" id="expediente-select-container" style="display: ${tarjeta.resolucionId ? 'block' : 'none'};">
+                        <label for="modal-expediente-id">Seleccionar Expediente (Resolución): <span style="color: red;">*</span></label>
                         <select id="modal-expediente-id">
                             <option value="">Seleccionar...</option>
                         </select>
                     </div>
-                    <div class="form-group" id="pdf-select-container" style="display: ${tarjeta.expedienteId ? 'block' : 'none'};">
+                    <div class="form-group" id="acta-entrega-select-container" style="display: ${tarjeta.resolucionId ? 'block' : 'none'};">
+                        <label for="modal-acta-entrega-id">Acta de Entrega (Opcional):</label>
+                        <select id="modal-acta-entrega-id">
+                            <option value="">Ninguna</option>
+                        </select>
+                        <small style="color: #666; margin-top: 0.25rem; display: block;">
+                            Seleccione un acta de entrega si la tarjeta ya fue entregada
+                        </small>
+                    </div>
+                    <div class="form-group" id="pdf-select-container" style="display: ${tarjeta.resolucionId ? 'block' : 'none'};">
                         <label for="modal-pdf-path">Documento PDF de la Tarjeta:</label>
                         <div style="display: flex; gap: 0.5rem; align-items: center;">
                             <input type="text" id="modal-pdf-path" value="${tarjeta.pdfPath ? 'PDF guardado: ' + tarjeta.pdfPath.split(/[\\/]/).pop() : ''}" placeholder="Ningún archivo seleccionado" readonly>
@@ -459,7 +494,7 @@ class TarjetasCRUD {
                             ${tarjeta.pdfPath ? '<button type="button" id="abrir-pdf-tarjeta-btn" class="btn-secondary">📄 Abrir</button>' : ''}
                         </div>
                         <small style="color: #666; margin-top: 0.25rem; display: block;">
-                            ${tarjeta.pdfPath ? 'Puedes reemplazar el PDF existente seleccionando uno nuevo' : 'El PDF se guardará en la carpeta del expediente seleccionado'}
+                            ${tarjeta.pdfPath ? 'Puedes reemplazar el PDF existente. El anterior será eliminado.' : 'El PDF se guardará en la carpeta del expediente seleccionado'}
                         </small>
                     </div>
                 `;
@@ -467,16 +502,20 @@ class TarjetasCRUD {
                 // Event listener para checkbox
                 const checkboxAsociar = document.getElementById('modal-asociar-expediente');
                 const expedienteContainer = document.getElementById('expediente-select-container');
+                const actaEntregaContainer = document.getElementById('acta-entrega-select-container');
                 const pdfContainer = document.getElementById('pdf-select-container');
                 
                 if (checkboxAsociar) {
                     checkboxAsociar.addEventListener('change', async (e) => {
                         if (e.target.checked) {
                             expedienteContainer.style.display = 'block';
+                            actaEntregaContainer.style.display = 'block';
                             pdfContainer.style.display = 'block';
-                            await this.cargarExpedientesEnSelect(tarjeta.expedienteId);
+                            await this.cargarExpedientesEnSelect(tarjeta.resolucionId);
+                            await this.cargarActasEntregaEnSelect(tarjeta.actaEntregaId);
                         } else {
                             expedienteContainer.style.display = 'none';
+                            actaEntregaContainer.style.display = 'none';
                             pdfContainer.style.display = 'none';
                             this.selectedPdfPath = null;
                         }
@@ -501,9 +540,10 @@ class TarjetasCRUD {
                     }
                 }
 
-                // Si tiene expediente, cargar select
-                if (tarjeta.expedienteId) {
-                    await this.cargarExpedientesEnSelect(tarjeta.expedienteId);
+                // Si tiene expediente, cargar selects
+                if (tarjeta.resolucionId) {
+                    await this.cargarExpedientesEnSelect(tarjeta.resolucionId);
+                    await this.cargarActasEntregaEnSelect(tarjeta.actaEntregaId);
                 }
 
                 this.abrirModal();
@@ -549,22 +589,59 @@ class TarjetasCRUD {
     }
 
     /**
-     * Guardar tarjeta (crear o actualizar)
+     * Cargar actas de entrega en el select
      */
+    async cargarActasEntregaEnSelect(actaEntregaIdSeleccionado = null) {
+        try {
+            const resultado = await window.api.invoke('acta-entrega:obtener-todas');
+            
+            if (resultado && resultado.success && Array.isArray(resultado.actas)) {
+                const select = document.getElementById('modal-acta-entrega-id');
+                if (select) {
+                    select.innerHTML = '<option value="">Ninguna</option>';
+                    
+                    resultado.actas.forEach(acta => {
+                        const option = document.createElement('option');
+                        option.value = acta._id;
+                        const fecha = acta.fechaEntrega ? new Date(acta.fechaEntrega).toLocaleDateString('es-ES') : 'Sin fecha';
+                        option.textContent = `Acta #${acta._id} - ${fecha} (${acta.n_tarjetas_entregadas || 0} tarjetas)`;
+                        
+                        if (acta._id === actaEntregaIdSeleccionado) {
+                            option.selected = true;
+                        }
+                        
+                        select.appendChild(option);
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error al cargar actas de entrega:', error);
+        }
+    }
+
     /**
      * Guardar tarjeta (crear o actualizar)
      */
     async guardarTarjeta() {
+        const operacion = this.currentTarjetaId ? 'actualizar-tarjeta' : 'crear-tarjeta';
+        
         try {
             // Obtener valores del formulario
             const placa = document.getElementById('modal-placa')?.value?.trim();
             const numeroTarjeta = document.getElementById('modal-numero-tarjeta')?.value?.trim();
             const asociarExpediente = document.getElementById('modal-asociar-expediente')?.checked;
             const expedienteId = asociarExpediente ? document.getElementById('modal-expediente-id')?.value : null;
+            const actaEntregaId = asociarExpediente ? document.getElementById('modal-acta-entrega-id')?.value : null;
 
             // Validación básica
             if (!placa && !numeroTarjeta) {
                 this.mostrarError('Debe proporcionar al menos la placa o el número de tarjeta');
+                return;
+            }
+
+            // Validar que debe haber placa
+            if (!placa) {
+                this.mostrarError('La placa del vehículo es obligatoria');
                 return;
             }
 
@@ -574,41 +651,96 @@ class TarjetasCRUD {
                 return;
             }
 
-            const operacion = this.currentTarjetaId ? 'actualizar-tarjeta' : 'crear-tarjeta';
             const textoLoading = this.currentTarjetaId ? 'Actualizando tarjeta...' : 'Creando tarjeta...';
-            
             loadingManager.show(operacion, textoLoading);
 
             const tarjetaData = {
                 placa: placa || null,
                 numeroTarjeta: numeroTarjeta || null,
-                expedienteId: expedienteId || null
+                expedienteId: expedienteId || null,
+                actaEntregaId: actaEntregaId || null
             };
 
             let resultado;
+            const tarjetaIdAnterior = this.currentTarjetaId;
 
-            if (this.currentTarjetaId) {
+            if (tarjetaIdAnterior) {
                 // Actualizar (con PDF opcional)
-                resultado = await window.api.invoke('tarjeta:actualizar', this.currentTarjetaId, tarjetaData, this.selectedPdfPath);
+                resultado = await window.api.invoke('tarjeta:actualizar', tarjetaIdAnterior, tarjetaData, this.selectedPdfPath);
             } else {
                 // Crear (con PDF opcional)
                 resultado = await window.api.invoke('tarjeta:crear', tarjetaData, this.selectedPdfPath);
             }
 
+            // Ocultar loading inmediatamente después de recibir respuesta
+            loadingManager.hide(operacion);
+
             if (resultado.success) {
-                this.mostrarExito(resultado.message);
+                // Cerrar modal primero
                 this.cerrarModal();
-                this.selectedPdfPath = null; // Resetear PDF
-                await this.cargarTarjetas();
+                
+                // Actualizar solo la tarjeta modificada sin recargar toda la página
+                if (tarjetaIdAnterior) {
+                    await this.actualizarTarjetaEnTabla(resultado.tarjeta);
+                } else {
+                    await this.agregarTarjetaATabla(resultado.tarjeta);
+                }
+                
+                this.mostrarExito(resultado.message);
             } else {
                 this.mostrarError(resultado.message);
             }
         } catch (error) {
             console.error('❌ Error al guardar tarjeta:', error);
             this.mostrarError('Error al guardar tarjeta');
-        } finally {
-            const operacion = this.currentTarjetaId ? 'actualizar-tarjeta' : 'crear-tarjeta';
             loadingManager.hide(operacion);
+        }
+    }
+
+    /**
+     * Actualizar una tarjeta específica en la tabla (sin recargar todo)
+     */
+    async actualizarTarjetaEnTabla(tarjetaActualizada) {
+        try {
+            // Actualizar en el array principal
+            const indexTarjetas = this.tarjetas.findIndex(t => t._id === tarjetaActualizada._id);
+            if (indexTarjetas !== -1) {
+                this.tarjetas[indexTarjetas] = tarjetaActualizada;
+            }
+
+            // Actualizar en el array filtrado
+            const indexFiltered = this.filteredTarjetas.findIndex(t => t._id === tarjetaActualizada._id);
+            if (indexFiltered !== -1) {
+                this.filteredTarjetas[indexFiltered] = tarjetaActualizada;
+            }
+
+            // Re-renderizar solo la página actual
+            this.renderTarjetas();
+            
+            console.log('✅ Tarjeta actualizada en la tabla');
+        } catch (error) {
+            console.error('❌ Error al actualizar tarjeta en tabla:', error);
+        }
+    }
+
+    /**
+     * Agregar una nueva tarjeta a la tabla (sin recargar todo)
+     */
+    async agregarTarjetaATabla(nuevaTarjeta) {
+        try {
+            // Agregar al principio de los arrays
+            this.tarjetas.unshift(nuevaTarjeta);
+            this.filteredTarjetas.unshift(nuevaTarjeta);
+
+            // Volver a la primera página
+            this.currentPage = 1;
+
+            // Re-renderizar
+            this.renderTarjetas();
+            
+            console.log('✅ Tarjeta agregada a la tabla');
+        } catch (error) {
+            console.error('❌ Error al agregar tarjeta a tabla:', error);
         }
     }
 
@@ -629,22 +761,33 @@ class TarjetasCRUD {
     async eliminarTarjeta() {
         if (!this.currentTarjetaId) return;
 
+        const tarjetaIdAEliminar = this.currentTarjetaId;
+
         try {
             loadingManager.show('eliminar-tarjeta', 'Eliminando tarjeta...');
 
-            const resultado = await window.api.invoke('tarjeta:eliminar', this.currentTarjetaId);
+            const resultado = await window.api.invoke('tarjeta:eliminar', tarjetaIdAEliminar);
+
+            // Ocultar loading inmediatamente después de recibir respuesta
+            loadingManager.hide('eliminar-tarjeta');
 
             if (resultado.success) {
-                this.mostrarExito(resultado.message);
                 this.cerrarModal();
-                await this.cargarTarjetas();
+                
+                // Eliminar de los arrays sin recargar
+                this.tarjetas = this.tarjetas.filter(t => t._id !== tarjetaIdAEliminar);
+                this.filteredTarjetas = this.filteredTarjetas.filter(t => t._id !== tarjetaIdAEliminar);
+                
+                // Re-renderizar tabla
+                this.renderTarjetas();
+                
+                this.mostrarExito(resultado.message);
             } else {
                 this.mostrarError(resultado.message);
             }
         } catch (error) {
             console.error('❌ Error al eliminar tarjeta:', error);
             this.mostrarError('Error al eliminar tarjeta');
-        } finally {
             loadingManager.hide('eliminar-tarjeta');
         }
     }
@@ -667,7 +810,18 @@ class TarjetasCRUD {
             this.elements.modal.style.display = 'none';
             document.body.style.overflow = 'auto';
         }
+        
+        // Limpiar estado
         this.currentTarjetaId = null;
+        this.selectedPdfPath = null;
+        
+        // Limpiar formulario
+        if (this.elements.modalForm) {
+            this.elements.modalForm.innerHTML = '';
+        }
+        
+        // Asegurar que todos los loadings estén ocultos
+        loadingManager.clearAll();
     }
 
     /**

@@ -153,6 +153,36 @@
                     <button type="button" id="agregar-tarjeta-btn">Agregar Tarjeta</button>
                 </fieldset>
 
+                <!-- Sección de Acta de Entrega -->
+                <fieldset class="form-section">
+                    <legend>Acta de Entrega (Opcional)</legend>
+                    <div class="form-group">
+                        <input type="checkbox" id="incluir-acta-entrega" style="width: auto; margin-right: 10px;">
+                        <label for="incluir-acta-entrega" style="display: inline;">Registrar Acta de Entrega</label>
+                    </div>
+                    <div id="acta-entrega-fields" style="display: none;">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="fechaEntrega">Fecha de Entrega:</label>
+                                <input type="date" id="fechaEntrega">
+                            </div>
+                            <div class="form-group">
+                                <label for="n_tarjetas_entregadas">N° de Tarjetas:</label>
+                                <input type="number" id="n_tarjetas_entregadas" min="0" placeholder="0">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="observacionesActa">Observaciones del Acta:</label>
+                            <textarea id="observacionesActa" rows="2" placeholder="Observaciones adicionales de la entrega..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="pdf-acta-path">Adjuntar Acta de Entrega (PDF):</label>
+                            <input type="text" id="pdf-acta-path" placeholder="Ningún archivo seleccionado" readonly>
+                            <button type="button" id="seleccionar-pdf-acta-btn" class="toggle-btn">Seleccionar Archivo</button>
+                        </div>
+                    </div>
+                </fieldset>
+
                 <!-- Sección de Archivos -->
                 <fieldset class="form-section">
                     <legend>Documentos</legend>
@@ -282,6 +312,7 @@
                             <th>Placa</th>
                             <th>N° Tarjeta</th>
                             <th>Expediente</th>
+                            <th>Acta de Entrega</th>
                             <th>Fecha Creación</th>
                             <th>Acciones</th>
                         </tr>
