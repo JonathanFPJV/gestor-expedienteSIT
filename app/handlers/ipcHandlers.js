@@ -14,7 +14,7 @@
  */
 
 const { ipcMain, BrowserWindow } = require('electron');
-const db = require('../db/database');
+const database = require('../db/database');
 const FileHandlers = require('./fileHandlers');
 const DeletionService = require('../services/deletionService');
 const { createExpedienteEditorWindow } = require('../windows/expedienteEditorWindow');
@@ -22,6 +22,10 @@ const ExpedienteHandlers = require('./expedienteHandlers');
 const TarjetaHandlers = require('./tarjetaHandlers');
 const ActaEntregaHandlers = require('./actaEntregaHandlers');
 const fs = require('fs');
+
+// Extraer la instancia real de la base de datos Y las APIs
+const db = database.db;  // Para servicios que usan SQLite3 directamente
+const dbAPI = database;  // Para handlers que usan las APIs (expedientes, tarjetas)
 
 /**
  * Registra todos los handlers IPC de la aplicación
@@ -39,22 +43,22 @@ exports.registerIpcHandlers = (appInstance) => {
     // ============================================
     // 2. REGISTRAR HANDLERS MODULARES
     // ============================================
-    // Handlers de Expedientes (CRUD completo)
-    const expedienteHandlers = new ExpedienteHandlers(db, fileHandlers);
+    // Handlers de Expedientes (CRUD completo) - Usa APIs de alto nivel
+    const expedienteHandlers = new ExpedienteHandlers(dbAPI, fileHandlers);
     expedienteHandlers.registerHandlers();
     
-    // Handlers de Tarjetas (CRUD completo + búsquedas)
-    const tarjetaHandlers = new TarjetaHandlers(db, fileHandlers);
+    // Handlers de Tarjetas (CRUD completo + búsquedas) - Usa APIs de alto nivel
+    const tarjetaHandlers = new TarjetaHandlers(dbAPI, fileHandlers);
     tarjetaHandlers.registerHandlers();
     
-    // Handlers de Actas de Entrega (CRUD completo)
+    // Handlers de Actas de Entrega (CRUD completo) - Usa SQLite3 directamente
     const actaEntregaHandlers = new ActaEntregaHandlers(db, fileHandlers);
     actaEntregaHandlers.registerHandlers();
     
     console.log('✅ Handlers modulares registrados:');
     console.log('   - ExpedienteHandlers (7 canales IPC)');
     console.log('   - TarjetaHandlers (13+ canales IPC)');
-    console.log('   - ActaEntregaHandlers (6 canales IPC)');
+    console.log('   - ActaEntregaHandlers (10+ canales IPC)');
     
     // ============================================
     // 3. HANDLERS DE VENTANAS
@@ -186,11 +190,14 @@ exports.registerIpcHandlers = (appInstance) => {
     // ============================================
     
     /**
+     * ⚠️ COMENTADO: Este handler ya está registrado en ExpedienteHandlers
+     * 
      * Elimina un expediente con cascada (tarjetas y archivos asociados)
      * Usa DeletionService para garantizar eliminación completa
      * 
      * TODO: Migrar DeletionService a SQLite3
      */
+    /* COMENTADO - Ya registrado en ExpedienteHandlers.js
     ipcMain.handle('eliminar-expediente', async (event, expedienteId) => {
         try {
             console.log(`🗑️ Iniciando eliminación del expediente: ${expedienteId}`);
@@ -214,6 +221,7 @@ exports.registerIpcHandlers = (appInstance) => {
             };
         }
     });
+    */
 
     /**
      * Obtiene información detallada antes de eliminar (confirmación)

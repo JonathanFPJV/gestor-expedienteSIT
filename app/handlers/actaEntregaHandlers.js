@@ -1,17 +1,34 @@
 // app/handlers/actaEntregaHandlers.js
 /**
  * Manejadores IPC para operaciones de Actas de Entrega
- * Trabaja con la estructura existente de la BD
+ * Compatible con SQLite3 y patrón reactivo
  */
 
-const { ipcMain } = require('electron');
+const { ipcMain, BrowserWindow } = require('electron');
 const ActaEntregaService = require('../services/actaEntregaService');
 
 class ActaEntregaHandlers {
     constructor(db, fileHandlers = null) {
+        console.log('🔍 ActaEntregaHandlers constructor:');
+        console.log('   - db recibido:', !!db);
+        console.log('   - Tipo de db:', typeof db);
+        console.log('   - Tiene prepare?:', typeof db?.prepare);
+        console.log('   - Constructor:', db?.constructor?.name);
+        
         this.db = db;
         this.actaEntregaService = new ActaEntregaService(db, fileHandlers);
         this.fileHandlers = fileHandlers;
+    }
+
+    /**
+     * Notificar a todas las ventanas sobre cambios en actas
+     */
+    _broadcastToAllWindows(channel, payload) {
+        BrowserWindow.getAllWindows().forEach(win => {
+            if (win && !win.isDestroyed()) {
+                win.webContents.send(channel, payload);
+            }
+        });
     }
 
     /**
@@ -21,10 +38,19 @@ class ActaEntregaHandlers {
         console.log('📝 Registrando manejadores IPC para Actas de Entrega...');
 
         // Crear nueva acta de entrega
-        ipcMain.handle('acta-entrega:crear', async (event, actaData, pdfFilePath = null, metadata = {}) => {
+        ipcMain.handle('acta-entrega:crear', (event, actaData, tarjetasIds = []) => {
             try {
                 console.log('📥 Solicitud crear acta de entrega:', actaData);
-                return await this.actaEntregaService.createActaEntrega(actaData, pdfFilePath, metadata);
+                const result = this.actaEntregaService.createActaEntrega(actaData, tarjetasIds);
+                
+                if (result.success) {
+                    // Notificar a todas las ventanas
+                    this._broadcastToAllWindows('acta-entrega-creada', {
+                        acta: result.acta
+                    });
+                }
+                
+                return result;
             } catch (error) {
                 console.error('❌ Error en acta-entrega:crear:', error);
                 return {
@@ -38,7 +64,13 @@ class ActaEntregaHandlers {
         ipcMain.handle('acta-entrega:obtener-todas', (event, filtros = {}) => {
             try {
                 console.log('📥 Solicitud obtener todas las actas de entrega');
-                return this.actaEntregaService.getActasEntrega(filtros);
+                const actas = this.actaEntregaService.getAllActasEntrega(filtros);
+                
+                return {
+                    success: true,
+                    actas: actas,
+                    count: actas.length
+                };
             } catch (error) {
                 console.error('❌ Error en acta-entrega:obtener-todas:', error);
                 return {
@@ -53,7 +85,12 @@ class ActaEntregaHandlers {
         ipcMain.handle('acta-entrega:obtener-por-id', (event, actaId) => {
             try {
                 console.log('📥 Solicitud obtener acta de entrega por ID:', actaId);
-                return this.actaEntregaService.getActaEntregaById(actaId);
+                const acta = this.actaEntregaService.getActaEntregaById(actaId);
+                
+                return {
+                    success: true,
+                    acta: acta
+                };
             } catch (error) {
                 console.error('❌ Error en acta-entrega:obtener-por-id:', error);
                 return {
@@ -65,10 +102,19 @@ class ActaEntregaHandlers {
         });
 
         // Actualizar acta de entrega
-        ipcMain.handle('acta-entrega:actualizar', (event, actaId, updateData) => {
+        ipcMain.handle('acta-entrega:actualizar', (event, actaId, actaData, tarjetasIds = null) => {
             try {
                 console.log('📥 Solicitud actualizar acta de entrega:', actaId);
-                return this.actaEntregaService.updateActaEntrega(actaId, updateData);
+                const result = this.actaEntregaService.updateActaEntrega(actaId, actaData, tarjetasIds);
+                
+                if (result.success) {
+                    // Notificar a todas las ventanas
+                    this._broadcastToAllWindows('acta-entrega-actualizada', {
+                        acta: result.acta
+                    });
+                }
+                
+                return result;
             } catch (error) {
                 console.error('❌ Error en acta-entrega:actualizar:', error);
                 return {
@@ -82,7 +128,17 @@ class ActaEntregaHandlers {
         ipcMain.handle('acta-entrega:eliminar', (event, actaId) => {
             try {
                 console.log('📥 Solicitud eliminar acta de entrega:', actaId);
-                return this.actaEntregaService.deleteActaEntrega(actaId);
+                const result = this.actaEntregaService.deleteActaEntrega(actaId);
+                
+                if (result.success) {
+                    // Notificar a todas las ventanas
+                    this._broadcastToAllWindows('acta-entrega-eliminada', {
+                        actaId: actaId,
+                        summary: result.summary
+                    });
+                }
+                
+                return result;
             } catch (error) {
                 console.error('❌ Error en acta-entrega:eliminar:', error);
                 return {
@@ -92,17 +148,82 @@ class ActaEntregaHandlers {
             }
         });
 
-        // Obtener tarjetas de un acta
-        ipcMain.handle('acta-entrega:obtener-tarjetas', (event, actaId) => {
+        // Obtener información para eliminar
+        ipcMain.handle('acta-entrega:info-eliminar', (event, actaId) => {
             try {
-                console.log('📥 Solicitud obtener tarjetas del acta:', actaId);
-                return this.actaEntregaService.getTarjetasByActa(actaId);
+                console.log('📥 Solicitud info para eliminar acta:', actaId);
+                const info = this.actaEntregaService.getDeleteInfo(actaId);
+                
+                return {
+                    success: true,
+                    info: info
+                };
             } catch (error) {
-                console.error('❌ Error en acta-entrega:obtener-tarjetas:', error);
+                console.error('❌ Error en acta-entrega:info-eliminar:', error);
                 return {
                     success: false,
-                    message: error.message || 'Error al obtener tarjetas',
+                    message: error.message
+                };
+            }
+        });
+
+        // Buscar actas de entrega
+        ipcMain.handle('acta-entrega:buscar', (event, searchTerm) => {
+            try {
+                console.log('📥 Solicitud buscar actas:', searchTerm);
+                const actas = this.actaEntregaService.searchActasEntrega(searchTerm);
+                
+                return {
+                    success: true,
+                    actas: actas,
+                    count: actas.length
+                };
+            } catch (error) {
+                console.error('❌ Error en acta-entrega:buscar:', error);
+                return {
+                    success: false,
+                    message: error.message,
+                    actas: []
+                };
+            }
+        });
+
+        // Obtener tarjetas disponibles
+        ipcMain.handle('acta-entrega:tarjetas-disponibles', (event) => {
+            try {
+                console.log('📥 Solicitud tarjetas disponibles');
+                const tarjetas = this.actaEntregaService.getTarjetasDisponibles();
+                
+                return {
+                    success: true,
+                    tarjetas: tarjetas,
+                    count: tarjetas.length
+                };
+            } catch (error) {
+                console.error('❌ Error en acta-entrega:tarjetas-disponibles:', error);
+                return {
+                    success: false,
+                    message: error.message,
                     tarjetas: []
+                };
+            }
+        });
+
+        // Obtener estadísticas
+        ipcMain.handle('acta-entrega:estadisticas', (event) => {
+            try {
+                console.log('📥 Solicitud estadísticas de actas');
+                const stats = this.actaEntregaService.getEstadisticas();
+                
+                return {
+                    success: true,
+                    estadisticas: stats
+                };
+            } catch (error) {
+                console.error('❌ Error en acta-entrega:estadisticas:', error);
+                return {
+                    success: false,
+                    message: error.message
                 };
             }
         });

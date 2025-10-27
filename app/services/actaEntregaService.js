@@ -1,243 +1,470 @@
 // app/services/actaEntregaService.js
 /**
- * Servicio para gestionar Actas de Entrega
- * Trabaja con la estructura existente de la BD:
- * - n_tarjetas_entregadas
- * - fechaEntrega
- * - pdfPathEntrega
- * - observaciones
+ * Servicio para gestión de Actas de Entrega
+ * Maneja operaciones CRUD y relaciones con tarjetas usando SQLite3
  */
+
+const path = require('path');
+const fs = require('fs');
+const { app } = require('electron');
 
 class ActaEntregaService {
     constructor(db, fileHandlers = null) {
         this.db = db;
         this.fileHandlers = fileHandlers;
+        
+        // Debug: Verificar que db es válido
+        if (!db) {
+            console.error('❌ ActaEntregaService: db es null o undefined');
+        } else if (typeof db.prepare !== 'function') {
+            console.error('❌ ActaEntregaService: db no tiene método prepare');
+            console.error('❌ Tipo de db:', typeof db);
+            console.error('❌ Propiedades de db:', Object.keys(db));
+        } else {
+            console.log('✅ ActaEntregaService inicializado con db válido');
+        }
     }
 
     /**
-     * Crear una nueva Acta de Entrega
+     * Crear nueva Acta de Entrega
      * @param {Object} actaData - Datos del acta
-     * @param {string} pdfFilePath - Ruta del PDF (opcional)
-     * @param {Object} metadata - Metadata para organizar archivos (numeroResolucion, numeroExpediente)
-     * @returns {Object} - Resultado de la operación
+     * @param {Array} tarjetasIds - IDs de tarjetas a asociar
+     * @returns {Object} Resultado de la operación
      */
-    async createActaEntrega(actaData, pdfFilePath = null, metadata = {}) {
-        try {
-            console.log('📝 Creando Acta de Entrega:', actaData);
+    createActaEntrega(actaData, tarjetasIds = []) {
+        console.log('📝 Creando acta de entrega:', actaData);
+        
+        const transaction = this.db.transaction(() => {
+            try {
+                // 1. Insertar acta de entrega
+                const insertActa = this.db.prepare(`
+                    INSERT INTO ActasEntrega (
+                        n_tarjetas_entregadas,
+                        fechaEntrega,
+                        pdfPathEntrega,
+                        observaciones
+                    ) VALUES (?, ?, ?, ?)
+                `);
 
-            // Validaciones
-            if (!actaData.fechaEntrega) {
-                return { success: false, message: 'La fecha de entrega es requerida' };
-            }
-
-            // Guardar PDF si se proporcionó (en la carpeta del expediente)
-            let pdfPath = null;
-            if (pdfFilePath && this.fileHandlers) {
-                console.log('💾 Guardando PDF del acta de entrega en la carpeta del expediente...');
-                const fileName = `acta-entrega-${Date.now()}.pdf`;
-                const saveResult = await this.fileHandlers.savePdf(
-                    pdfFilePath, 
-                    fileName,
-                    metadata
+                const result = insertActa.run(
+                    actaData.n_tarjetas_entregadas || tarjetasIds.length,
+                    actaData.fechaEntrega,
+                    null, // Se actualizará después de copiar el PDF
+                    actaData.observaciones || null
                 );
-                
-                if (saveResult.success) {
-                    pdfPath = saveResult.path;
-                    console.log('✅ PDF guardado en:', pdfPath);
-                } else {
-                    console.warn('⚠️ No se pudo guardar el PDF:', saveResult.message);
+
+                const actaId = result.lastInsertRowid;
+                console.log('✅ Acta creada con ID:', actaId);
+
+                // 2. Copiar PDF si existe
+                let finalPdfPath = null;
+                if (actaData.pdfSourcePath && fs.existsSync(actaData.pdfSourcePath)) {
+                    finalPdfPath = this._copyPdfFile(actaData.pdfSourcePath, actaId);
+                    
+                    // Actualizar ruta del PDF
+                    const updatePdf = this.db.prepare(`
+                        UPDATE ActasEntrega 
+                        SET pdfPathEntrega = ?
+                        WHERE _id = ?
+                    `);
+                    updatePdf.run(finalPdfPath, actaId);
                 }
+
+                // 3. Asociar tarjetas al acta
+                if (tarjetasIds && tarjetasIds.length > 0) {
+                    const updateTarjeta = this.db.prepare(`
+                        UPDATE TarjetasVehiculos 
+                        SET actaEntregaId = ?,
+                            fechaModificacion = CURRENT_TIMESTAMP
+                        WHERE _id = ?
+                    `);
+
+                    for (const tarjetaId of tarjetasIds) {
+                        updateTarjeta.run(actaId, tarjetaId);
+                    }
+                    console.log(`✅ ${tarjetasIds.length} tarjetas asociadas al acta`);
+                }
+
+                // 4. Obtener acta completa
+                const actaCompleta = this.getActaEntregaById(actaId);
+
+                return {
+                    success: true,
+                    message: 'Acta de entrega creada exitosamente',
+                    acta: actaCompleta
+                };
+
+            } catch (error) {
+                console.error('❌ Error al crear acta:', error);
+                throw error;
             }
+        });
 
-            // Preparar datos para inserción
-            const actaToInsert = {
-                n_tarjetas_entregadas: actaData.n_tarjetas_entregadas || 0,
-                fechaEntrega: actaData.fechaEntrega,
-                pdfPathEntrega: pdfPath,
-                observaciones: actaData.observaciones || null
-            };
-
-            // Insertar en la base de datos
-            const insertedActa = this.db.actasEntrega.insert(actaToInsert);
-
-            console.log('✅ Acta de Entrega creada exitosamente:', insertedActa._id);
-
-            return {
-                success: true,
-                message: 'Acta de Entrega creada exitosamente',
-                acta: insertedActa
-            };
-
-        } catch (error) {
-            console.error('❌ Error al crear Acta de Entrega:', error);
-            return {
-                success: false,
-                message: error.message || 'Error al crear Acta de Entrega',
-                acta: null
-            };
-        }
+        return transaction();
     }
 
     /**
-     * Obtener todas las Actas de Entrega
-     * @param {Object} filtros - Filtros opcionales
-     * @returns {Object} - Lista de actas
-     */
-    getActasEntrega(filtros = {}) {
-        try {
-            console.log('📋 Obteniendo Actas de Entrega');
-
-            const actas = this.db.actasEntrega.find(filtros);
-
-            console.log(`✅ Se encontraron ${actas.length} actas`);
-
-            return {
-                success: true,
-                actas: actas,
-                count: actas.length
-            };
-
-        } catch (error) {
-            console.error('❌ Error al obtener Actas de Entrega:', error);
-            return {
-                success: false,
-                message: error.message || 'Error al obtener Actas de Entrega',
-                actas: [],
-                count: 0
-            };
-        }
-    }
-
-    /**
-     * Obtener un Acta de Entrega por ID
-     * @param {string} actaId - ID del acta
-     * @returns {Object} - Acta encontrada
+     * Obtener acta de entrega por ID con sus tarjetas asociadas
      */
     getActaEntregaById(actaId) {
-        try {
-            console.log('🔍 Buscando Acta de Entrega con ID:', actaId);
+        console.log('🔍 Obteniendo acta ID:', actaId);
 
-            const acta = this.db.actasEntrega.findOne({ _id: actaId });
+        const acta = this.db.prepare(`
+            SELECT * FROM ActasEntrega WHERE _id = ?
+        `).get(actaId);
 
-            if (!acta) {
-                return {
-                    success: false,
-                    message: 'Acta de Entrega no encontrada',
-                    acta: null
-                };
-            }
-
-            return {
-                success: true,
-                acta: acta
-            };
-
-        } catch (error) {
-            console.error('❌ Error al buscar Acta de Entrega:', error);
-            return {
-                success: false,
-                message: error.message || 'Error al buscar Acta de Entrega',
-                acta: null
-            };
+        if (!acta) {
+            throw new Error(`Acta de entrega ${actaId} no encontrada`);
         }
+
+        // Obtener tarjetas asociadas
+        const tarjetas = this.db.prepare(`
+            SELECT 
+                t._id,
+                t.placa,
+                t.numeroTarjeta,
+                t.pdfPath,
+                t.resolucionId,
+                ar.numeroExpediente,
+                ar.anioExpediente,
+                ar.nombreEmpresa
+            FROM TarjetasVehiculos t
+            LEFT JOIN ActasResolucion ar ON t.resolucionId = ar._id
+            WHERE t.actaEntregaId = ?
+            ORDER BY t.placa
+        `).all(actaId);
+
+        return {
+            ...acta,
+            tarjetas: tarjetas
+        };
     }
 
     /**
-     * Actualizar un Acta de Entrega
-     * @param {string} actaId - ID del acta
-     * @param {Object} updateData - Datos a actualizar
-     * @returns {Object} - Resultado de la operación
+     * Obtener todas las actas de entrega
      */
-    updateActaEntrega(actaId, updateData) {
-        try {
-            console.log('📝 Actualizando Acta de Entrega:', actaId);
+    getAllActasEntrega(filtros = {}) {
+        console.log('📋 Obteniendo todas las actas de entrega');
 
-            const changes = this.db.actasEntrega.update({ _id: actaId }, updateData);
+        let query = `
+            SELECT 
+                ae.*,
+                COUNT(t._id) as cantidadTarjetas
+            FROM ActasEntrega ae
+            LEFT JOIN TarjetasVehiculos t ON t.actaEntregaId = ae._id
+        `;
 
-            if (changes === 0) {
-                return {
-                    success: false,
-                    message: 'Acta de Entrega no encontrada'
-                };
-            }
+        const conditions = [];
+        const params = [];
 
-            console.log('✅ Acta de Entrega actualizada exitosamente');
-
-            return {
-                success: true,
-                message: 'Acta de Entrega actualizada exitosamente'
-            };
-
-        } catch (error) {
-            console.error('❌ Error al actualizar Acta de Entrega:', error);
-            return {
-                success: false,
-                message: error.message || 'Error al actualizar Acta de Entrega'
-            };
+        if (filtros.fechaDesde) {
+            conditions.push('ae.fechaEntrega >= ?');
+            params.push(filtros.fechaDesde);
         }
+
+        if (filtros.fechaHasta) {
+            conditions.push('ae.fechaEntrega <= ?');
+            params.push(filtros.fechaHasta);
+        }
+
+        if (filtros.anio) {
+            conditions.push('strftime("%Y", ae.fechaEntrega) = ?');
+            params.push(filtros.anio.toString());
+        }
+
+        if (conditions.length > 0) {
+            query += ' WHERE ' + conditions.join(' AND ');
+        }
+
+        query += ' GROUP BY ae._id ORDER BY ae.fechaEntrega DESC';
+
+        const actas = this.db.prepare(query).all(...params);
+
+        console.log(`✅ ${actas.length} actas encontradas`);
+        return actas;
     }
 
     /**
-     * Eliminar un Acta de Entrega
-     * @param {string} actaId - ID del acta
-     * @returns {Object} - Resultado de la operación
+     * Actualizar acta de entrega
+     */
+    updateActaEntrega(actaId, actaData, tarjetasIds = null) {
+        console.log('📝 Actualizando acta ID:', actaId);
+
+        const transaction = this.db.transaction(() => {
+            try {
+                const actaExistente = this.db.prepare(
+                    'SELECT * FROM ActasEntrega WHERE _id = ?'
+                ).get(actaId);
+
+                if (!actaExistente) {
+                    throw new Error(`Acta ${actaId} no encontrada`);
+                }
+
+                // Actualizar campos
+                const updateActa = this.db.prepare(`
+                    UPDATE ActasEntrega
+                    SET n_tarjetas_entregadas = ?,
+                        fechaEntrega = ?,
+                        observaciones = ?,
+                        fechaModificacion = CURRENT_TIMESTAMP
+                    WHERE _id = ?
+                `);
+
+                updateActa.run(
+                    actaData.n_tarjetas_entregadas || actaExistente.n_tarjetas_entregadas,
+                    actaData.fechaEntrega || actaExistente.fechaEntrega,
+                    actaData.observaciones !== undefined ? actaData.observaciones : actaExistente.observaciones,
+                    actaId
+                );
+
+                // Gestionar PDF
+                if (actaData.pdfSourcePath && fs.existsSync(actaData.pdfSourcePath)) {
+                    if (actaExistente.pdfPathEntrega && fs.existsSync(actaExistente.pdfPathEntrega)) {
+                        fs.unlinkSync(actaExistente.pdfPathEntrega);
+                    }
+
+                    const newPdfPath = this._copyPdfFile(actaData.pdfSourcePath, actaId);
+                    
+                    const updatePdf = this.db.prepare(`
+                        UPDATE ActasEntrega SET pdfPathEntrega = ? WHERE _id = ?
+                    `);
+                    updatePdf.run(newPdfPath, actaId);
+                }
+
+                // Actualizar tarjetas
+                if (tarjetasIds !== null && Array.isArray(tarjetasIds)) {
+                    this.db.prepare(`
+                        UPDATE TarjetasVehiculos 
+                        SET actaEntregaId = NULL,
+                            fechaModificacion = CURRENT_TIMESTAMP
+                        WHERE actaEntregaId = ?
+                    `).run(actaId);
+
+                    if (tarjetasIds.length > 0) {
+                        const asociar = this.db.prepare(`
+                            UPDATE TarjetasVehiculos 
+                            SET actaEntregaId = ?,
+                                fechaModificacion = CURRENT_TIMESTAMP
+                            WHERE _id = ?
+                        `);
+
+                        for (const tarjetaId of tarjetasIds) {
+                            asociar.run(actaId, tarjetaId);
+                        }
+                    }
+                }
+
+                const actaActualizada = this.getActaEntregaById(actaId);
+
+                return {
+                    success: true,
+                    message: 'Acta actualizada exitosamente',
+                    acta: actaActualizada
+                };
+
+            } catch (error) {
+                console.error('❌ Error al actualizar acta:', error);
+                throw error;
+            }
+        });
+
+        return transaction();
+    }
+
+    /**
+     * Eliminar acta de entrega
      */
     deleteActaEntrega(actaId) {
-        try {
-            console.log('🗑️ Eliminando Acta de Entrega:', actaId);
+        console.log('🗑️ Eliminando acta ID:', actaId);
 
-            const changes = this.db.actasEntrega.remove({ _id: actaId });
+        const transaction = this.db.transaction(() => {
+            try {
+                const acta = this.db.prepare(
+                    'SELECT * FROM ActasEntrega WHERE _id = ?'
+                ).get(actaId);
 
-            if (changes === 0) {
+                if (!acta) {
+                    throw new Error(`Acta ${actaId} no encontrada`);
+                }
+
+                const tarjetas = this.db.prepare(`
+                    SELECT COUNT(*) as cantidad
+                    FROM TarjetasVehiculos
+                    WHERE actaEntregaId = ?
+                `).get(actaId);
+
+                // Desasociar tarjetas
+                this.db.prepare(`
+                    UPDATE TarjetasVehiculos 
+                    SET actaEntregaId = NULL,
+                        fechaModificacion = CURRENT_TIMESTAMP
+                    WHERE actaEntregaId = ?
+                `).run(actaId);
+
+                // Eliminar PDF
+                let pdfEliminado = false;
+                if (acta.pdfPathEntrega && fs.existsSync(acta.pdfPathEntrega)) {
+                    try {
+                        fs.unlinkSync(acta.pdfPathEntrega);
+                        pdfEliminado = true;
+                    } catch (error) {
+                        console.warn('⚠️ No se pudo eliminar el PDF:', error.message);
+                    }
+                }
+
+                // Eliminar acta
+                this.db.prepare('DELETE FROM ActasEntrega WHERE _id = ?').run(actaId);
+
                 return {
-                    success: false,
-                    message: 'Acta de Entrega no encontrada'
+                    success: true,
+                    message: 'Acta de entrega eliminada exitosamente',
+                    summary: {
+                        actaId: actaId,
+                        fechaEntrega: acta.fechaEntrega,
+                        tarjetasDesasociadas: tarjetas.cantidad,
+                        pdfEliminado: pdfEliminado
+                    }
                 };
+
+            } catch (error) {
+                console.error('❌ Error al eliminar acta:', error);
+                throw error;
             }
+        });
 
-            console.log('✅ Acta de Entrega eliminada exitosamente');
-
-            return {
-                success: true,
-                message: 'Acta de Entrega eliminada exitosamente'
-            };
-
-        } catch (error) {
-            console.error('❌ Error al eliminar Acta de Entrega:', error);
-            return {
-                success: false,
-                message: error.message || 'Error al eliminar Acta de Entrega'
-            };
-        }
+        return transaction();
     }
 
     /**
-     * Obtener tarjetas asociadas a un acta de entrega
-     * @param {string} actaId - ID del acta
-     * @returns {Object} - Tarjetas asociadas
+     * Obtener información para eliminar (preview)
      */
-    getTarjetasByActa(actaId) {
-        try {
-            console.log('🔍 Buscando tarjetas del Acta:', actaId);
+    getDeleteInfo(actaId) {
+        const acta = this.getActaEntregaById(actaId);
+        
+        return {
+            acta: {
+                id: acta._id,
+                fechaEntrega: acta.fechaEntrega,
+                nTarjetas: acta.n_tarjetas_entregadas,
+                observaciones: acta.observaciones
+            },
+            tarjetas: acta.tarjetas.map(t => ({
+                id: t._id,
+                placa: t.placa,
+                numeroTarjeta: t.numeroTarjeta,
+                expediente: `${t.numeroExpediente}-${t.anioExpediente}`
+            })),
+            archivos: {
+                pdf: !!acta.pdfPathEntrega
+            }
+        };
+    }
 
-            const tarjetas = this.db.tarjetas.find({ actaEntregaId: actaId });
-
-            return {
-                success: true,
-                tarjetas: tarjetas,
-                count: tarjetas.length
-            };
-
-        } catch (error) {
-            console.error('❌ Error al buscar tarjetas:', error);
-            return {
-                success: false,
-                message: error.message || 'Error al buscar tarjetas',
-                tarjetas: [],
-                count: 0
-            };
+    /**
+     * Buscar actas de entrega
+     */
+    searchActasEntrega(searchTerm) {
+        if (!searchTerm || searchTerm.trim() === '') {
+            return this.getAllActasEntrega();
         }
+
+        const term = `%${searchTerm.toLowerCase()}%`;
+
+        const actas = this.db.prepare(`
+            SELECT DISTINCT
+                ae.*,
+                COUNT(DISTINCT t._id) as cantidadTarjetas
+            FROM ActasEntrega ae
+            LEFT JOIN TarjetasVehiculos t ON t.actaEntregaId = ae._id
+            LEFT JOIN ActasResolucion ar ON t.resolucionId = ar._id
+            WHERE 
+                LOWER(ae.observaciones) LIKE ?
+                OR LOWER(t.placa) LIKE ?
+                OR LOWER(t.numeroTarjeta) LIKE ?
+                OR LOWER(ar.numeroExpediente) LIKE ?
+                OR LOWER(ar.nombreEmpresa) LIKE ?
+                OR strftime('%Y', ae.fechaEntrega) LIKE ?
+            GROUP BY ae._id
+            ORDER BY ae.fechaEntrega DESC
+        `).all(term, term, term, term, term, term);
+
+        return actas;
+    }
+
+    /**
+     * Obtener tarjetas disponibles (sin acta)
+     */
+    getTarjetasDisponibles() {
+        const tarjetas = this.db.prepare(`
+            SELECT 
+                t._id,
+                t.placa,
+                t.numeroTarjeta,
+                t.resolucionId,
+                ar.numeroExpediente,
+                ar.anioExpediente,
+                ar.nombreEmpresa,
+                ar.fechaExpediente
+            FROM TarjetasVehiculos t
+            LEFT JOIN ActasResolucion ar ON t.resolucionId = ar._id
+            WHERE t.actaEntregaId IS NULL
+            ORDER BY ar.fechaExpediente DESC, t.placa ASC
+        `).all();
+
+        return tarjetas;
+    }
+
+    /**
+     * Obtener estadísticas
+     */
+    getEstadisticas() {
+        const stats = {};
+
+        stats.totalActas = this.db.prepare(
+            'SELECT COUNT(*) as count FROM ActasEntrega'
+        ).get().count;
+
+        stats.tarjetasEntregadas = this.db.prepare(
+            'SELECT COUNT(*) as count FROM TarjetasVehiculos WHERE actaEntregaId IS NOT NULL'
+        ).get().count;
+
+        stats.tarjetasPendientes = this.db.prepare(
+            'SELECT COUNT(*) as count FROM TarjetasVehiculos WHERE actaEntregaId IS NULL'
+        ).get().count;
+
+        stats.actasPorAnio = this.db.prepare(`
+            SELECT 
+                strftime('%Y', fechaEntrega) as anio,
+                COUNT(*) as cantidad,
+                SUM(n_tarjetas_entregadas) as totalTarjetas
+            FROM ActasEntrega
+            GROUP BY anio
+            ORDER BY anio DESC
+        `).all();
+
+        return stats;
+    }
+
+    /**
+     * Copiar archivo PDF
+     * @private
+     */
+    _copyPdfFile(sourcePath, actaId) {
+        const pdfDir = path.join(app.getPath('userData'), 'pdfs', 'actas-entrega');
+        
+        if (!fs.existsSync(pdfDir)) {
+            fs.mkdirSync(pdfDir, { recursive: true });
+        }
+
+        const fileName = `acta_${actaId}_${Date.now()}.pdf`;
+        const destPath = path.join(pdfDir, fileName);
+
+        fs.copyFileSync(sourcePath, destPath);
+        console.log('📄 PDF copiado a:', destPath);
+
+        return destPath;
     }
 }
 
 module.exports = ActaEntregaService;
+

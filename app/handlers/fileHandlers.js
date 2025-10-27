@@ -2,11 +2,13 @@
 const { dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const pathConfig = require('../config/pathConfig');
 
 class FileHandlers {
     constructor(appInstance) {
         this.app = appInstance;
-        this.dataDir = path.join(this.app.getPath('userData'), 'archivos-vehiculos');
+        // Usar pathConfig para obtener la ruta de archivos (portable o estándar)
+        this.dataDir = pathConfig.getFilesPath();
 
         // Asegura que la carpeta raíz exista.
         if (!fs.existsSync(this.dataDir)) {

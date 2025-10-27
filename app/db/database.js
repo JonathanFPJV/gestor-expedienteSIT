@@ -8,9 +8,13 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 const { app } = require('electron');
+const pathConfig = require('../config/pathConfig');
 
-// Define la ruta del directorio de datos de la aplicación
-const dbDir = path.join(app.getPath('userData'), 'database');
+// Inicializar configuración de rutas (portable o estándar)
+pathConfig.initialize();
+
+// Define la ruta del directorio de datos de la aplicación usando pathConfig
+const dbDir = pathConfig.getDatabasePath();
 
 // Asegura que el directorio de la base de datos exista
 if (!fs.existsSync(dbDir)) {
