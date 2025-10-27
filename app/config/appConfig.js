@@ -2,6 +2,14 @@
 const path = require('path');
 
 const AppConfig = {
+    // Configuración de modo portable
+    portable: {
+        enabled: true,
+        markerFile: 'portable.txt',
+        dataFolder: 'data',
+        description: 'Si existe portable.txt junto al .exe, todos los datos se guardan en carpeta data/'
+    },
+    
     // Configuración de base de datos
     database: {
         expedientes: 'expedientes.db',

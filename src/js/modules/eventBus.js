@@ -75,6 +75,11 @@ export const APP_EVENTS = {
     TARJETA_UPDATED: 'tarjeta:updated',
     TARJETA_DELETED: 'tarjeta:deleted',
     
+    // Eventos de actas de entrega
+    ACTA_CREATED: 'acta:created',
+    ACTA_UPDATED: 'acta:updated',
+    ACTA_DELETED: 'acta:deleted',
+    
     // Eventos de búsqueda
     SEARCH_REQUESTED: 'search:requested',
     SEARCH_COMPLETED: 'search:completed',

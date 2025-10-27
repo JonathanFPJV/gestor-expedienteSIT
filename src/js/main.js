@@ -5,11 +5,13 @@ import { dataService } from './modules/dataService.js';
 import { loadingManager } from './modules/loadingManager.js';
 import { eventBus, APP_EVENTS } from './modules/eventBus.js';
 import { debounceSearch } from './modules/debounce.js';
-import { navigationManager } from './modules/navigation.js';
+import { navigationManager } from './modules/navigationManager.js';
 import { expedientesCRUD } from './modules/expedientesCRUD.js';
 import { tarjetasCRUD } from './modules/tarjetasCRUD.js';
+import { actasEntregaCRUD } from './modules/actasEntregaCRUD.js';
 import { searchManager } from './modules/searchManager.js';
 import { SimplePDFViewer } from './modules/simplePdfViewer.js';
+import { tableResponsive } from './modules/tableResponsive.js';
 
 // Inicializar visualizador de PDFs
 const simplePdfViewer = new SimplePDFViewer();
@@ -25,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.navigationManager = navigationManager;
     window.expedientesCRUD = expedientesCRUD;
     window.tarjetasCRUD = tarjetasCRUD;
+    window.actasEntregaCRUD = actasEntregaCRUD;
     window.searchManager = searchManager;
     window.dataService = dataService;
     window.ui = ui;
@@ -310,14 +313,21 @@ function initializeApp() {
     // Configurar listeners de IPC para comunicación entre ventanas
     setupIPCListeners();
     
+    // Inicializar sistema de tablas responsive
+    tableResponsive.init();
+    
     // Inicializar módulo de tarjetas (expedientes se inicializa en su constructor)
     tarjetasCRUD.init();
-    console.log('Módulos CRUD disponibles e inicializados');
+    
+    // Inicializar módulo de actas de entrega
+    actasEntregaCRUD.init();
+    
+    console.log('Módulos CRUD disponibles e inicializados (Expedientes, Tarjetas, Actas)');
     
     // Limpiar cualquier estado de carga residual
     loadingManager.clearAll();
     
-    console.log('Aplicación inicializada con sistema reactivo');
+    console.log('Aplicación inicializada con sistema reactivo y responsive');
 }
 
 // 🔔 Configurar listeners de IPC para comunicación entre ventanas
@@ -360,7 +370,46 @@ function setupIPCListeners() {
             }
         });
 
-        console.log('✅ Listeners de IPC configurados');
+        // ========== LISTENERS PARA ACTAS DE ENTREGA ==========
+        
+        // Escuchar cuando se crea un acta de entrega
+        window.api.on('acta-entrega-creada', (payload) => {
+            console.log('📡 IPC: acta-entrega-creada recibido:', payload);
+            
+            if (payload && payload.acta) {
+                eventBus.emit(APP_EVENTS.ACTA_CREATED, { 
+                    acta: payload.acta
+                });
+                console.log('✅ Evento ACTA_CREATED emitido desde IPC');
+            }
+        });
+
+        // Escuchar cuando se actualiza un acta de entrega
+        window.api.on('acta-entrega-actualizada', (payload) => {
+            console.log('📡 IPC: acta-entrega-actualizada recibido:', payload);
+            
+            if (payload && payload.acta) {
+                eventBus.emit(APP_EVENTS.ACTA_UPDATED, { 
+                    acta: payload.acta
+                });
+                console.log('✅ Evento ACTA_UPDATED emitido desde IPC');
+            }
+        });
+
+        // Escuchar cuando se elimina un acta de entrega
+        window.api.on('acta-entrega-eliminada', (payload) => {
+            console.log('📡 IPC: acta-entrega-eliminada recibido:', payload);
+            
+            if (payload && payload.actaId) {
+                eventBus.emit(APP_EVENTS.ACTA_DELETED, { 
+                    actaId: payload.actaId,
+                    summary: payload.summary
+                });
+                console.log('✅ Evento ACTA_DELETED emitido desde IPC');
+            }
+        });
+
+        console.log('✅ Listeners de IPC configurados (Expedientes + Actas)');
     } else {
         console.warn('⚠️ window.api no está disponible');
     }

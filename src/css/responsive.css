@@ -1,0 +1,368 @@
+/* css/responsive.css - Estilos Responsive para Tablas y Contenido */
+
+/* ============================================
+   CONTENEDORES PRINCIPALES
+   ============================================ */
+
+.vista-container {
+    padding: 2rem;
+}
+
+/* ============================================
+   TABLAS RESPONSIVE
+   ============================================ */
+
+.crud-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.crud-table {
+    min-width: 800px;
+}
+
+/* ============================================
+   RESPONSIVE - TABLET (max-width: 992px)
+   ============================================ */
+
+@media (max-width: 992px) {
+    .vista-container {
+        padding: 1.5rem;
+    }
+
+    .crud-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+
+    .crud-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .search-crud {
+        width: 100%;
+    }
+
+    .search-crud input {
+        width: 100%;
+    }
+
+    .btn-primary,
+    .btn-secondary {
+        width: 100%;
+    }
+
+    .crud-filters {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .filter-group {
+        width: 100%;
+    }
+
+    .filter-group select {
+        width: 100%;
+    }
+
+    .form-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+}
+
+/* ============================================
+   RESPONSIVE - MOBILE (max-width: 768px)
+   ============================================ */
+
+@media (max-width: 768px) {
+    .vista-container {
+        padding: 1rem;
+    }
+
+    /* Header CRUD */
+    .crud-header h2 {
+        font-size: 1.5rem;
+    }
+
+    /* Tablas en modo tarjeta para mobile */
+    .crud-table-container {
+        overflow: visible;
+    }
+
+    .crud-table {
+        min-width: unset;
+    }
+
+    .crud-table thead {
+        display: none;
+    }
+
+    .crud-table tbody {
+        display: block;
+    }
+
+    .crud-table tr {
+        display: block;
+        margin-bottom: 1.5rem;
+        background: white;
+        border: 1px solid var(--borde-suave);
+        border-radius: 8px;
+        padding: 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .crud-table td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--borde-suave);
+    }
+
+    .crud-table td:last-child {
+        border-bottom: none;
+    }
+
+    .crud-table td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--color-texto-principal);
+        flex: 0 0 40%;
+    }
+
+    .crud-table td:nth-child(7),
+    .crud-table td:nth-child(8) {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    /* Botones de acción en mobile */
+    .action-btns {
+        flex-wrap: wrap;
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .btn-action {
+        flex: 1;
+        min-width: 80px;
+    }
+
+    /* Paginación en mobile */
+    .crud-pagination {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+
+    .pagination-controls {
+        flex-direction: column;
+        gap: 0.5rem;
+        width: 100%;
+    }
+
+    .pagination-controls button {
+        width: 100%;
+    }
+
+    /* Formularios */
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-container,
+    .search-container {
+        padding: 1.5rem;
+    }
+
+    fieldset {
+        padding: 1rem;
+    }
+
+    /* Filtros */
+    .crud-filters {
+        padding: 1rem;
+    }
+
+    .btn-outline {
+        width: 100%;
+    }
+
+    /* Modal en mobile */
+    .modal-content {
+        width: 95%;
+        max-height: 95vh;
+        margin: 2.5vh auto;
+        padding: 1rem;
+    }
+
+    .modal-header h3 {
+        font-size: 1.25rem;
+    }
+
+    .modal-footer {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .modal-footer button {
+        width: 100%;
+    }
+
+    /* Búsqueda */
+    .search-tabs {
+        flex-direction: column;
+    }
+
+    .tab-btn {
+        width: 100%;
+    }
+
+    /* Resultados de búsqueda */
+    .expediente-details {
+        grid-template-columns: 1fr;
+    }
+
+    .tarjeta-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+}
+
+/* ============================================
+   RESPONSIVE - MOBILE PEQUEÑO (max-width: 480px)
+   ============================================ */
+
+@media (max-width: 480px) {
+    .vista-container {
+        padding: 0.75rem;
+    }
+
+    .crud-header h2 {
+        font-size: 1.25rem;
+    }
+
+    .form-container,
+    .search-container {
+        padding: 1rem;
+    }
+
+    .btn-primary,
+    .btn-secondary,
+    .btn-outline {
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    .crud-table tr {
+        padding: 0.75rem;
+    }
+
+    .crud-table td {
+        padding: 0.5rem 0;
+        font-size: 0.9rem;
+    }
+
+    .crud-table td::before {
+        font-size: 0.85rem;
+    }
+
+    /* Badge más pequeño */
+    .badge {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+    }
+
+    /* Botones de acción más compactos */
+    .btn-action {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+    }
+}
+
+/* ============================================
+   MEJORAS PARA IMPRESIÓN
+   ============================================ */
+
+@media print {
+    .main-nav,
+    .nav-toggle,
+    .nav-overlay,
+    .crud-actions,
+    .crud-filters,
+    .crud-pagination,
+    .action-btns,
+    .modal {
+        display: none !important;
+    }
+
+    .vista-container {
+        padding: 0;
+    }
+
+    .crud-table {
+        font-size: 10pt;
+    }
+
+    .crud-table thead {
+        display: table-header-group;
+    }
+
+    .crud-table tr {
+        page-break-inside: avoid;
+    }
+}
+
+/* ============================================
+   UTILIDADES RESPONSIVE
+   ============================================ */
+
+/* Ocultar en mobile */
+.hide-mobile {
+    display: block;
+}
+
+@media (max-width: 768px) {
+    .hide-mobile {
+        display: none !important;
+    }
+}
+
+/* Mostrar solo en mobile */
+.show-mobile {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .show-mobile {
+        display: block !important;
+    }
+}
+
+/* Clases de ancho completo */
+.w-full {
+    width: 100% !important;
+}
+
+.w-auto {
+    width: auto !important;
+}
+
+/* Espaciado responsive */
+@media (max-width: 768px) {
+    .mt-mobile-lg {
+        margin-top: 2rem !important;
+    }
+
+    .mb-mobile-lg {
+        margin-bottom: 2rem !important;
+    }
+
+    .p-mobile-sm {
+        padding: 0.5rem !important;
+    }
+}

@@ -923,3 +923,121 @@
         border-radius: var(--border-radius);
     }
 }
+
+/* =========================
+   ESTILOS PARA ACTAS DE ENTREGA
+   ========================= */
+
+/* Badge para número de tarjetas */
+.badge-primary {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* Lista de tarjetas con checkboxes */
+.tarjetas-checklist {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    padding: 10px;
+    border-radius: var(--border-radius-sm);
+    background-color: var(--bg-white);
+}
+
+.tarjeta-checkbox-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    margin-bottom: 5px;
+    border-radius: var(--border-radius-sm);
+    transition: var(--transition-fast);
+}
+
+.tarjeta-checkbox-item:hover {
+    background-color: var(--bg-light);
+}
+
+.tarjeta-checkbox-item input[type="checkbox"] {
+    margin-right: 10px;
+    width: auto;
+}
+
+.tarjeta-checkbox-item label {
+    margin: 0;
+    cursor: pointer;
+    flex: 1;
+}
+
+/* Notificaciones para actas */
+.notification {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    min-width: 300px;
+    padding: 15px 20px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow-lg);
+    z-index: var(--z-notification);
+    transform: translateX(400px);
+    transition: transform 0.3s ease;
+}
+
+.notification.show {
+    transform: translateX(0);
+}
+
+.notification-success {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.notification-error {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.notification-info {
+    background-color: var(--info-color);
+    color: white;
+}
+
+/* Detalles de acta en modal */
+.acta-details h3 {
+    margin-top: 0;
+    color: var(--dark-color);
+}
+
+.acta-details p {
+    margin: 10px 0;
+}
+
+.acta-details ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.acta-details ul li {
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.acta-details ul li:last-child {
+    border-bottom: none;
+}
+
+/* Responsive para actas */
+@media (max-width: 768px) {
+    .tarjetas-checklist {
+        max-height: 200px;
+    }
+    
+    .notification {
+        right: 10px;
+        left: 10px;
+        min-width: auto;
+    }
+}

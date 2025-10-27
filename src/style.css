@@ -1,6 +1,8 @@
 /* style.css - SITransporte Arequipa */
 @import url('./css/variables.css');
 @import url('./css/typography.css');
+@import url('./css/navigation.css');
+@import url('./css/responsive.css');
 
 /* Reset y Base */
 * {
@@ -15,6 +17,7 @@ body {
     color: var(--color-texto-principal);
     margin: 0;
     padding: 0;
+    padding-top: 0;
 }
 
 /* Contenedores */
@@ -247,55 +250,6 @@ button:active {
 @keyframes spin {
     0% { transform: translateY(-50%) rotate(0deg); }
     100% { transform: translateY(-50%) rotate(360deg); }
-}
-
-/* Estilos para navegación principal */
-.main-nav {
-    background: var(--color-fondo-contenedor);
-    color: var(--color-texto-principal);
-    padding: var(--espacio-md) var(--espacio-lg);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: var(--sombra-elevada);
-    border-bottom: 3px solid var(--color-acento);
-}
-
-.nav-brand h1 {
-    margin: 0;
-    font-size: var(--tamano-xl);
-    font-weight: var(--peso-semibold);
-    color: var(--color-acento);
-}
-
-.nav-menu {
-    display: flex;
-    gap: var(--espacio-md);
-}
-
-.nav-btn {
-    background: var(--color-fondo-contenedor);
-    color: var(--color-texto-principal);
-    border: 2px solid var(--borde-suave);
-    padding: var(--espacio-sm) var(--espacio-lg);
-    border-radius: var(--radio-medio);
-    cursor: pointer;
-    transition: all var(--transicion-normal);
-    font-weight: var(--peso-medio);
-}
-
-.nav-btn:hover {
-    background: var(--color-fondo-plataforma);
-    border-color: var(--color-acento);
-    transform: translateY(-2px);
-    box-shadow: var(--sombra-elevada);
-}
-
-.nav-btn.active {
-    background: var(--color-primario);
-    color: var(--color-texto-blanco);
-    box-shadow: var(--sombra-flotante);
-    border-color: var(--color-primario);
 }
 
 /* Sistema de Vistas */

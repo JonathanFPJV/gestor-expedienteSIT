@@ -1,20 +1,46 @@
 {
-  "name": "gestor-electron",
+  "name": "sit-gestor-vehiculos",
   "version": "1.0.0",
   "main": "app/main.js",
+  "productName": "SIT Gestor Vehículos",
   "scripts": {
     "start": "electron .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "electron-builder --win --x64",
+    "build:portable": "electron-builder --win --x64 && node scripts/create-portable-marker.js",
+    "dist": "electron-builder --win --x64",
+    "postinstall": "electron-builder install-app-deps"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "electron",
+    "sqlite",
+    "sitransporte"
+  ],
+  "author": "SITransporte Dev Team",
   "license": "ISC",
-  "description": "",
+  "description": "Sistema de gestión y consulta de actas de resolución y tarjetas de vehículos.",
   "dependencies": {
     "better-sqlite3": "^12.4.1",
-    "electron": "^38.0.0",
-    "electron-store": "^10.1.0",
-    "nedb": "^1.8.0",
     "pdfjs-dist": "^5.4.149"
+  },
+  "devDependencies": {
+    "electron": "^38.0.0", 
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.sitransporte.gestor",
+    "copyright": "Copyright © 2025 SITransporte Arequipa",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "app/**/*",
+      "src/**/*",
+      "preload.js",
+      "package.json"
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "build/icon.ico"
+    }
   }
 }

@@ -6,13 +6,15 @@ export class NavigationManager {
             'busqueda': document.getElementById('vista-busqueda'),
             'registro': document.getElementById('vista-registro'),
             'crud': document.getElementById('vista-crud'),
-            'tarjetas-crud': document.getElementById('vista-tarjetas-crud')
+            'tarjetas-crud': document.getElementById('vista-tarjetas-crud'),
+            'actas-crud': document.getElementById('vista-actas-crud')
         };
         this.navButtons = {
             'busqueda': document.getElementById('nav-busqueda'),
             'registro': document.getElementById('nav-registro'),
             'crud': document.getElementById('nav-crud'),
-            'tarjetas-crud': document.getElementById('nav-tarjetas')
+            'tarjetas-crud': document.getElementById('nav-tarjetas'),
+            'actas-crud': document.getElementById('nav-actas')
         };
         
         this.initializeNavigation();

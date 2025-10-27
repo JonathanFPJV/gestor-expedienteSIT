@@ -9,24 +9,42 @@
 <body>
     <!-- Navegación Principal -->
     <nav class="main-nav">
-        <div class="nav-brand">
-            <h1>📋 Gestor de Expedientes SIT</h1>
-        </div>
-        <div class="nav-menu">
-            <button id="nav-busqueda" class="nav-btn active">
-                🔍 Búsqueda
+        <div class="nav-container">
+            <div class="nav-brand">
+                <img src="assets/LogoSIT-R.png" alt="Logo SIT" class="brand-logo">
+                <h1>Gestor de Expedientes SIT</h1>
+            </div>
+            
+            <!-- Botón Hamburguesa (Mobile) -->
+            <button class="nav-toggle" aria-label="Menú de navegación">
+                <span></span>
+                <span></span>
+                <span></span>
             </button>
-            <button id="nav-registro" class="nav-btn">
-                ➕ Nuevo Expediente
-            </button>
-            <button id="nav-crud" class="nav-btn">
-                📂 Gestión de Expedientes
-            </button>
-            <button id="nav-tarjetas" class="nav-btn">
-                🎫 Gestión de Tarjetas
-            </button>
+            
+            <!-- Menú de Navegación -->
+            <div class="nav-menu">
+                <button id="nav-busqueda" class="nav-btn active">
+                    🔍 Búsqueda
+                </button>
+                <button id="nav-registro" class="nav-btn">
+                    ➕ Nuevo Expediente
+                </button>
+                <button id="nav-crud" class="nav-btn">
+                    📂 Gestión de Expedientes
+                </button>
+                <button id="nav-tarjetas" class="nav-btn">
+                    🎫 Gestión de Tarjetas
+                </button>
+                <button id="nav-actas" class="nav-btn">
+                    📋 Gestión de Actas de Entrega
+                </button>
+            </div>
         </div>
     </nav>
+    
+    <!-- Overlay para menú mobile -->
+    <div class="nav-overlay"></div>
 
     <!-- Sección de Búsqueda (Vista por defecto) -->
     <div id="vista-busqueda" class="vista-container active">
@@ -337,6 +355,63 @@
         </div>
     </div>
 
+    <!-- Sección de Gestión de Actas de Entrega -->
+    <div id="vista-actas-crud" class="vista-container">
+        <div class="crud-container">
+            <div class="crud-header">
+                <h2>📋 Gestión de Actas de Entrega</h2>
+                <div class="crud-actions">
+                    <button id="nueva-acta-btn" class="btn-primary">
+                        ➕ Nueva Acta
+                    </button>
+                    <div class="search-crud">
+                        <input type="text" id="search-actas-input" placeholder="Buscar actas..." />
+                        <button id="search-actas-btn" class="btn-secondary">🔍</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class="crud-filters">
+                <button id="limpiar-filtros-actas-btn" class="btn-outline">Limpiar Filtros</button>
+                <div class="filter-stats">
+                    <span id="stats-actas">Total: 0 actas</span>
+                </div>
+            </div>
+
+            <!-- Tabla de Actas -->
+            <div class="crud-table-container">
+                <table id="actas-table" class="crud-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Fecha Entrega</th>
+                            <th>N° Tarjetas</th>
+                            <th>PDF</th>
+                            <th>Observaciones</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="actas-tbody">
+                        <!-- Las actas se cargarán aquí -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginación -->
+            <div class="crud-pagination">
+                <div class="pagination-info">
+                    <span id="pagination-info-actas">Mostrando 0 de 0 actas</span>
+                </div>
+                <div class="pagination-controls">
+                    <button id="prev-page-actas" class="btn-outline" disabled>« Anterior</button>
+                    <span id="page-info-actas">Página 1 de 1</span>
+                    <button id="next-page-actas" class="btn-outline" disabled>Siguiente »</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal para Editar Expediente -->
     <div id="modal-expediente" class="modal">
         <div class="modal-content">
@@ -373,6 +448,26 @@
                 <button id="modal-tarjeta-cancelar" class="btn-outline">Cancelar</button>
                 <button id="modal-tarjeta-guardar" class="btn-primary">Guardar</button>
                 <button id="modal-tarjeta-eliminar" class="btn-danger" style="display: none;">Eliminar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Acta de Entrega -->
+    <div id="modal-acta" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-acta-title">Nueva Acta de Entrega</h3>
+                <button id="modal-acta-close" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="modal-acta-form">
+                    <!-- Los campos del formulario se cargarán dinámicamente -->
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="modal-acta-cancelar" class="btn-outline">Cancelar</button>
+                <button id="modal-acta-guardar" class="btn-primary">Guardar</button>
+                <button id="modal-acta-eliminar" class="btn-danger" style="display: none;">Eliminar</button>
             </div>
         </div>
     </div>
