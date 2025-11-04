@@ -18,6 +18,7 @@ class TarjetasCRUD {
         this.searchTerm = '';
         this.currentTarjetaId = null;
         this.selectedPdfPath = null; // Para almacenar la ruta del PDF seleccionado
+        this.isInitialized = false; // Para controlar la carga inicial de datos
         
         // Referencias al DOM
         this.elements = {};
@@ -38,7 +39,50 @@ class TarjetasCRUD {
         // Suscribirse a eventos del eventBus
         this.subscribeToEvents();
         
+        // Configurar observer para detectar cuando la vista se activa
+        this.setupViewActivationListener();
+        
         console.log('✅ Módulo de tarjetas inicializado');
+    }
+
+    /**
+     * Configurar listener para detectar cuando la vista de tarjetas se activa
+     */
+    setupViewActivationListener() {
+        const vistaTarjetas = document.getElementById('vista-tarjetas-crud');
+        
+        if (!vistaTarjetas) {
+            console.warn('⚠️ No se encontró el elemento vista-tarjetas-crud');
+            return;
+        }
+
+        // Crear observer para detectar cambios en la clase
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                    const vistaTarjetas = document.getElementById('vista-tarjetas-crud');
+                    
+                    if (vistaTarjetas && vistaTarjetas.classList.contains('active') && !this.isInitialized) {
+                        console.log('🎯 Vista de tarjetas activada - Cargando datos iniciales...');
+                        this.isInitialized = true;
+                        this.cargarTarjetas();
+                    }
+                }
+            });
+        });
+
+        // Observar cambios en los atributos del elemento
+        observer.observe(vistaTarjetas, {
+            attributes: true,
+            attributeFilter: ['class']
+        });
+
+        // Si la vista ya está activa al cargar, cargar datos inmediatamente
+        if (vistaTarjetas.classList.contains('active') && !this.isInitialized) {
+            console.log('🎯 Vista de tarjetas ya estaba activa - Cargando datos iniciales...');
+            this.isInitialized = true;
+            this.cargarTarjetas();
+        }
     }
 
     /**

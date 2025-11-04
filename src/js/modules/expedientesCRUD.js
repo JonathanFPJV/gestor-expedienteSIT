@@ -9,11 +9,45 @@ export class ExpedientesCRUD {
         this.currentPage = 1;
         this.itemsPerPage = 10;
         this.currentExpediente = null;
+        this.isInitialized = false;
         
         this.initializeElements();
         this.initializeEventListeners();
         this.initializeFilters();
         this.subscribeToEvents(); // 🔄 Suscribirse a eventos para reactividad
+        this.setupViewActivationListener(); // 🔄 Escuchar cuando se activa la vista
+    }
+
+    /**
+     * Configurar listener para cuando se active la vista de expedientes
+     */
+    setupViewActivationListener() {
+        // Cargar expedientes cuando se muestre la vista
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                    const vistaCrud = document.getElementById('vista-crud');
+                    if (vistaCrud && vistaCrud.classList.contains('active') && !this.isInitialized) {
+                        console.log('🎯 Vista de expedientes activada - Cargando datos...');
+                        this.isInitialized = true;
+                        this.loadExpedientes();
+                    }
+                }
+            });
+        });
+
+        // Observar cambios en la vista-crud
+        const vistaCrud = document.getElementById('vista-crud');
+        if (vistaCrud) {
+            observer.observe(vistaCrud, { attributes: true });
+            
+            // Si ya está activa al cargar, cargar datos inmediatamente
+            if (vistaCrud.classList.contains('active')) {
+                console.log('🎯 Vista de expedientes ya activa - Cargando datos...');
+                this.isInitialized = true;
+                this.loadExpedientes();
+            }
+        }
     }
 
     initializeElements() {
