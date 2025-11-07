@@ -392,26 +392,52 @@ export const displayExpedientesResults = (results) => {
                     </div>
                 `;
                 
-                // Mostrar tarjetas asociadas como enlaces
+                // Mostrar tarjetas asociadas con visualización dinámica
                 if (expediente.tarjetasAsociadas && expediente.tarjetasAsociadas.length > 0) {
                     const tarjetasDiv = document.createElement('div');
                     tarjetasDiv.className = 'tarjetas-asociadas';
-                    tarjetasDiv.innerHTML = `<h4>Tarjetas Asociadas (${expediente.tarjetasAsociadas.length}):</h4>`;
                     
-                    expediente.tarjetasAsociadas.forEach((tarjeta) => {
+                    const cantidadTarjetas = expediente.tarjetasAsociadas.length;
+                    const mostrarColapsable = cantidadTarjetas > 3; // Colapsable si hay más de 3
+                    const maxTarjetasVisibles = 2; // Mostrar solo 2 cuando está colapsado
+                    
+                    // Encabezado con contador
+                    const header = document.createElement('div');
+                    header.className = 'tarjetas-header';
+                    header.innerHTML = `
+                        <h4>Tarjetas Asociadas (${cantidadTarjetas}):</h4>
+                        ${mostrarColapsable ? `<button class="toggle-tarjetas-btn" onclick="this.closest('.tarjetas-asociadas').querySelector('.tarjetas-list').classList.toggle('expanded'); this.textContent = this.closest('.tarjetas-asociadas').querySelector('.tarjetas-list').classList.contains('expanded') ? '▼ Ver menos' : '▶ Ver todas'">▶ Ver todas</button>` : ''}
+                    `;
+                    tarjetasDiv.appendChild(header);
+                    
+                    // Contenedor de la lista de tarjetas
+                    const tarjetasList = document.createElement('div');
+                    tarjetasList.className = mostrarColapsable ? 'tarjetas-list collapsed' : 'tarjetas-list expanded';
+                    
+                    expediente.tarjetasAsociadas.forEach((tarjeta, index) => {
                         const tarjetaItem = document.createElement('div');
                         tarjetaItem.className = 'tarjeta-asociada';
                         
+                        // Ocultar tarjetas después de las primeras 2 si está colapsado
+                        if (mostrarColapsable && index >= maxTarjetasVisibles) {
+                            tarjetaItem.classList.add('tarjeta-hidden');
+                        }
+                        
+                        // 🔧 Manejar diferentes nombres de campo para el número de tarjeta
+                        const numeroTarjeta = tarjeta.numeroTarjeta || tarjeta.tarjeta || tarjeta.numero || 'N/A';
+                        
                         tarjetaItem.innerHTML = `
                             <div class="tarjeta-info">
-                                <span>Placa: ${tarjeta.placa} - Tarjeta: ${tarjeta.tarjeta}</span>
-                                ${tarjeta.pdfPath ? `<button class="ver-pdf-tarjeta-btn" onclick="window.api.enviar('abrir-pdf', '${tarjeta.pdfPath}')">Ver PDF Tarjeta (Externo)</button>` : ''}
+                                <span class="tarjeta-badge">${index + 1}</span>
+                                <span class="tarjeta-datos">Placa: <strong>${tarjeta.placa}</strong> - Tarjeta: <strong>${numeroTarjeta}</strong></span>
+                                ${tarjeta.pdfPath ? `<button class="ver-pdf-tarjeta-btn" onclick="window.api.enviar('abrir-pdf', '${tarjeta.pdfPath}')">📄 Ver PDF</button>` : ''}
                             </div>
                         `;
                         
-                        tarjetasDiv.appendChild(tarjetaItem);
+                        tarjetasList.appendChild(tarjetaItem);
                     });
                     
+                    tarjetasDiv.appendChild(tarjetasList);
                     item.appendChild(tarjetasDiv);
                 }
                 

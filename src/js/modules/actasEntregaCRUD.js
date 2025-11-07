@@ -19,6 +19,40 @@ class ActasEntregaCRUD {
         this.elements = null;
 
         console.log('✅ ActasEntregaCRUD: Módulo inicializado');
+        
+        // 🔄 Configurar listener para recarga automática cuando se active la vista
+        this.setupViewActivationListener();
+    }
+
+    /**
+     * Configurar listener para cuando se active la vista de actas
+     */
+    setupViewActivationListener() {
+        // Cargar actas cuando se muestre la vista
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                    const vistaActas = document.getElementById('vista-actas-crud');
+                    if (vistaActas && vistaActas.classList.contains('active')) {
+                        console.log('🎯 Vista de actas activada - Recargando datos...');
+                        // 🔄 SIEMPRE recargar cuando se active la vista para mostrar cambios
+                        this.loadActas();
+                    }
+                }
+            });
+        });
+
+        // Observar cambios en la vista-actas-crud
+        const vistaActas = document.getElementById('vista-actas-crud');
+        if (vistaActas) {
+            observer.observe(vistaActas, { attributes: true });
+            
+            // Si ya está activa al cargar, cargar datos inmediatamente
+            if (vistaActas.classList.contains('active')) {
+                console.log('🎯 Vista de actas ya activa - Cargando datos...');
+                this.loadActas();
+            }
+        }
     }
 
     /**
@@ -31,8 +65,7 @@ class ActasEntregaCRUD {
         this.attachEventListeners();
         this.subscribeToEvents();
         
-        await this.loadActas();
-        
+        // Ya no es necesario cargar aquí, se carga automáticamente cuando se activa la vista
         console.log('✅ ActasEntregaCRUD: Módulo listo');
     }
 

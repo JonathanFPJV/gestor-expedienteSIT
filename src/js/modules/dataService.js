@@ -292,18 +292,34 @@ class DataService {
 
     // Invalidar cache cuando se crean nuevos registros
     handleExpedienteCreated(expedienteData) {
+        console.log('🔔 handleExpedienteCreated llamado con:', expedienteData);
+        
         // Invalidar cache de búsquedas
         this.cache.lastSearchTarjetas = null;
         this.cache.lastSearchExpedientes = null;
         
-        // Emitir evento para que la UI se actualice automáticamente
+        // 🔔 Emitir evento EXPEDIENTE_CREATED para que la tabla se actualice
+        eventBus.emit(APP_EVENTS.EXPEDIENTE_CREATED, { expediente: expedienteData });
+        
+        // También emitir DATA_REFRESHED para compatibilidad
         eventBus.emit(APP_EVENTS.DATA_REFRESHED, { type: 'expediente', data: expedienteData });
+        
+        console.log('✅ Eventos emitidos para expediente creado');
     }
 
     handleExpedienteUpdated(expedienteData) {
+        console.log('🔔 handleExpedienteUpdated llamado con:', expedienteData);
+        
         this.cache.lastSearchTarjetas = null;
         this.cache.lastSearchExpedientes = null;
+        
+        // 🔔 Emitir evento EXPEDIENTE_UPDATED
+        eventBus.emit(APP_EVENTS.EXPEDIENTE_UPDATED, { expediente: expedienteData });
+        
+        // También emitir DATA_REFRESHED para compatibilidad
         eventBus.emit(APP_EVENTS.DATA_REFRESHED, { type: 'expediente', data: expedienteData });
+        
+        console.log('✅ Eventos emitidos para expediente actualizado');
     }
 
     updateTarjetasCache(tarjetas) {

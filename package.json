@@ -20,10 +20,11 @@
   "description": "Sistema de gestión y consulta de actas de resolución y tarjetas de vehículos.",
   "dependencies": {
     "better-sqlite3": "^12.4.1",
-    "pdfjs-dist": "^5.4.149"
+    "pdfjs-dist": "^5.4.394",
+    "tesseract.js": "^6.0.1"
   },
   "devDependencies": {
-    "electron": "^38.0.0", 
+    "electron": "^38.0.0",
     "electron-builder": "^24.13.3"
   },
   "build": {

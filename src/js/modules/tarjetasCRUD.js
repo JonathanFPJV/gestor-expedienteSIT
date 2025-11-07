@@ -62,9 +62,9 @@ class TarjetasCRUD {
                 if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
                     const vistaTarjetas = document.getElementById('vista-tarjetas-crud');
                     
-                    if (vistaTarjetas && vistaTarjetas.classList.contains('active') && !this.isInitialized) {
-                        console.log('🎯 Vista de tarjetas activada - Cargando datos iniciales...');
-                        this.isInitialized = true;
+                    if (vistaTarjetas && vistaTarjetas.classList.contains('active')) {
+                        console.log('🎯 Vista de tarjetas activada - Recargando datos...');
+                        // 🔄 SIEMPRE recargar cuando se active la vista para mostrar cambios
                         this.cargarTarjetas();
                     }
                 }
@@ -78,9 +78,8 @@ class TarjetasCRUD {
         });
 
         // Si la vista ya está activa al cargar, cargar datos inmediatamente
-        if (vistaTarjetas.classList.contains('active') && !this.isInitialized) {
-            console.log('🎯 Vista de tarjetas ya estaba activa - Cargando datos iniciales...');
-            this.isInitialized = true;
+        if (vistaTarjetas.classList.contains('active')) {
+            console.log('🎯 Vista de tarjetas ya activa - Cargando datos...');
             this.cargarTarjetas();
         }
     }

@@ -359,25 +359,85 @@ fieldset legend {
     color: var(--color-texto-principal);
 }
 
-/* Estilos para tarjetas asociadas */
+/* Estilos para tarjetas asociadas con visualización dinámica */
 .tarjetas-asociadas {
     margin-top: var(--espacio-md);
     padding: var(--espacio-sm);
     background-color: var(--color-fondo-contenedor);
     border-left: 3px solid var(--color-primario);
+    border-radius: var(--radio-pequeno);
+}
+
+.tarjetas-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--espacio-sm);
 }
 
 .tarjetas-asociadas h4 {
-    margin: 0 0 var(--espacio-sm) 0;
+    margin: 0;
     color: var(--color-primario);
     font-size: var(--tamano-base);
 }
 
+.toggle-tarjetas-btn {
+    background-color: var(--color-primario);
+    color: var(--color-texto-blanco);
+    border: none;
+    padding: var(--espacio-xs) var(--espacio-sm);
+    border-radius: var(--radio-pequeno);
+    cursor: pointer;
+    font-size: var(--tamano-xs);
+    transition: all 0.3s ease;
+}
+
+.toggle-tarjetas-btn:hover {
+    background-color: var(--color-acento);
+    transform: translateY(-1px);
+}
+
+.tarjetas-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espacio-xs);
+}
+
+/* Estado colapsado: ocultar tarjetas extra */
+.tarjetas-list.collapsed .tarjeta-hidden {
+    display: none;
+}
+
+/* Estado expandido: mostrar todas */
+.tarjetas-list.expanded .tarjeta-hidden {
+    display: flex;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .tarjeta-asociada {
+    display: flex;
     padding: var(--espacio-sm);
-    margin: var(--espacio-xs) 0;
     background-color: var(--color-fondo-plataforma);
     border-radius: var(--radio-pequeno);
+    border: 1px solid #e0e0e0;
+    transition: all 0.2s ease;
+}
+
+.tarjeta-asociada:hover {
+    background-color: #f5f5f5;
+    border-color: var(--color-primario);
+    transform: translateX(3px);
 }
 
 .tarjeta-info {
@@ -386,6 +446,32 @@ fieldset legend {
     align-items: center;
     flex-wrap: wrap;
     gap: var(--espacio-sm);
+    width: 100%;
+}
+
+.tarjeta-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    background-color: var(--color-primario);
+    color: var(--color-texto-blanco);
+    border-radius: 50%;
+    font-size: var(--tamano-xs);
+    font-weight: bold;
+    margin-right: var(--espacio-xs);
+}
+
+.tarjeta-datos {
+    flex: 1;
+    font-size: var(--tamano-sm);
+    color: var(--color-texto-primario);
+}
+
+.tarjeta-datos strong {
+    color: var(--color-primario);
+    font-weight: 600;
 }
 
 .ver-pdf-tarjeta-btn {
@@ -396,6 +482,13 @@ fieldset legend {
     border-radius: var(--radio-pequeno);
     cursor: pointer;
     font-size: var(--tamano-xs);
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.ver-pdf-tarjeta-btn:hover {
+    background-color: var(--color-acento);
+    transform: scale(1.05);
 }
 
 .ver-pdf-tarjeta-btn:hover {

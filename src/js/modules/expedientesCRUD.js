@@ -30,9 +30,9 @@ export class ExpedientesCRUD {
             mutations.forEach((mutation) => {
                 if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
                     const vistaCrud = document.getElementById('vista-crud');
-                    if (vistaCrud && vistaCrud.classList.contains('active') && !this.isInitialized) {
-                        console.log('🎯 Vista de expedientes activada - Cargando datos...');
-                        this.isInitialized = true;
+                    if (vistaCrud && vistaCrud.classList.contains('active')) {
+                        console.log('🎯 Vista de expedientes activada - Recargando datos...');
+                        // 🔄 SIEMPRE recargar cuando se active la vista para mostrar cambios
                         this.loadExpedientes();
                     }
                 }
@@ -47,7 +47,6 @@ export class ExpedientesCRUD {
             // Si ya está activa al cargar, cargar datos inmediatamente
             if (vistaCrud.classList.contains('active')) {
                 console.log('🎯 Vista de expedientes ya activa - Cargando datos...');
-                this.isInitialized = true;
                 this.loadExpedientes();
             }
         }

@@ -186,14 +186,21 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('📥 Respuesta del backend:', result);
             
             if (result.success) {
-                ui.showNotification('Expediente guardado exitosamente.', 'success');
+                ui.showNotification('✅ Expediente guardado exitosamente.', 'success');
                 ui.resetExpedienteForm();
                 selectedPdfPath = null;
+                tarjetas = []; // Limpiar array de tarjetas
                 
-                // Opcional: cambiar a vista de gestión
-                // navigationManager.showView('vista-crud');
+                // 🔄 Navegar automáticamente a la vista de gestión para ver el nuevo expediente
+                setTimeout(() => {
+                    navigationManager.navigateTo('vista-crud');
+                    // Recargar la tabla de expedientes
+                    if (window.expedientesCRUD) {
+                        window.expedientesCRUD.loadExpedientes();
+                    }
+                }, 500);
             } else {
-                ui.showNotification('Error: ' + (result.message || 'Error desconocido'), 'error');
+                ui.showNotification('❌ Error: ' + (result.message || 'Error desconocido'), 'error');
             }
         } catch (error) {
             console.error('❌ Error al procesar el formulario:', error);
