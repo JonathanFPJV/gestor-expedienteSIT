@@ -18,7 +18,7 @@
  */
 
 const { ipcMain } = require('electron');
-const { handleError, mapExpedienteForFrontend, mapTarjetaForFrontend } = require('./utils');
+const { handleError, mapExpedienteCompleto, mapTarjetaForFrontend } = require('./utils');
 
 /**
  * Registra los handlers de lectura de expedientes
@@ -44,51 +44,95 @@ function registerReadHandlers(expedienteService, db) {
     });
 
     /**
+     * Obtener expedientes con paginación
+     * @param {Object} options - Opciones de paginación
+     * @param {number} options.page - Página actual (default: 1)
+     * @param {number} options.limit - Registros por página (default: 10)
+     * @param {string} options.sortBy - Campo para ordenar (default: 'fechaExpediente')
+     * @param {string} options.sortOrder - Orden: 'asc' o 'desc' (default: 'desc')
+     */
+    ipcMain.handle('expediente:obtener-paginado', (event, options = {}) => {
+        try {
+            const {
+                page = 1,
+                limit = 10,
+                sortBy = 'fechaExpediente',
+                sortOrder = 'desc'
+            } = options;
+
+            console.log('📥 Solicitud obtener expedientes paginados:', { page, limit, sortBy, sortOrder });
+
+            // Obtener todos los expedientes (después optimizaremos con índices)
+            const allExpedientes = db.expedientes.find({});
+            const totalExpedientes = allExpedientes.length;
+            
+            // Ordenar
+            allExpedientes.sort((a, b) => {
+                const valorA = a[sortBy];
+                const valorB = b[sortBy];
+                
+                if (sortOrder === 'asc') {
+                    return valorA > valorB ? 1 : valorA < valorB ? -1 : 0;
+                } else {
+                    return valorA < valorB ? 1 : valorA > valorB ? -1 : 0;
+                }
+            });
+            
+            // Calcular paginación
+            const startIndex = (page - 1) * limit;
+            const endIndex = startIndex + limit;
+            const expedientesPagina = allExpedientes.slice(startIndex, endIndex);
+            
+            console.log(`📄 Página ${page}: mostrando ${expedientesPagina.length} de ${totalExpedientes} expedientes`);
+            
+            // Mapear expedientes con sus tarjetas usando función utilitaria
+            const expedientesConTarjetas = expedientesPagina.map(expediente => 
+                mapExpedienteCompleto(expediente, db)
+            );
+            
+            const resultado = {
+                success: true,
+                data: expedientesConTarjetas,
+                pagination: {
+                    currentPage: page,
+                    totalPages: Math.ceil(totalExpedientes / limit),
+                    totalRecords: totalExpedientes,
+                    recordsPerPage: limit,
+                    hasNextPage: endIndex < totalExpedientes,
+                    hasPrevPage: page > 1
+                }
+            };
+            
+            console.log('✅ Expedientes paginados procesados:', resultado.pagination);
+            return resultado;
+        } catch (error) {
+            console.error('❌ Error en obtener expedientes paginados:', error);
+            return {
+                success: false,
+                message: error.message,
+                data: [],
+                pagination: { currentPage: 1, totalPages: 0, totalRecords: 0 }
+            };
+        }
+    });
+
+    /**
      * Obtener todos los expedientes con sus tarjetas asociadas
+     * ⚠️ DEPRECADO: Usar 'expediente:obtener-paginado' para mejor rendimiento
      */
     ipcMain.handle('obtener-todos-expedientes', () => {
         try {
+            console.log('⚠️ ADVERTENCIA: Usando obtener-todos-expedientes (deprecado)');
+            console.log('💡 Considera usar expediente:obtener-paginado para mejor rendimiento');
             console.log('📥 Solicitud obtener todos los expedientes');
             const expedientes = db.expedientes.find({});
             console.log('📊 Expedientes obtenidos de la BD:', expedientes.length);
             
-            // Para cada expediente, obtener sus tarjetas asociadas
-            const expedientesConTarjetas = expedientes.map((expediente) => {
-                try {
-                    // Buscar tarjetas por resolucionId
-                    const tarjetasAsociadas = db.tarjetas.find({ resolucionId: expediente._id });
-                    console.log(`🎫 Expediente ${expediente.numeroExpediente}: ${tarjetasAsociadas.length} tarjetas`);
-                    
-                    // Mapear el expediente con todos los campos necesarios para el frontend
-                    const expedienteMapeado = {
-                        _id: expediente._id,
-                        numeroExpediente: expediente.numeroExpediente,
-                        anioExpediente: expediente.anioExpediente,
-                        numeroResolucion: expediente.numeroResolucion,
-                        fechaExpediente: expediente.fechaExpediente,
-                        unidadNegocio: expediente.unidadNegocio,
-                        nombreEmpresa: expediente.nombreEmpresa,
-                        numeroFichero: expediente.numeroFichero,
-                        observaciones: expediente.observaciones,
-                        pdfPathActa: expediente.pdfPathActa,
-                        informeTecnico: expediente.informeTecnico,
-                        // Campos legacy para retrocompatibilidad con frontend
-                        expediente: expediente.numeroExpediente,
-                        fecha: expediente.fechaExpediente,
-                        pdfPath: expediente.pdfPathActa,
-                        // Tarjetas asociadas
-                        tarjetasAsociadas: tarjetasAsociadas || []
-                    };
-                    
-                    console.log('✅ Expediente mapeado:', expedienteMapeado.numeroExpediente, '- Campos:', Object.keys(expedienteMapeado));
-                    return expedienteMapeado;
-                } catch (error) {
-                    console.error(`❌ Error obteniendo tarjetas para expediente ${expediente._id}:`, error);
-                    return {
-                        ...mapExpedienteForFrontend(expediente),
-                        tarjetasAsociadas: []
-                    };
-                }
+            // Mapear expedientes con sus tarjetas usando función utilitaria
+            const expedientesConTarjetas = expedientes.map(expediente => {
+                const resultado = mapExpedienteCompleto(expediente, db);
+                console.log(`🎫 Expediente ${expediente.numeroExpediente}: ${resultado.tarjetasAsociadas.length} tarjetas`);
+                return resultado;
             });
             
             console.log('✅ Expedientes con tarjetas procesados:', expedientesConTarjetas.length);
@@ -115,31 +159,10 @@ function registerReadHandlers(expedienteService, db) {
                 return { success: true, data: [] };
             }
             
-            // Formatear resultados con tarjetas asociadas
-            const resultados = expedientes.map((expediente) => {
-                // Buscar tarjetas asociadas
-                const tarjetasAsociadas = db.tarjetas.find({ resolucionId: expediente._id });
-
-                return {
-                    _id: expediente._id,
-                    // Mapeo de campos para compatibilidad
-                    expediente: expediente.numeroExpediente,
-                    fecha: expediente.fechaExpediente,
-                    pdfPath: expediente.pdfPathActa,
-                    // Campos completos
-                    numeroExpediente: expediente.numeroExpediente,
-                    anioExpediente: expediente.anioExpediente,
-                    numeroResolucion: expediente.numeroResolucion,
-                    fechaExpediente: expediente.fechaExpediente,
-                    informeTecnico: expediente.informeTecnico,
-                    unidadNegocio: expediente.unidadNegocio,
-                    nombreEmpresa: expediente.nombreEmpresa,
-                    numeroFichero: expediente.numeroFichero,
-                    observaciones: expediente.observaciones,
-                    pdfPathActa: expediente.pdfPathActa,
-                    tarjetasAsociadas: tarjetasAsociadas.map(mapTarjetaForFrontend)
-                };
-            });
+            // Formatear resultados con tarjetas asociadas usando función utilitaria
+            const resultados = expedientes.map(expediente => 
+                mapExpedienteCompleto(expediente, db)
+            );
             
             console.log(`✅ Búsqueda de expedientes: ${resultados.length} resultados`);
             return { success: true, data: resultados };

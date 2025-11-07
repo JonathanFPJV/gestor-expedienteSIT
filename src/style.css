@@ -851,6 +851,30 @@ fieldset legend {
     margin: 0;
 }
 
+/* Estilos para tarjetas en modo edición */
+.tarjeta-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.tarjeta-numero,
+.tarjeta-placa {
+    font-size: 14px;
+    color: var(--color-texto-primario, #333);
+}
+
+.tarjeta-numero {
+    font-weight: 600;
+}
+
+.btn-small {
+    padding: 5px 10px;
+    font-size: 12px;
+    min-width: auto;
+}
+
 .eliminar-tarjeta-btn {
     background-color: var(--color-error);
     padding: var(--espacio-xs) var(--espacio-sm);

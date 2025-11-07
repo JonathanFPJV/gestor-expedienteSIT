@@ -44,8 +44,42 @@ class DataService {
 
     // === MÉTODOS PARA EXPEDIENTES ===
     
+    /**
+     * Obtener expedientes con paginación (RECOMENDADO)
+     * @param {Object} options - Opciones de paginación
+     * @param {number} options.page - Página actual (default: 1)
+     * @param {number} options.limit - Registros por página (default: 10)
+     * @param {string} options.sortBy - Campo para ordenar (default: 'fechaExpediente')
+     * @param {string} options.sortOrder - Orden: 'asc' o 'desc' (default: 'desc')
+     * @returns {Promise<Object>} { success, data, pagination }
+     */
+    async getExpedientesPaginados(options = {}) {
+        try {
+            console.log('🔄 Solicitando expedientes paginados:', options);
+            const resultado = await window.api.invoke('expediente:obtener-paginado', options);
+            
+            if (resultado.success) {
+                console.log('📊 Expedientes paginados recibidos:', {
+                    registros: resultado.data.length,
+                    pagina: resultado.pagination.currentPage,
+                    total: resultado.pagination.totalRecords
+                });
+            }
+            
+            return resultado;
+        } catch (error) {
+            console.error('❌ Error al obtener expedientes paginados:', error);
+            throw error;
+        }
+    }
+    
+    /**
+     * Obtener todos los expedientes (SIN PAGINACIÓN)
+     * ⚠️ DEPRECADO: Usar getExpedientesPaginados() para mejor rendimiento
+     */
     async getAllExpedientes() {
         try {
+            console.log('⚠️ getAllExpedientes - Considera usar getExpedientesPaginados()');
             console.log('🔄 Solicitando expedientes al backend...');
             const expedientes = await window.api.invoke('obtener-todos-expedientes');
             console.log('📊 Expedientes recibidos del backend:', expedientes);

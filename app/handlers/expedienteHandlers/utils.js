@@ -13,6 +13,48 @@
 const { BrowserWindow } = require('electron');
 
 /**
+ * Mapea un expediente completo con sus tarjetas asociadas
+ * Centraliza el mapeo que se usa en múltiples handlers
+ * 
+ * @param {Object} expediente - Expediente desde la base de datos
+ * @param {Object} db - Base de datos con APIs
+ * @returns {Object} Expediente completo con tarjetas mapeadas
+ */
+function mapExpedienteCompleto(expediente, db) {
+    try {
+        // Buscar tarjetas asociadas
+        const tarjetasAsociadas = db.tarjetas.find({ resolucionId: expediente._id });
+        
+        // Retornar expediente con todos los campos
+        return {
+            _id: expediente._id,
+            numeroExpediente: expediente.numeroExpediente,
+            anioExpediente: expediente.anioExpediente,
+            numeroResolucion: expediente.numeroResolucion,
+            fechaExpediente: expediente.fechaExpediente,
+            unidadNegocio: expediente.unidadNegocio,
+            nombreEmpresa: expediente.nombreEmpresa,
+            numeroFichero: expediente.numeroFichero,
+            observaciones: expediente.observaciones,
+            pdfPathActa: expediente.pdfPathActa,
+            informeTecnico: expediente.informeTecnico,
+            // Campos legacy para retrocompatibilidad
+            expediente: expediente.numeroExpediente,
+            fecha: expediente.fechaExpediente,
+            pdfPath: expediente.pdfPathActa,
+            // Tarjetas asociadas
+            tarjetasAsociadas: tarjetasAsociadas || []
+        };
+    } catch (error) {
+        console.error(`❌ Error mapeando expediente ${expediente._id}:`, error);
+        return {
+            ...mapExpedienteForFrontend(expediente),
+            tarjetasAsociadas: []
+        };
+    }
+}
+
+/**
  * Mapea un expediente de BD a formato compatible con frontend
  * Mantiene retrocompatibilidad con versiones anteriores
  * 
@@ -91,6 +133,7 @@ function prepareExpedientePayload(expediente, tarjetas = []) {
 }
 
 module.exports = {
+    mapExpedienteCompleto,
     mapExpedienteForFrontend,
     mapTarjetaForFrontend,
     notifyAllWindows,

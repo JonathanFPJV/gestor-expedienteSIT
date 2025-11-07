@@ -1,0 +1,22 @@
+Gestor de Expedientes SIT - Modo Portable
+==========================================
+
+Este archivo activa el modo portable de la aplicación.
+
+Mientras este archivo exista junto al ejecutable (.exe), todos los datos 
+(base de datos SQLite y archivos PDF) se guardarán en la carpeta 'data'
+en lugar de usar la carpeta AppData del sistema.
+
+Estructura de carpetas en modo portable:
+- GestorExpedientesSIT.exe    (Ejecutable)
+- portable.txt                (Este archivo)
+- data/                       (Carpeta de datos - se crea automáticamente)
+  - database/                 (Base de datos SQLite)
+  - archivos-vehiculos/       (Archivos PDF)
+
+IMPORTANTE:
+- No eliminar este archivo si deseas mantener el modo portable
+- La carpeta 'data' se crea automáticamente al ejecutar la aplicación
+- Asegúrate de tener permisos de escritura en esta ubicación
+
+Para más información, consulta: docs/MODO_PORTABLE.md

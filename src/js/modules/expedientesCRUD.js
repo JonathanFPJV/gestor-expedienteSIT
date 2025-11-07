@@ -8,8 +8,11 @@ export class ExpedientesCRUD {
         this.filteredExpedientes = [];
         this.currentPage = 1;
         this.itemsPerPage = 10;
+        this.totalPages = 1;
+        this.totalRecords = 0;
         this.currentExpediente = null;
         this.isInitialized = false;
+        this.usePagination = true; // 🆕 Flag para usar paginación del backend
         
         this.initializeElements();
         this.initializeEventListeners();
@@ -67,15 +70,6 @@ export class ExpedientesCRUD {
         
         // Botones
         this.nuevoExpedienteBtn = document.getElementById('nuevo-expediente-btn');
-        
-        // Modal
-        this.modal = document.getElementById('modal-expediente');
-        this.modalTitle = document.getElementById('modal-title');
-        this.modalForm = document.getElementById('modal-expediente-form');
-        this.modalClose = document.getElementById('modal-close');
-        this.modalCancelar = document.getElementById('modal-cancelar');
-        this.modalGuardar = document.getElementById('modal-guardar');
-        this.modalEliminar = document.getElementById('modal-eliminar');
     }
 
     initializeEventListeners() {
@@ -96,17 +90,6 @@ export class ExpedientesCRUD {
 
         // Nuevo expediente
         this.nuevoExpedienteBtn?.addEventListener('click', () => this.openNewExpedienteModal());
-
-        // Modal
-        this.modalClose?.addEventListener('click', () => this.closeModal());
-        this.modalCancelar?.addEventListener('click', () => this.closeModal());
-        this.modalGuardar?.addEventListener('click', () => this.saveExpediente());
-        this.modalEliminar?.addEventListener('click', () => this.deleteExpediente());
-
-        // Cerrar modal al hacer clic fuera
-        this.modal?.addEventListener('click', (e) => {
-            if (e.target === this.modal) this.closeModal();
-        });
 
         // Escuchar eventos de eliminación del backend
         if (window.api && window.api.on) {
@@ -248,25 +231,52 @@ export class ExpedientesCRUD {
             if (!dataService) {
                 console.warn('⚠️ DataService no está disponible, usando datos de prueba');
                 this.expedientes = this.createTestData();
+                this.filteredExpedientes = [...this.expedientes];
+                this.currentPage = 1;
+                this.renderTable();
+                this.updatePagination();
+                this.populateYearFilter();
+                return;
+            }
+
+            // 🆕 Usar paginación del backend
+            if (this.usePagination) {
+                const resultado = await dataService.getExpedientesPaginados({
+                    page: this.currentPage,
+                    limit: this.itemsPerPage,
+                    sortBy: 'fechaExpediente',
+                    sortOrder: 'desc'
+                });
+
+                if (resultado.success) {
+                    this.expedientes = resultado.data;
+                    this.filteredExpedientes = [...this.expedientes];
+                    this.totalPages = resultado.pagination.totalPages;
+                    this.totalRecords = resultado.pagination.totalRecords;
+                    
+                    console.log(`✅ Expedientes paginados cargados: ${this.expedientes.length} de ${this.totalRecords}`);
+                } else {
+                    console.error('❌ Error al cargar expedientes paginados:', resultado.message);
+                    this.expedientes = [];
+                    this.filteredExpedientes = [];
+                }
             } else {
+                // Modo antiguo (cargar todo)
                 this.expedientes = await dataService.getAllExpedientes();
+                
+                if (!this.expedientes) {
+                    console.warn('⚠️ La respuesta de expedientes es null/undefined, usando datos de prueba');
+                    this.expedientes = this.createTestData();
+                } else if (!Array.isArray(this.expedientes)) {
+                    console.warn('⚠️ Los expedientes no son un array:', this.expedientes, 'usando datos de prueba');
+                    this.expedientes = this.createTestData();
+                } else {
+                    console.log('Total de expedientes cargados:', this.expedientes.length);
+                }
+                
+                this.filteredExpedientes = [...this.expedientes];
             }
             
-            console.log(' Expedientes obtenidos:', this.expedientes);
-            
-            // Verificar que la respuesta sea válida
-            if (!this.expedientes) {
-                console.warn('⚠️ La respuesta de expedientes es null/undefined, usando datos de prueba');
-                this.expedientes = this.createTestData();
-            } else if (!Array.isArray(this.expedientes)) {
-                console.warn('⚠️ Los expedientes no son un array:', this.expedientes, 'usando datos de prueba');
-                this.expedientes = this.createTestData();
-            } else {
-                console.log('Total de expedientes cargados:', this.expedientes.length);
-            }
-            
-            this.filteredExpedientes = [...this.expedientes];
-            this.currentPage = 1;
             this.renderTable();
             this.updatePagination();
             this.populateYearFilter();
@@ -363,9 +373,16 @@ export class ExpedientesCRUD {
     renderTable() {
         if (!this.tbody) return;
 
-        const startIndex = (this.currentPage - 1) * this.itemsPerPage;
-        const endIndex = startIndex + this.itemsPerPage;
-        const expedientesToShow = this.filteredExpedientes.slice(startIndex, endIndex);
+        // 🆕 Si usamos paginación del backend, los datos ya vienen paginados
+        let expedientesToShow;
+        if (this.usePagination) {
+            expedientesToShow = this.filteredExpedientes; // Ya están paginados
+        } else {
+            // Paginación local (modo antiguo)
+            const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+            const endIndex = startIndex + this.itemsPerPage;
+            expedientesToShow = this.filteredExpedientes.slice(startIndex, endIndex);
+        }
 
         this.tbody.innerHTML = '';
 
@@ -425,14 +442,21 @@ export class ExpedientesCRUD {
     }
 
     updatePagination() {
-        const totalItems = this.filteredExpedientes.length;
-        const totalPages = Math.ceil(totalItems / this.itemsPerPage);
+        // 🆕 Si usamos paginación del backend, usar los valores del servidor
+        const totalItems = this.usePagination ? this.totalRecords : this.filteredExpedientes.length;
+        const totalPages = this.usePagination ? this.totalPages : Math.ceil(this.filteredExpedientes.length / this.itemsPerPage);
 
         // Información
         if (this.paginationInfo) {
-            const startItem = totalItems === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1;
-            const endItem = Math.min(this.currentPage * this.itemsPerPage, totalItems);
-            this.paginationInfo.textContent = `Mostrando ${startItem}-${endItem} de ${totalItems} expedientes`;
+            if (this.usePagination) {
+                const startItem = totalItems === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1;
+                const endItem = Math.min(this.currentPage * this.itemsPerPage, totalItems);
+                this.paginationInfo.textContent = `Mostrando ${startItem}-${endItem} de ${totalItems} expedientes`;
+            } else {
+                const startItem = totalItems === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1;
+                const endItem = Math.min(this.currentPage * this.itemsPerPage, totalItems);
+                this.paginationInfo.textContent = `Mostrando ${startItem}-${endItem} de ${totalItems} expedientes`;
+            }
         }
 
         if (this.pageInfo) {
@@ -515,17 +539,30 @@ export class ExpedientesCRUD {
     previousPage() {
         if (this.currentPage > 1) {
             this.currentPage--;
-            this.renderTable();
-            this.updatePagination();
+            
+            // 🆕 Si usamos paginación del backend, recargar datos
+            if (this.usePagination) {
+                this.loadExpedientes();
+            } else {
+                this.renderTable();
+                this.updatePagination();
+            }
         }
     }
 
     nextPage() {
-        const totalPages = Math.ceil(this.filteredExpedientes.length / this.itemsPerPage);
+        const totalPages = this.usePagination ? this.totalPages : Math.ceil(this.filteredExpedientes.length / this.itemsPerPage);
+        
         if (this.currentPage < totalPages) {
             this.currentPage++;
-            this.renderTable();
-            this.updatePagination();
+            
+            // 🆕 Si usamos paginación del backend, recargar datos
+            if (this.usePagination) {
+                this.loadExpedientes();
+            } else {
+                this.renderTable();
+                this.updatePagination();
+            }
         }
     }
 
@@ -583,31 +620,312 @@ ${expediente.observaciones || 'Sin observaciones'}`;
 
     async editExpediente(expedienteId) {
         try {
-            if (!this.expedientes || !Array.isArray(this.expedientes)) {
-                this.showError('Los expedientes no están cargados');
+            console.log('🔍 editExpediente llamado con ID:', expedienteId, `(tipo: ${typeof expedienteId})`);
+            
+            // Buscar expediente en el array local primero
+            let expedienteCompleto = this.expedientes.find(exp => exp._id === expedienteId);
+            
+            if (!expedienteCompleto) {
+                console.error('❌ Expediente no encontrado en array local');
+                this.showError('Expediente no encontrado');
                 return;
             }
             
-            console.log('🔍 editExpediente llamado con ID:', expedienteId, `(tipo: ${typeof expedienteId})`);
-            console.log('📊 Expedientes disponibles:', this.expedientes.map(e => ({ _id: e._id, tipo: typeof e._id, numero: e.numeroExpediente })));
+            console.log('✅ Expediente encontrado en array local:', expedienteCompleto);
+            console.log('� Tarjetas asociadas:', expedienteCompleto.tarjetasAsociadas);
             
-            const expediente = this.expedientes.find(exp => exp._id === expedienteId);
-            console.log('🔎 Expediente encontrado en array:', expediente ? 'SÍ' : 'NO');
+            // NOTA: El acta de entrega se obtiene desde las tarjetas, no del expediente
+            // Esto se maneja en loadExpedienteIntoForm()
             
-            if (expediente) {
-                console.log('📤 Enviando ID al editor:', expedienteId, `(tipo: ${typeof expedienteId})`);
-                if (window.api) {
-                    window.api.enviar('abrir-editor-expediente', expedienteId);
-                } else {
-                    console.warn('window.api no disponible; no se puede abrir el editor');
-                }
+            console.log('✅ Expediente completo preparado, navegando al formulario');
+            
+            // Navegar a la vista de registro
+            if (window.navigationManager) {
+                window.navigationManager.navigateTo('vista-registro');
+                
+                // Esperar a que la vista esté visible
+                setTimeout(() => {
+                    this.loadExpedienteIntoForm(expedienteCompleto);
+                }, 100);
             } else {
-                console.error('❌ Expediente NO encontrado en el array local');
-                this.showError('Expediente no encontrado');
+                console.error('❌ navigationManager no disponible');
             }
         } catch (error) {
             console.error('Error al editar expediente:', error);
             this.showError('Error al cargar expediente para edición');
+        }
+    }
+
+    async loadExpedienteIntoForm(expediente) {
+        try {
+            console.log('📝 Cargando expediente completo en formulario:', expediente);
+            
+            // 1️⃣ Cargar datos básicos del expediente
+            document.getElementById('numeroExpediente').value = expediente.numeroExpediente || '';
+            document.getElementById('anioExpediente').value = expediente.anioExpediente || new Date().getFullYear();
+            document.getElementById('numeroResolucion').value = expediente.numeroResolucion || '';
+            document.getElementById('fecha').value = expediente.fechaExpediente || expediente.fecha || '';
+            document.getElementById('informeTecnico').value = expediente.informeTecnico || '';
+            document.getElementById('numeroFichero').value = expediente.numeroFichero || '';
+            document.getElementById('nombreEmpresa').value = expediente.nombreEmpresa || '';
+            document.getElementById('unidadNegocio').value = expediente.unidadNegocio || '';
+            document.getElementById('observaciones').value = expediente.observaciones || '';
+            
+            // Si hay observaciones, mostrar el contenedor
+            if (expediente.observaciones) {
+                const observacionesContainer = document.getElementById('observaciones-container');
+                if (observacionesContainer) {
+                    observacionesContainer.classList.remove('hidden');
+                }
+            }
+            
+            // 2️⃣ Cargar TARJETAS ASOCIADAS (EDITABLES)
+            if (expediente.tarjetasAsociadas && expediente.tarjetasAsociadas.length > 0) {
+                console.log(`📋 Cargando ${expediente.tarjetasAsociadas.length} tarjetas asociadas`);
+                console.log('🔍 Estructura completa de tarjetas:', JSON.stringify(expediente.tarjetasAsociadas, null, 2));
+                
+                const tarjetasList = document.getElementById('tarjetas-list');
+                if (tarjetasList) {
+                    tarjetasList.innerHTML = ''; // Limpiar lista
+                    
+                    // 🔍 Verificar si alguna tarjeta tiene acta de entrega asociada
+                    let actaEntregaId = null;
+                    for (const tarjeta of expediente.tarjetasAsociadas) {
+                        console.log(`🔍 Revisando tarjeta:`, {
+                            placa: tarjeta.placa,
+                            numero: tarjeta.numero || tarjeta.numeroTarjeta,
+                            actaEntregaId: tarjeta.actaEntregaId,
+                            _id: tarjeta._id
+                        });
+                        
+                        if (tarjeta.actaEntregaId) {
+                            actaEntregaId = tarjeta.actaEntregaId;
+                            console.log(`✅ ¡ENCONTRADO! Tarjeta ${tarjeta.placa} tiene acta de entrega ID: ${actaEntregaId}`);
+                            break;
+                        }
+                    }
+                    
+                    // Si encontramos un acta, cargarla
+                    if (actaEntregaId) {
+                        console.log(`🚀 Llamando a loadActaEntregaInfo con ID: ${actaEntregaId}`);
+                        await this.loadActaEntregaInfo(actaEntregaId);
+                    } else {
+                        console.warn('⚠️ No se encontró ninguna tarjeta con actaEntregaId');
+                    }
+                    
+                    expediente.tarjetasAsociadas.forEach((tarjeta, index) => {
+                        const tarjetaDiv = document.createElement('div');
+                        tarjetaDiv.className = 'tarjeta-item';
+                        tarjetaDiv.dataset.tarjetaIndex = index;
+                        tarjetaDiv.innerHTML = `
+                            <input type="text" 
+                                   placeholder="Placa del vehículo" 
+                                   value="${tarjeta.placa || ''}"
+                                   data-field="placa"
+                                   onchange="window.expedientesCRUD.updateTarjetaData(${index}, 'placa', this.value)">
+                            <input type="text" 
+                                   placeholder="Número de tarjeta" 
+                                   value="${tarjeta.numero || tarjeta.numeroTarjeta || ''}"
+                                   data-field="numero"
+                                   onchange="window.expedientesCRUD.updateTarjetaData(${index}, 'numero', this.value)">
+                            <button type="button" 
+                                    class="eliminar-tarjeta-btn" 
+                                    onclick="window.expedientesCRUD.removeTarjetaFromForm(${index})">
+                                🗑️ Eliminar
+                            </button>
+                        `;
+                        tarjetasList.appendChild(tarjetaDiv);
+                    });
+                }
+            }
+            
+            // 3️⃣ NOTA: El acta de entrega se carga desde las tarjetas, no directamente del expediente
+            
+            // 4️⃣ Cargar ruta de PDF si existe
+            if (expediente.pdfPath) {
+                console.log('📎 Cargando ruta de PDF:', expediente.pdfPath);
+                const pdfFilePathInput = document.getElementById('pdf-file-path');
+                if (pdfFilePathInput) {
+                    pdfFilePathInput.value = expediente.pdfPath;
+                }
+            }
+            
+            // 5️⃣ Cambiar título del formulario a "Editar Expediente"
+            const formTitle = document.querySelector('#vista-registro h2');
+            if (formTitle) {
+                formTitle.textContent = `✏️ Editar Expediente ${expediente.numeroExpediente}-${expediente.anioExpediente}`;
+            }
+            
+            // 6️⃣ Cambiar texto del botón de guardar
+            const guardarBtn = document.getElementById('guardar-expediente-btn');
+            if (guardarBtn) {
+                guardarBtn.textContent = '💾 Actualizar Expediente';
+            }
+            
+            // 7️⃣ Guardar el ID del expediente para actualización
+            const form = document.getElementById('expediente-form');
+            if (form) {
+                form.dataset.editingId = expediente._id;
+                
+                // Guardar tarjetas en formato JSON para el submit
+                if (expediente.tarjetasAsociadas) {
+                    form.dataset.tarjetas = JSON.stringify(expediente.tarjetasAsociadas);
+                }
+                
+                // Guardar acta de entrega si existe
+                if (expediente.actaEntrega) {
+                    form.dataset.actaEntregaId = expediente.actaEntrega._id;
+                }
+            }
+            
+            console.log('✅ Expediente cargado completamente en formulario');
+        } catch (error) {
+            console.error('❌ Error al cargar expediente en formulario:', error);
+            this.showError('Error al cargar datos en el formulario');
+        }
+    }
+    
+    // 🔄 Método para actualizar datos de tarjeta en tiempo real
+    updateTarjetaData(index, field, value) {
+        try {
+            const form = document.getElementById('expediente-form');
+            if (!form || !form.dataset.tarjetas) return;
+            
+            const tarjetas = JSON.parse(form.dataset.tarjetas);
+            if (tarjetas[index]) {
+                tarjetas[index][field] = value;
+                form.dataset.tarjetas = JSON.stringify(tarjetas);
+                console.log(`✅ Tarjeta ${index} actualizada: ${field} = ${value}`);
+            }
+        } catch (error) {
+            console.error('❌ Error al actualizar tarjeta:', error);
+        }
+    }
+    
+    // 🗑️ Método para eliminar tarjeta del formulario durante edición
+    removeTarjetaFromForm(index) {
+        try {
+            const form = document.getElementById('expediente-form');
+            if (!form || !form.dataset.tarjetas) return;
+            
+            const tarjetas = JSON.parse(form.dataset.tarjetas);
+            tarjetas.splice(index, 1);
+            form.dataset.tarjetas = JSON.stringify(tarjetas);
+            
+            // Re-renderizar la lista CON CAMPOS EDITABLES
+            const tarjetasList = document.getElementById('tarjetas-list');
+            if (tarjetasList) {
+                tarjetasList.innerHTML = '';
+                tarjetas.forEach((tarjeta, idx) => {
+                    const tarjetaDiv = document.createElement('div');
+                    tarjetaDiv.className = 'tarjeta-item';
+                    tarjetaDiv.dataset.tarjetaIndex = idx;
+                    tarjetaDiv.innerHTML = `
+                        <input type="text" 
+                               placeholder="Placa del vehículo" 
+                               value="${tarjeta.placa || ''}"
+                               data-field="placa"
+                               onchange="window.expedientesCRUD.updateTarjetaData(${idx}, 'placa', this.value)">
+                        <input type="text" 
+                               placeholder="Número de tarjeta" 
+                               value="${tarjeta.numero || tarjeta.numeroTarjeta || ''}"
+                               data-field="numero"
+                               onchange="window.expedientesCRUD.updateTarjetaData(${idx}, 'numero', this.value)">
+                        <button type="button" 
+                                class="eliminar-tarjeta-btn" 
+                                onclick="window.expedientesCRUD.removeTarjetaFromForm(${idx})">
+                            🗑️ Eliminar
+                        </button>
+                    `;
+                    tarjetasList.appendChild(tarjetaDiv);
+                });
+            }
+            
+            console.log('✅ Tarjeta eliminada del formulario');
+        } catch (error) {
+            console.error('❌ Error al eliminar tarjeta:', error);
+        }
+    }
+    
+    // 📄 Método para cargar información del Acta de Entrega (SOLO LECTURA)
+    async loadActaEntregaInfo(actaEntregaId) {
+        try {
+            console.log('📄 ========================================');
+            console.log('📄 INICIANDO CARGA DE ACTA DE ENTREGA');
+            console.log('📄 Acta ID:', actaEntregaId);
+            console.log('📄 ========================================');
+            
+            // Usar invoke en lugar de enviar para este canal IPC
+            const actaResponse = await window.api.invoke('acta-entrega:obtener-por-id', actaEntregaId);
+            
+            console.log('📄 Respuesta del backend:', actaResponse);
+            
+            // El handler retorna { success, acta } en lugar de { success, data }
+            if (actaResponse && actaResponse.success && actaResponse.acta) {
+                const acta = actaResponse.acta;
+                console.log('✅ Acta de entrega obtenida:', JSON.stringify(acta, null, 2));
+                
+                // Mostrar la sección del acta
+                const incluirActaCheckbox = document.getElementById('incluir-acta-entrega');
+                const actaFields = document.getElementById('acta-entrega-fields');
+                
+                if (incluirActaCheckbox) {
+                    incluirActaCheckbox.checked = true;
+                    incluirActaCheckbox.disabled = true; // Deshabilitar para que no se pueda modificar
+                }
+                
+                if (actaFields) {
+                    actaFields.style.display = 'block';
+                }
+                
+                // Esperar un momento para que se muestren los campos
+                setTimeout(() => {
+                    // Cargar datos del acta (SOLO LECTURA)
+                    const fechaEntregaInput = document.getElementById('fechaEntrega');
+                    const nTarjetasInput = document.getElementById('n_tarjetas_entregadas');
+                    const observacionesActaInput = document.getElementById('observacionesActa');
+                    const pdfActaPathInput = document.getElementById('pdf-acta-path');
+                    
+                    if (fechaEntregaInput) {
+                        fechaEntregaInput.value = acta.fechaEntrega || '';
+                        fechaEntregaInput.readOnly = true; // SOLO LECTURA
+                        fechaEntregaInput.style.backgroundColor = '#f5f5f5';
+                        fechaEntregaInput.style.cursor = 'not-allowed';
+                    }
+                    
+                    if (nTarjetasInput) {
+                        nTarjetasInput.value = acta.n_tarjetas_entregadas || 0;
+                        nTarjetasInput.readOnly = true; // SOLO LECTURA
+                        nTarjetasInput.style.backgroundColor = '#f5f5f5';
+                        nTarjetasInput.style.cursor = 'not-allowed';
+                    }
+                    
+                    if (observacionesActaInput) {
+                        observacionesActaInput.value = acta.observaciones || '';
+                        observacionesActaInput.readOnly = true; // SOLO LECTURA
+                        observacionesActaInput.style.backgroundColor = '#f5f5f5';
+                        observacionesActaInput.style.cursor = 'not-allowed';
+                    }
+                    
+                    if (pdfActaPathInput) {
+                        pdfActaPathInput.value = acta.pdfPathEntrega || 'Sin PDF asociado';
+                    }
+                    
+                    // Deshabilitar botón de seleccionar PDF
+                    const seleccionarPdfActaBtn = document.getElementById('seleccionar-pdf-acta-btn');
+                    if (seleccionarPdfActaBtn) {
+                        seleccionarPdfActaBtn.disabled = true;
+                        seleccionarPdfActaBtn.style.opacity = '0.5';
+                        seleccionarPdfActaBtn.style.cursor = 'not-allowed';
+                    }
+                    
+                    console.log('✅ Acta de entrega mostrada como SOLO LECTURA');
+                }, 100);
+            } else {
+                console.warn('⚠️ No se pudo obtener el acta de entrega');
+            }
+        } catch (error) {
+            console.error('❌ Error al cargar acta de entrega:', error);
         }
     }
 
@@ -772,225 +1090,69 @@ ${expediente.observaciones || 'Sin observaciones'}`;
     openNewExpedienteModal() {
         // Navegar a la vista de registro
         if (window.navigationManager) {
-            window.navigationManager.navigateToView('registro');
+            window.navigationManager.navigateTo('vista-registro');
+            
+            // Limpiar el formulario y prepararlo para crear nuevo expediente
+            setTimeout(() => {
+                this.prepareFormForNew();
+            }, 100);
+        } else {
+            console.error('❌ navigationManager no disponible');
         }
     }
-
-    openEditModal(expediente) {
-        this.modalTitle.textContent = `Editar Expediente ${expediente.numeroExpediente}-${expediente.anioExpediente}`;
-        
-        // Crear formulario en el modal
-        this.modalForm.innerHTML = this.createModalForm(expediente);
-        
-        // Mostrar modal
-        this.modal.classList.add('active');
-    }
-
-    createModalForm(expediente = null) {
-        const isEdit = expediente !== null;
-        
-        return `
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="modal-numeroExpediente">N° de Expediente:</label>
-                    <input type="text" id="modal-numeroExpediente" value="${expediente?.numeroExpediente || ''}" required>
-                </div>
-                <div class="form-group">
-                    <label for="modal-anioExpediente">Año:</label>
-                    <input type="number" id="modal-anioExpediente" value="${expediente?.anioExpediente || new Date().getFullYear()}" min="2020" max="2030" required>
-                </div>
-                <div class="form-group">
-                    <label for="modal-fecha">Fecha:</label>
-                    <input type="date" id="modal-fecha" value="${expediente?.fecha || new Date().toISOString().split('T')[0]}" required>
-                </div>
-                <div class="form-group">
-                    <label for="modal-numeroResolucion">N° Resolución:</label>
-                    <input type="text" id="modal-numeroResolucion" value="${expediente?.numeroResolucion || ''}">
-                </div>
-                <div class="form-group">
-                    <label for="modal-informeTecnico">Informe Técnico:</label>
-                    <input type="text" id="modal-informeTecnico" value="${expediente?.informeTecnico || ''}">
-                </div>
-                <div class="form-group">
-                    <label for="modal-unidadNegocio">Unidad de Negocio:</label>
-                    <select id="modal-unidadNegocio">
-                        <option value="">Seleccionar...</option>
-                        ${['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9', 'C10', 'C11'].map(c => 
-                            `<option value="${c}" ${expediente?.unidadNegocio === c ? 'selected' : ''}>${c}</option>`
-                        ).join('')}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="modal-nombreEmpresa">Nombre de la Empresa:</label>
-                    <input type="text" id="modal-nombreEmpresa" value="${expediente?.nombreEmpresa || ''}">
-                </div>
-                <div class="form-group">
-                    <label for="modal-numeroFichero">N° Fichero:</label>
-                    <input type="text" id="modal-numeroFichero" value="${expediente?.numeroFichero || ''}">
-                </div>
-            </div>
-            <div class="form-group full-width">
-                <label for="modal-observaciones">Observaciones:</label>
-                <textarea id="modal-observaciones" rows="3">${expediente?.observaciones || ''}</textarea>
-            </div>
-        `;
-    }
-
-    async saveExpediente() {
-        const operacion = this.currentExpediente ? 'actualizar-expediente' : 'crear-expediente';
-        
+    
+    // 🆕 Preparar formulario para crear nuevo expediente
+    prepareFormForNew() {
         try {
-            if (window.loadingManager) {
-                window.loadingManager.show(operacion, this.currentExpediente ? 'Actualizando expediente...' : 'Creando expediente...');
-            }
-
-            const formData = this.getModalFormData();
+            console.log('📝 Preparando formulario para nuevo expediente');
             
-            if (this.currentExpediente) {
-                // Actualizar expediente existente
-                const resultado = await dataService.updateExpediente(this.currentExpediente._id, formData);
-                
-                // ✅ OPTIMIZACIÓN: Ocultar loading INMEDIATAMENTE
-                if (window.loadingManager) {
-                    window.loadingManager.hide(operacion);
-                }
-                
-                if (resultado.success) {
-                    this.showSuccess('Expediente actualizado correctamente');
-                    this.closeModal();
-                    // ✅ OPTIMIZACIÓN: Actualizar solo la fila modificada, sin recargar
-                    await this.actualizarExpedienteEnTabla(resultado.expediente);
-                } else {
-                    this.showError(resultado.message || 'Error al actualizar expediente');
-                }
-            } else {
-                // Crear nuevo expediente
-                const resultado = await dataService.createExpediente(formData);
-                
-                // ✅ OPTIMIZACIÓN: Ocultar loading INMEDIATAMENTE
-                if (window.loadingManager) {
-                    window.loadingManager.hide(operacion);
-                }
-                
-                if (resultado.success) {
-                    this.showSuccess('Expediente creado correctamente');
-                    this.closeModal();
-                    // ✅ OPTIMIZACIÓN: Agregar al inicio del array, sin recargar
-                    await this.agregarExpedienteATabla(resultado.expediente);
-                } else {
-                    this.showError(resultado.message || 'Error al crear expediente');
-                }
+            // 1️⃣ Limpiar el formulario
+            const form = document.getElementById('expediente-form');
+            if (form) {
+                form.reset();
+                delete form.dataset.editingId;
+                delete form.dataset.tarjetas;
             }
             
+            // 2️⃣ Limpiar lista de tarjetas
+            const tarjetasList = document.getElementById('tarjetas-list');
+            if (tarjetasList) {
+                tarjetasList.innerHTML = '';
+            }
+            
+            // 3️⃣ Ocultar campos de acta de entrega
+            const actaFields = document.getElementById('acta-entrega-fields');
+            const incluirActaCheckbox = document.getElementById('incluir-acta-entrega');
+            if (actaFields) actaFields.style.display = 'none';
+            if (incluirActaCheckbox) incluirActaCheckbox.checked = false;
+            
+            // 4️⃣ Ocultar observaciones
+            const observacionesContainer = document.getElementById('observaciones-container');
+            if (observacionesContainer) {
+                observacionesContainer.classList.add('hidden');
+            }
+            
+            // 5️⃣ Cambiar título del formulario
+            const formTitle = document.querySelector('#vista-registro h2');
+            if (formTitle) {
+                formTitle.textContent = '📋 Nuevo Registro de Expediente';
+            }
+            
+            // 6️⃣ Cambiar texto del botón de guardar
+            const guardarBtn = document.getElementById('guardar-expediente-btn');
+            if (guardarBtn) {
+                guardarBtn.textContent = '💾 Guardar Expediente';
+            }
+            
+            // 7️⃣ Establecer año actual por defecto
+            const anioInput = document.getElementById('anioExpediente');
+            if (anioInput) {
+                anioInput.value = new Date().getFullYear();
+            }
+            
+            console.log('✅ Formulario preparado para nuevo expediente');
         } catch (error) {
-            // Ocultar loading en caso de error
-            if (window.loadingManager) {
-                window.loadingManager.hide(operacion);
-            }
-            
-            console.error('Error al guardar expediente:', error);
-            this.showError('Error al guardar expediente: ' + error.message);
-        }
-    }
-
-    /**
-     * Actualizar expediente en el array local y re-renderizar (optimización sin API)
-     * @param {Object} expedienteActualizado - Expediente actualizado desde la API
-     */
-    async actualizarExpedienteEnTabla(expedienteActualizado) {
-        const index = this.expedientes.findIndex(exp => exp._id === expedienteActualizado._id);
-        
-        if (index !== -1) {
-            // Obtener tarjetas actualizadas
-            const resultadoTarjetas = await window.api.invoke('tarjeta:obtener-por-expediente', expedienteActualizado._id);
-            const tarjetas = resultadoTarjetas?.success ? resultadoTarjetas.tarjetas : [];
-            
-            // Preparar expediente completo con tarjetas
-            const expedienteCompleto = {
-                ...expedienteActualizado,
-                expediente: expedienteActualizado.numeroExpediente,
-                fecha: expedienteActualizado.fechaExpediente,
-                pdfPath: expedienteActualizado.pdfPathActa,
-                tarjetasAsociadas: tarjetas
-            };
-            
-            // Actualizar en ambos arrays
-            this.expedientes[index] = expedienteCompleto;
-            
-            const filteredIndex = this.filteredExpedientes.findIndex(exp => exp._id === expedienteActualizado._id);
-            if (filteredIndex !== -1) {
-                this.filteredExpedientes[filteredIndex] = expedienteCompleto;
-            }
-            
-            // Re-renderizar sin llamar a la API
-            this.renderTable();
-            console.log('✅ Expediente actualizado en tabla sin recargar');
-        }
-    }
-
-    /**
-     * Agregar nuevo expediente al array local y re-renderizar (optimización sin API)
-     * @param {Object} nuevoExpediente - Expediente recién creado desde la API
-     */
-    async agregarExpedienteATabla(nuevoExpediente) {
-        // Obtener tarjetas del expediente
-        const resultadoTarjetas = await window.api.invoke('tarjeta:obtener-por-expediente', nuevoExpediente._id);
-        const tarjetas = resultadoTarjetas?.success ? resultadoTarjetas.tarjetas : [];
-        
-        // Preparar expediente completo con tarjetas
-        const expedienteCompleto = {
-            ...nuevoExpediente,
-            expediente: nuevoExpediente.numeroExpediente,
-            fecha: nuevoExpediente.fechaExpediente,
-            pdfPath: nuevoExpediente.pdfPathActa,
-            tarjetasAsociadas: tarjetas
-        };
-        
-        // Agregar al inicio de ambos arrays
-        this.expedientes.unshift(expedienteCompleto);
-        this.filteredExpedientes.unshift(expedienteCompleto);
-        
-        // Re-renderizar sin llamar a la API
-        this.renderTable();
-        console.log('✅ Expediente agregado a tabla sin recargar');
-    }
-
-    async deleteExpediente() {
-        if (this.currentExpediente) {
-            const expedienteCompleto = `${this.currentExpediente.numeroExpediente}-${this.currentExpediente.anioExpediente}`;
-            if (confirm(`¿Está seguro de que desea eliminar el expediente ${expedienteCompleto}?`)) {
-                await this.deleteExpedienteById(this.currentExpediente._id);
-                this.closeModal();
-            }
-        }
-    }
-
-    getModalFormData() {
-        return {
-            numeroExpediente: document.getElementById('modal-numeroExpediente')?.value?.trim(),
-            anioExpediente: parseInt(document.getElementById('modal-anioExpediente')?.value) || new Date().getFullYear(),
-            fecha: document.getElementById('modal-fecha')?.value,
-            numeroResolucion: document.getElementById('modal-numeroResolucion')?.value?.trim() || null,
-            informeTecnico: document.getElementById('modal-informeTecnico')?.value?.trim() || null,
-            unidadNegocio: document.getElementById('modal-unidadNegocio')?.value || null,
-            nombreEmpresa: document.getElementById('modal-nombreEmpresa')?.value?.trim() || null,
-            numeroFichero: document.getElementById('modal-numeroFichero')?.value?.trim() || null,
-            observaciones: document.getElementById('modal-observaciones')?.value?.trim() || null
-        };
-    }
-
-    closeModal() {
-        this.modal.classList.remove('active');
-        this.currentExpediente = null;
-        
-        // ✅ OPTIMIZACIÓN: Limpiar formulario completamente
-        if (this.modalForm) {
-            this.modalForm.innerHTML = '';
-        }
-        
-        // ✅ OPTIMIZACIÓN: Forzar limpieza de loadings para evitar bloqueos
-        if (window.loadingManager) {
-            window.loadingManager.clearAll();
+            console.error('❌ Error al preparar formulario:', error);
         }
     }
 

@@ -34,7 +34,6 @@ class NavigationManager {
     setupNavButtons() {
         const navMapping = {
             'nav-busqueda': 'vista-busqueda',
-            'nav-registro': 'vista-registro',
             'nav-crud': 'vista-crud',
             'nav-tarjetas': 'vista-tarjetas-crud',
             'nav-actas': 'vista-actas-crud'
@@ -242,7 +241,7 @@ class NavigationManager {
     getButtonIdFromView(viewId) {
         const mapping = {
             'vista-busqueda': 'nav-busqueda',
-            'vista-registro': 'nav-registro',
+            'vista-registro': 'nav-crud', // El formulario se accede desde el botón interno de gestión
             'vista-crud': 'nav-crud',
             'vista-tarjetas-crud': 'nav-tarjetas',
             'vista-actas-crud': 'nav-actas'

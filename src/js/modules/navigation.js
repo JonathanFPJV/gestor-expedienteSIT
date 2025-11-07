@@ -11,7 +11,6 @@ export class NavigationManager {
         };
         this.navButtons = {
             'busqueda': document.getElementById('nav-busqueda'),
-            'registro': document.getElementById('nav-registro'),
             'crud': document.getElementById('nav-crud'),
             'tarjetas-crud': document.getElementById('nav-tarjetas'),
             'actas-crud': document.getElementById('nav-actas')
