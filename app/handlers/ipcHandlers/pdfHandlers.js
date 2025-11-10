@@ -55,6 +55,32 @@ function registerPdfHandlers(fileHandlers) {
     });
 
     /**
+     * Lee un archivo PDF completo y devuelve su contenido como ArrayBuffer
+     * Usado para OCR y procesamiento de PDFs
+     */
+    ipcMain.handle('leer-archivo-pdf', async (event, pdfPath) => {
+        try {
+            console.log('📖 Leyendo archivo PDF para OCR:', pdfPath);
+            
+            if (!fs.existsSync(pdfPath)) {
+                console.error('❌ Archivo PDF no existe:', pdfPath);
+                throw new Error(`Archivo no encontrado: ${pdfPath}`);
+            }
+            
+            // Leer el archivo como buffer
+            const buffer = await fs.promises.readFile(pdfPath);
+            console.log(`✅ PDF leído exitosamente: ${buffer.length} bytes`);
+            
+            // Convertir a ArrayBuffer para enviar al renderer
+            return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+            
+        } catch (error) {
+            console.error('❌ Error al leer archivo PDF:', error);
+            throw error;
+        }
+    });
+
+    /**
      * Descarga un PDF con diálogo de guardar
      * Copia el archivo a la ubicación seleccionada por el usuario
      */
@@ -96,7 +122,7 @@ function registerPdfHandlers(fileHandlers) {
         }
     });
 
-    console.log('✅ PDF Handlers registrados (4 canales IPC)');
+    console.log('✅ PDF Handlers registrados (5 canales IPC)');
 }
 
 module.exports = registerPdfHandlers;

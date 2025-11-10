@@ -79,6 +79,23 @@
         <div class="form-container">
             <h2>📋 Nuevo Registro de Expediente</h2>
             <form id="expediente-form">
+                <!-- Sección de Archivos (PDF) - movido al inicio -->
+                <fieldset class="form-section">
+                    <legend>📄 Cargar Documento del Expediente</legend>
+                    <div class="form-group">
+                        <label for="pdf-file-path">Adjuntar Expediente (PDF):</label>
+                        <input type="text" id="pdf-file-path" placeholder="Ningún archivo seleccionado" readonly>
+                        <button type="button" id="seleccionar-pdf-btn" class="toggle-btn">📁 Seleccionar PDF y Extraer Texto</button>
+                    </div>
+                    <!-- Indicador de estado OCR -->
+                    <div id="ocr-status" class="ocr-status" style="display: none;">
+                        <div class="ocr-progress">
+                            <div id="ocr-spinner" class="spinner"></div>
+                            <span id="ocr-message" class="ocr-message">Procesando documento con OCR...</span>
+                        </div>
+                    </div>
+                </fieldset>
+
                 <!-- Sección Principal del Expediente -->
                 <fieldset class="form-section">
                     <legend>Información Principal</legend>
@@ -198,15 +215,7 @@
                     </div>
                 </fieldset>
 
-                <!-- Sección de Archivos -->
-                <fieldset class="form-section">
-                    <legend>Documentos</legend>
-                    <div class="form-group">
-                        <label for="pdf-file-path">Adjuntar Expediente (PDF):</label>
-                        <input type="text" id="pdf-file-path" placeholder="Ningún archivo seleccionado" readonly>
-                        <button type="button" id="seleccionar-pdf-btn" class="toggle-btn">Seleccionar Archivo</button>
-                    </div>
-                </fieldset>
+                <!-- (Sección de Archivos movida al inicio del formulario) -->
 
                 <!-- Campo oculto para compatibilidad -->
                 <input type="hidden" id="expediente">
@@ -463,9 +472,19 @@
     <script src="../scripts/test-delete.js"></script>
     <script src="../scripts/diagnostico-db.js"></script>
     <script src="../scripts/auto-migrate-tarjetas.js"></script>
+    
+    <!-- Librerías para OCR: PDF.js + Tesseract.js -->
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script>
+        // Configurar PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+        console.log('📚 Librerías OCR cargadas: PDF.js y Tesseract.js');
+    </script>
+    
     <script type="module" src="js/main.js"></script>
     <script>
-        // Configuración de PDF.js worker
+        // Configuración adicional
         if (typeof window !== 'undefined' && !window.pdfjsWorkerSrc) {
             window.pdfjsWorkerSrc = 'node_modules/pdfjs-dist/build/pdf.worker.js';
         }

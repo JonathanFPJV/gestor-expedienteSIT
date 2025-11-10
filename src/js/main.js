@@ -12,9 +12,14 @@ import { actasEntregaCRUD } from './modules/actasEntregaCRUD.js';
 import { searchManager } from './modules/searchManager.js';
 import { SimplePDFViewer } from './modules/simplePdfViewer.js';
 import { tableResponsive } from './modules/tableResponsive.js';
+import { ocrProcessor } from './modules/ocrProcessor.js';
+import { ocrUI } from './modules/ocrUI.js';
+import { ocrParser } from './modules/ocrParser.js';
+import { formAutofill } from './modules/formAutofill.js';
 
 // Inicializar visualizador de PDFs
 const simplePdfViewer = new SimplePDFViewer();
+
 
 let selectedPdfPath = null;
 let tarjetas = []; // Array para manejar las tarjetas a guardar
@@ -23,11 +28,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // Inicializar servicios
     initializeApp();
     
+    // Inicializar UI de OCR
+    ocrUI.initialize();
+    
+    // Inicializar auto-completado de formulario
+    formAutofill.initializeFormElements();
+    
     // Hacer disponibles globalmente
     window.navigationManager = navigationManager;
     window.expedientesCRUD = expedientesCRUD;
     window.tarjetasCRUD = tarjetasCRUD;
     window.actasEntregaCRUD = actasEntregaCRUD;
+    window.ocrProcessor = ocrProcessor; // Exponer OCR globalmente
+    window.ocrUI = ocrUI;
+    window.ocrParser = ocrParser;
+    window.formAutofill = formAutofill;
     window.searchManager = searchManager;
     window.dataService = dataService;
     window.ui = ui;
@@ -216,13 +231,56 @@ document.addEventListener('DOMContentLoaded', () => {
     // Configurar búsqueda mejorada con searchManager
     // searchManager.initializeSearch(); // Ya se inicializa automáticamente
 
-    // -- Lógica para seleccionar PDF --
+    // -- Lógica para seleccionar PDF con OCR + Auto-completado automático --
     seleccionarPdfBtn.addEventListener('click', async () => {
         loadingManager.showButtonLoading(seleccionarPdfBtn, 'Seleccionando...');
         try {
             selectedPdfPath = await window.api.abrirDialogoPdf();
             if (selectedPdfPath) {
+                // Actualizar UI con nombre del archivo
                 ui.updatePdfFilePath(selectedPdfPath);
+                
+                // 🤖 Iniciar proceso completo: OCR → Parser → Auto-completado
+                console.log('🚀 Iniciando proceso completo OCR → Parser → Auto-completado...');
+                ocrUI.showProcessing('Extrayendo texto de la primera página...');
+                
+                try {
+                    // Paso 1: Extraer texto de la primera página
+                    const extractedText = await ocrProcessor.extractTextFromFirstPage(selectedPdfPath);
+                    
+                    if (extractedText && extractedText.trim().length > 0) {
+                        ocrUI.updateMessage('Analizando datos del expediente...');
+                        
+                        // Paso 2: Parsear el texto y extraer campos
+                        const parsedData = ocrParser.parseExpedienteData(extractedText);
+                        
+                        if (parsedData) {
+                            ocrUI.updateMessage('Auto-completando formulario...');
+                            
+                            // Paso 3: Auto-completar el formulario
+                            const stats = formAutofill.autofillForm(parsedData);
+                            
+                            // Mostrar resultado
+                            if (stats.filled > 0) {
+                                ocrUI.showSuccess(`✅ ${stats.filled} campos auto-completados`);
+                                ui.showNotification(`✨ Formulario auto-completado: ${stats.filled}/${stats.total} campos`, 'success');
+                            } else {
+                                ocrUI.showError('⚠️ No se detectaron datos');
+                                ui.showNotification('No se pudieron extraer datos del PDF', 'warning');
+                            }
+                        } else {
+                            ocrUI.showError('⚠️ No se detectaron datos');
+                            ui.showNotification('No se pudieron parsear los datos', 'warning');
+                        }
+                    } else {
+                        ocrUI.showError('⚠️ No se pudo extraer texto');
+                        ui.showNotification('No se detectó texto en el documento', 'warning');
+                    }
+                } catch (ocrError) {
+                    console.error('❌ Error en OCR:', ocrError);
+                    ocrUI.showError('❌ Error al procesar el documento');
+                    ui.showNotification('Error al procesar el PDF con OCR', 'error');
+                }
             }
         } catch (error) {
             console.error('Error al seleccionar PDF:', error);

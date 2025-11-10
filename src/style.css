@@ -1215,3 +1215,108 @@ fieldset legend {
     font-weight: var(--peso-semibold);
     color: var(--color-primario);
 }
+
+/* ========================================
+   ESTILOS OCR - Indicadores de Procesamiento
+   ======================================== */
+
+.ocr-status {
+    display: none;
+    margin-top: 12px;
+    padding: 12px 16px;
+    background-color: #e3f2fd;
+    border-left: 4px solid #2196F3;
+    border-radius: 4px;
+    align-items: center;
+    gap: 12px;
+}
+
+.ocr-status.success {
+    background-color: #e8f5e9;
+    border-left-color: #4CAF50;
+}
+
+.ocr-status.error {
+    background-color: #ffebee;
+    border-left-color: #f44336;
+}
+
+.ocr-progress {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.spinner {
+    width: 20px;
+    height: 20px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #2196F3;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.ocr-message {
+    font-size: 14px;
+    color: #1976D2;
+    font-weight: 500;
+}
+
+.ocr-status.success .ocr-message {
+    color: #388E3C;
+}
+
+.ocr-status.error .ocr-message {
+    color: #D32F2F;
+}
+
+/* ========================================
+   CAMPOS AUTO-COMPLETADOS POR OCR
+   ======================================== */
+
+.autofilled {
+    background-color: #e8f5e9 !important;
+    border: 2px solid #4CAF50 !important;
+    animation: pulse-green 0.6s ease-in-out;
+    transition: all 0.3s ease;
+}
+
+@keyframes pulse-green {
+    0% {
+        background-color: #ffffff;
+        transform: scale(1);
+    }
+    50% {
+        background-color: #c8e6c9;
+        transform: scale(1.02);
+    }
+    100% {
+        background-color: #e8f5e9;
+        transform: scale(1);
+    }
+}
+
+/* Icono de check para campos auto-completados */
+.autofilled::after {
+    content: '✓';
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #4CAF50;
+    font-weight: bold;
+    font-size: 18px;
+    pointer-events: none;
+}
+
+/* Asegurar posición relativa en form-group para el icono */
+.form-group {
+    position: relative;
+}
+

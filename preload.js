@@ -40,6 +40,19 @@ contextBridge.exposeInMainWorld('api', {
     }
   },
   
+  // **Función para leer archivo PDF completo (para OCR)**
+  readPdfFile: async (pdfPath) => {
+    console.log('📖 Solicitando lectura de PDF:', pdfPath);
+    try {
+      const arrayBuffer = await ipcRenderer.invoke('leer-archivo-pdf', pdfPath);
+      console.log('✅ PDF leído:', arrayBuffer.byteLength, 'bytes');
+      return arrayBuffer;
+    } catch (error) {
+      console.error('❌ Error en readPdfFile:', error);
+      throw error;
+    }
+  },
+  
   // Método para escuchar eventos del proceso principal
   on: (canal, callback) => {
     console.log(`🎯 Registrando listener para canal: ${canal}`);
