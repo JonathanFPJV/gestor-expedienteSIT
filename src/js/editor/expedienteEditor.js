@@ -19,6 +19,7 @@ function cacheElements() {
     elements.title = document.getElementById('editor-title');
     elements.subtitle = document.getElementById('editor-subtitle');
     elements.form = document.getElementById('editor-form');
+    elements.btnVolver = document.getElementById('btn-volver');
     elements.btnGuardar = document.getElementById('btn-guardar');
     elements.btnCancelar = document.getElementById('btn-cancelar');
     elements.btnSeleccionarExpediente = document.getElementById('btn-seleccionar-expediente');
@@ -40,6 +41,11 @@ function cacheElements() {
 }
 
 function attachEventListeners() {
+    elements.btnVolver?.addEventListener('click', () => {
+        if (confirm('¿Desea salir sin guardar los cambios?')) {
+            window.close();
+        }
+    });
     elements.btnCancelar?.addEventListener('click', () => window.close());
     elements.btnGuardar?.addEventListener('click', handleSave);
     elements.btnSeleccionarExpediente?.addEventListener('click', handleSelectExpedientePdf);
@@ -82,6 +88,7 @@ async function initialize() {
             uid: generateUid(),
             placa: t.placa || '',
             numero: t.numeroTarjeta || t.tarjeta || '',  // ✅ Primero intenta numeroTarjeta (SQLite), luego tarjeta (compatibilidad)
+            estado: t.estado || 'ACTIVA',  // 🆕 Cargar estado desde BD
             pdfPath: t.pdfPath || '',
             pdfSourcePath: null
         }));
@@ -148,12 +155,14 @@ function renderTarjetas() {
         const row = fragment.querySelector('.tarjeta-row');
         const placaInput = row.querySelector('.tarjeta-placa');
         const numeroInput = row.querySelector('.tarjeta-numero');
+        const estadoSelect = row.querySelector('.tarjeta-estado');
         const pdfInput = row.querySelector('.tarjeta-pdf');
         const btnPdf = row.querySelector('.btn-tarjeta-pdf');
         const btnEliminar = row.querySelector('.btn-tarjeta-eliminar');
 
         placaInput.value = tarjeta.placa;
         numeroInput.value = tarjeta.numero;
+        if (estadoSelect) estadoSelect.value = tarjeta.estado || 'ACTIVA';
         if (tarjeta.pdfSourcePath) {
             pdfInput.value = resumirRuta(tarjeta.pdfSourcePath);
             pdfInput.title = tarjeta.pdfSourcePath;
@@ -171,6 +180,11 @@ function renderTarjetas() {
         numeroInput.addEventListener('input', (e) => {
             tarjeta.numero = e.target.value;
         });
+        if (estadoSelect) {
+            estadoSelect.addEventListener('change', (e) => {
+                tarjeta.estado = e.target.value;
+            });
+        }
         btnPdf.addEventListener('click', async () => {
             const selected = await window.api.abrirDialogoPdf();
             if (selected) {
@@ -202,6 +216,7 @@ function handleAddTarjeta() {
         uid: generateUid(),
         placa: '',
         numero: '',
+        estado: 'ACTIVA',  // 🆕 Estado por defecto
         pdfPath: '',
         pdfSourcePath: null
     });
@@ -244,7 +259,8 @@ async function handleSave(event) {
     payload.tarjetas = state.tarjetas.map(t => {
         const tarjetaPayload = {
             placa: t.placa.trim(),
-            tarjeta: t.numero.trim()
+            tarjeta: t.numero.trim(),
+            estado: t.estado || 'ACTIVA'  // 🆕 Incluir estado
         };
 
         if (t.pdfSourcePath) {

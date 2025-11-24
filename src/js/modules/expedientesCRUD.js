@@ -14,9 +14,13 @@ export class ExpedientesCRUD {
         this.isInitialized = false;
         this.usePagination = true; // 🆕 Flag para usar paginación del backend
         
+        // 🔍 Debounce timer para búsqueda
+        this.searchDebounceTimer = null;
+        this.searchDebounceDelay = 500; // 500ms de espera después de dejar de escribir
+        
         this.initializeElements();
         this.initializeEventListeners();
-        this.initializeFilters();
+        // ✅ NO cargar filtros en constructor - se cargarán con los datos
         this.subscribeToEvents(); // 🔄 Suscribirse a eventos para reactividad
         this.setupViewActivationListener(); // 🔄 Escuchar cuando se activa la vista
     }
@@ -44,11 +48,7 @@ export class ExpedientesCRUD {
         if (vistaCrud) {
             observer.observe(vistaCrud, { attributes: true });
             
-            // Si ya está activa al cargar, cargar datos inmediatamente
-            if (vistaCrud.classList.contains('active')) {
-                console.log('🎯 Vista de expedientes ya activa - Cargando datos...');
-                this.loadExpedientes();
-            }
+            // ✅ NO cargar datos automáticamente - solo cuando usuario active la vista
         }
     }
 
@@ -62,21 +62,20 @@ export class ExpedientesCRUD {
         
         // Elementos de búsqueda y filtros
         this.searchInput = document.getElementById('search-crud-input');
-        this.searchBtn = document.getElementById('search-crud-btn');
+        this.clearSearchBtn = document.getElementById('clear-search-crud');
         this.filterAnio = document.getElementById('filter-anio');
         this.filterUnidad = document.getElementById('filter-unidad');
         this.limpiarFiltrosBtn = document.getElementById('limpiar-filtros-btn');
         
         // Botones
         this.nuevoExpedienteBtn = document.getElementById('nuevo-expediente-btn');
+        this.exportarExcelBtn = document.getElementById('exportar-excel-btn');
     }
 
     initializeEventListeners() {
-        // Búsqueda
-        this.searchBtn?.addEventListener('click', () => this.handleSearch());
-        this.searchInput?.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.handleSearch();
-        });
+        // Búsqueda rápida en tiempo real
+        this.searchInput?.addEventListener('input', (e) => this.filterTableInRealTime(e.target.value));
+        this.clearSearchBtn?.addEventListener('click', () => this.clearQuickSearch());
 
         // Filtros
         this.filterAnio?.addEventListener('change', () => this.applyFilters());
@@ -89,6 +88,9 @@ export class ExpedientesCRUD {
 
         // Nuevo expediente
         this.nuevoExpedienteBtn?.addEventListener('click', () => this.openNewExpedienteModal());
+
+        // Exportar a Excel
+        this.exportarExcelBtn?.addEventListener('click', () => this.exportToExcel());
 
         // Escuchar eventos de eliminación del backend
         if (window.api && window.api.on) {
@@ -201,26 +203,6 @@ export class ExpedientesCRUD {
             console.error('❌ Error al agregar expediente a tabla:', error);
         }
     }
-
-    async initializeFilters() {
-        // Llenar filtro de años
-        try {
-            const expedientes = await dataService.getAllExpedientes();
-            const years = [...new Set(expedientes.map(exp => exp.anioExpediente || new Date(exp.fecha).getFullYear()))]
-                .sort((a, b) => b - a);
-
-            this.filterAnio.innerHTML = '<option value="">Todos</option>';
-            years.forEach(year => {
-                const option = document.createElement('option');
-                option.value = year;
-                option.textContent = year;
-                this.filterAnio.appendChild(option);
-            });
-        } catch (error) {
-            console.error('Error al cargar filtros:', error);
-        }
-    }
-
     async loadExpedientes() {
         try {
             console.log('🔄 Cargando expedientes...');
@@ -529,10 +511,101 @@ export class ExpedientesCRUD {
         if (this.filterAnio) this.filterAnio.value = '';
         if (this.filterUnidad) this.filterUnidad.value = '';
         
+        // Limpiar búsqueda rápida también
+        this.clearQuickSearch();
+        
         this.filteredExpedientes = [...this.expedientes];
         this.currentPage = 1;
         this.renderTable();
         this.updatePagination();
+    }
+    
+    // 🔍 Filtrar tabla con búsqueda en backend (con debounce)
+    filterTableInRealTime(searchTerm) {
+        const term = searchTerm.trim();
+        
+        // Mostrar/ocultar botón de limpiar
+        if (this.clearSearchBtn) {
+            this.clearSearchBtn.style.display = term ? 'block' : 'none';
+        }
+        
+        // Cancelar búsqueda anterior pendiente
+        if (this.searchDebounceTimer) {
+            clearTimeout(this.searchDebounceTimer);
+        }
+        
+        // Si no hay término, limpiar búsqueda
+        if (!term) {
+            this.clearQuickSearch();
+            return;
+        }
+        
+        // Mostrar indicador de carga mientras se espera
+        this.showSearchingIndicator();
+        
+        // Esperar a que el usuario termine de escribir (debounce)
+        this.searchDebounceTimer = setTimeout(async () => {
+            try {
+                console.log(`🔍 Buscando en backend: "${term}"`);
+                
+                // Llamar al backend con el término de búsqueda
+                const resultado = await window.api.invoke('buscar-expedientes', {
+                    searchTerm: term,
+                    page: 1,
+                    limit: this.itemsPerPage
+                });
+                
+                if (resultado.success) {
+                    this.expedientes = resultado.expedientes || [];
+                    this.filteredExpedientes = [...this.expedientes];
+                    this.totalRecords = resultado.total || this.expedientes.length;
+                    this.totalPages = Math.ceil(this.totalRecords / this.itemsPerPage);
+                    this.currentPage = 1;
+                    
+                    this.renderTable();
+                    this.updatePagination();
+                    
+                    console.log(`✅ Búsqueda completada: ${this.expedientes.length} resultados`);
+                } else {
+                    console.error('❌ Error en búsqueda:', resultado.message);
+                    this.showError('Error al buscar expedientes');
+                }
+            } catch (error) {
+                console.error('❌ Error al buscar:', error);
+                this.showError('Error de conexión al buscar');
+            } finally {
+                this.hideSearchingIndicator();
+            }
+        }, this.searchDebounceDelay);
+    }
+    
+    // 💫 Mostrar indicador de búsqueda
+    showSearchingIndicator() {
+        if (this.searchInput) {
+            this.searchInput.style.opacity = '0.6';
+            this.searchInput.style.pointerEvents = 'none';
+        }
+    }
+    
+    // 💫 Ocultar indicador de búsqueda
+    hideSearchingIndicator() {
+        if (this.searchInput) {
+            this.searchInput.style.opacity = '1';
+            this.searchInput.style.pointerEvents = 'auto';
+        }
+    }
+    
+    // 🧹 Limpiar búsqueda rápida
+    clearQuickSearch() {
+        if (this.searchInput) {
+            this.searchInput.value = '';
+        }
+        if (this.clearSearchBtn) {
+            this.clearSearchBtn.style.display = 'none';
+        }
+        
+        // Volver a aplicar filtros normales
+        this.applyFilters();
     }
 
     previousPage() {
@@ -718,15 +791,22 @@ ${expediente.observaciones || 'Sin observaciones'}`;
                         tarjetaDiv.dataset.tarjetaIndex = index;
                         tarjetaDiv.innerHTML = `
                             <input type="text" 
+                                   class="placa-input"
                                    placeholder="Placa del vehículo" 
                                    value="${tarjeta.placa || ''}"
                                    data-field="placa"
                                    onchange="window.expedientesCRUD.updateTarjetaData(${index}, 'placa', this.value)">
                             <input type="text" 
+                                   class="tarjeta-input"
                                    placeholder="Número de tarjeta" 
                                    value="${tarjeta.numero || tarjeta.numeroTarjeta || ''}"
                                    data-field="numero"
                                    onchange="window.expedientesCRUD.updateTarjetaData(${index}, 'numero', this.value)">
+                            <select class="estado-input"
+                                    data-field="estado"
+                                    onchange="window.expedientesCRUD.updateTarjetaData(${index}, 'estado', this.value)">
+                                <option value="ACTIVA">✅ ACTIVA</option>
+                            </select>
                             <button type="button" 
                                     class="eliminar-tarjeta-btn" 
                                     onclick="window.expedientesCRUD.removeTarjetaFromForm(${index})">
@@ -734,6 +814,10 @@ ${expediente.observaciones || 'Sin observaciones'}`;
                             </button>
                         `;
                         tarjetasList.appendChild(tarjetaDiv);
+                        
+                        // Cargar estados disponibles en el selector
+                        const estadoSelect = tarjetaDiv.querySelector('.estado-input');
+                        this.cargarEstadosEnSelector(estadoSelect, tarjeta.estado || 'ACTIVA');
                     });
                 }
             }
@@ -784,6 +868,35 @@ ${expediente.observaciones || 'Sin observaciones'}`;
         }
     }
     
+    // 🏭 Cargar estados disponibles en un selector
+    async cargarEstadosEnSelector(selectElement, estadoSeleccionado = 'ACTIVA') {
+        if (!selectElement) return;
+        
+        try {
+            const resultado = await window.api.invoke('tarjeta:obtener-estados-disponibles');
+            
+            if (resultado && resultado.success && Array.isArray(resultado.estados)) {
+                selectElement.innerHTML = '';
+                
+                resultado.estados.forEach(estado => {
+                    const option = document.createElement('option');
+                    option.value = estado.valor;
+                    option.textContent = `${estado.icono} ${estado.valor}`;
+                    
+                    if (estado.valor === estadoSeleccionado) {
+                        option.selected = true;
+                    }
+                    
+                    selectElement.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('❌ Error al cargar estados:', error);
+            // Mantener valor por defecto si hay error
+            selectElement.innerHTML = '<option value="ACTIVA">✅ ACTIVA</option>';
+        }
+    }
+    
     // 🔄 Método para actualizar datos de tarjeta en tiempo real
     updateTarjetaData(index, field, value) {
         try {
@@ -830,6 +943,11 @@ ${expediente.observaciones || 'Sin observaciones'}`;
                                value="${tarjeta.numero || tarjeta.numeroTarjeta || ''}"
                                data-field="numero"
                                onchange="window.expedientesCRUD.updateTarjetaData(${idx}, 'numero', this.value)">
+                        <select class="estado-input"
+                                data-field="estado"
+                                onchange="window.expedientesCRUD.updateTarjetaData(${idx}, 'estado', this.value)">
+                            <option value="ACTIVA">✅ ACTIVA</option>
+                        </select>
                         <button type="button" 
                                 class="eliminar-tarjeta-btn" 
                                 onclick="window.expedientesCRUD.removeTarjetaFromForm(${idx})">
@@ -837,6 +955,10 @@ ${expediente.observaciones || 'Sin observaciones'}`;
                         </button>
                     `;
                     tarjetasList.appendChild(tarjetaDiv);
+                    
+                    // Cargar estados disponibles en el selector
+                    const estadoSelect = tarjetaDiv.querySelector('.estado-input');
+                    this.cargarEstadosEnSelector(estadoSelect, tarjeta.estado || 'ACTIVA');
                 });
             }
             
@@ -1165,6 +1287,39 @@ ${expediente.observaciones || 'Sin observaciones'}`;
         // Implementar sistema de notificaciones
         console.error('ERROR:', message);
         alert(message); // Temporal
+    }
+    
+    // 📊 Exportar expedientes a Excel
+    async exportToExcel() {
+        try {
+            console.log('📊 Iniciando exportación a Excel...');
+            
+            // Usar los datos filtrados si existen, sino usar todos
+            const dataToExport = this.filteredExpedientes.length > 0 
+                ? this.filteredExpedientes 
+                : this.expedientes;
+            
+            if (!dataToExport || dataToExport.length === 0) {
+                this.showWarning('No hay datos para exportar');
+                return;
+            }
+            
+            // Llamar al handler IPC del backend para exportar
+            const result = await window.api.invoke('exportar-expedientes-excel', dataToExport);
+            
+            if (result.success) {
+                this.showSuccess(result.message);
+                console.log('✅ Exportación completada:', result.filePath);
+            } else if (result.canceled) {
+                console.log('⚠️ Exportación cancelada por el usuario');
+            } else {
+                this.showError(result.message);
+            }
+            
+        } catch (error) {
+            console.error('❌ Error al exportar a Excel:', error);
+            this.showError('Error al exportar datos a Excel: ' + error.message);
+        }
     }
 }
 

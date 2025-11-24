@@ -6,6 +6,12 @@
 
 const queries = require('./queries');
 const { normalizePlaca, buildQuery } = require('./utils');
+const { 
+    ESTADO_DEFAULT, 
+    esEstadoValido, 
+    getMensajeErrorEstado,
+    esTransicionPermitida 
+} = require('../../config/tarjetaEstados');
 
 /**
  * Crear módulo de gestión de tarjetas
@@ -20,16 +26,23 @@ module.exports = function createTarjetaManager(db) {
          * @returns {Object} Tarjeta creada
          */
         insertTarjeta(tarjetaData) {
+            // Validar estado si se proporciona
+            const estado = tarjetaData.estado || ESTADO_DEFAULT;
+            if (!esEstadoValido(estado)) {
+                throw new Error(getMensajeErrorEstado(estado));
+            }
+
             const tarjetaToInsert = {
                 placa: normalizePlaca(tarjetaData.placa),
                 numeroTarjeta: tarjetaData.numeroTarjeta || null,
+                estado: estado.toUpperCase(),
                 pdfPath: tarjetaData.pdfPath || null,
                 resolucionId: tarjetaData.resolucionId || null,
                 actaEntregaId: tarjetaData.actaEntregaId || null
             };
 
             const nuevaTarjeta = db.tarjetas.insert(tarjetaToInsert);
-            console.log('✅ Tarjeta creada con ID:', nuevaTarjeta._id);
+            console.log('✅ Tarjeta creada con ID:', nuevaTarjeta._id, '| Estado:', nuevaTarjeta.estado);
 
             return nuevaTarjeta;
         },
@@ -168,6 +181,70 @@ module.exports = function createTarjetaManager(db) {
             } catch (error) {
                 return false;
             }
+        },
+
+        /**
+         * Obtener tarjetas por estado
+         * @param {string} estado - Estado de la tarjeta
+         * @returns {Array} Tarjetas con el estado especificado
+         */
+        getTarjetasByEstado(estado) {
+            if (!esEstadoValido(estado)) {
+                throw new Error(getMensajeErrorEstado(estado));
+            }
+            return db.tarjetas.find({ estado: estado.toUpperCase() });
+        },
+
+        /**
+         * Cambiar estado de una tarjeta
+         * @param {number} tarjetaId - ID de la tarjeta
+         * @param {string} nuevoEstado - Nuevo estado
+         * @returns {Object} Tarjeta actualizada
+         */
+        cambiarEstado(tarjetaId, nuevoEstado) {
+            if (!esEstadoValido(nuevoEstado)) {
+                throw new Error(getMensajeErrorEstado(nuevoEstado));
+            }
+
+            // Obtener estado actual para validar transición
+            const tarjetaActual = this.getTarjetaById(tarjetaId);
+            
+            // Validar que la transición sea permitida
+            if (!esTransicionPermitida(tarjetaActual.estado, nuevoEstado)) {
+                throw new Error(
+                    `Transición no permitida: ${tarjetaActual.estado} → ${nuevoEstado.toUpperCase()}`
+                );
+            }
+
+            const result = db.tarjetas.update(
+                { _id: tarjetaId },
+                { estado: nuevoEstado.toUpperCase() }
+            );
+
+            if (result === 0) {
+                throw new Error('No se pudo actualizar el estado de la tarjeta');
+            }
+
+            console.log(`✅ Estado de tarjeta ${tarjetaId} cambiado: ${tarjetaActual.estado} → ${nuevoEstado.toUpperCase()}`);
+            return this.getTarjetaById(tarjetaId);
+        },
+
+        /**
+         * Cancelar tarjeta
+         * @param {number} tarjetaId - ID de la tarjeta
+         * @returns {Object} Tarjeta cancelada
+         */
+        cancelarTarjeta(tarjetaId) {
+            return this.cambiarEstado(tarjetaId, 'CANCELADA');
+        },
+
+        /**
+         * Activar tarjeta
+         * @param {number} tarjetaId - ID de la tarjeta
+         * @returns {Object} Tarjeta activada
+         */
+        activarTarjeta(tarjetaId) {
+            return this.cambiarEstado(tarjetaId, 'ACTIVA');
         }
     };
 };

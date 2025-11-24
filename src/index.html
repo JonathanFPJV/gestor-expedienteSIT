@@ -64,7 +64,7 @@
             
             <div id="search-expedientes" class="search-section" style="display: none;">
                 <div class="search-input-container">
-                    <input type="text" id="search-expedientes-input" placeholder="Buscar por expediente...">
+                    <input type="text" id="search-expedientes-input" placeholder="Buscar por N° de expediente o N° de resolución...">
                     <div class="search-indicator"></div>
                     <div class="search-completed">✓</div>
                 </div>
@@ -181,6 +181,76 @@
                 <!-- Sección de Tarjetas -->
                 <fieldset class="form-section">
                     <legend>Tarjetas Asociadas</legend>
+                    
+                    <!-- Opción 1: Procesamiento por Lotes (OCR) -->
+                    <div class="form-group" style="background: #f0f8ff; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <h4 style="margin-top: 0; color: #1976d2;">📄 Procesamiento Automático (OCR)</h4>
+                        <p style="font-size: 0.9em; color: #666; margin-bottom: 10px;">
+                            Sube un PDF de múltiples páginas y el sistema extraerá automáticamente el <strong>Código Único</strong> y la <strong>Placa de Rodaje</strong> de cada página.
+                        </p>
+                        
+                        <div class="form-group">
+                            <label for="pdf-batch-path">PDF de Tarjetas (Múltiples Páginas):</label>
+                            <input type="text" id="pdf-batch-path" placeholder="Ningún archivo seleccionado" readonly>
+                            <button type="button" id="seleccionar-pdf-batch-btn" class="toggle-btn">
+                                📁 Seleccionar PDF y Procesar
+                            </button>
+                        </div>
+
+                        <!-- Progreso del procesamiento -->
+                        <div id="batch-progress-container" style="display: none; margin-top: 15px;">
+                            <div class="progress" style="height: 25px; background: #e0e0e0; border-radius: 5px; overflow: hidden;">
+                                <div id="batch-progress-bar" 
+                                     class="progress-bar" 
+                                     role="progressbar" 
+                                     style="width: 0%; background: #4CAF50; color: white; font-weight: bold; line-height: 25px; text-align: center; transition: width 0.3s ease;"
+                                     aria-valuenow="0" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                    0%
+                                </div>
+                            </div>
+                            <p id="batch-status-message" class="text-info" style="margin-top: 10px; font-weight: 500;"></p>
+                        </div>
+
+                        <!-- Tabla de resultados del batch -->
+                        <div id="batch-results-container" style="display: none; margin-top: 20px;">
+                            <h5>📊 Tarjetas Detectadas:</h5>
+                            <div style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px;">
+                                <table id="batch-results-table" class="table table-striped" style="width: 100%; margin: 0;">
+                                    <thead style="background: #f5f5f5; position: sticky; top: 0;">
+                                        <tr>
+                                            <th style="width: 60px; text-align: center;">Estado</th>
+                                            <th style="width: 80px; text-align: center;">Página</th>
+                                            <th style="width: 25%;">Código Único</th>
+                                            <th style="width: 20%;">Placa de Rodaje</th>
+                                            <th style="width: 25%;">PDF Generado</th>
+                                            <th style="width: 100px; text-align: center;">Campos</th>
+                                            <th style="width: 120px; text-align: center;">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Filas se agregan dinámicamente -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button type="button" id="dividir-pdf-btn" class="toggle-btn" style="margin-top: 10px; background: #2196F3;">
+                                📁 Dividir PDF y Guardar por Código Único
+                            </button>
+                            <button type="button" id="aplicar-tarjetas-batch-btn" class="toggle-btn" style="margin-top: 10px;">
+                                ✅ Aplicar Todas las Tarjetas Detectadas
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Separador -->
+                    <div style="border-top: 2px dashed #ccc; margin: 20px 0; position: relative;">
+                        <span style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: white; padding: 0 10px; color: #999; font-size: 0.9em;">
+                            O agregar manualmente
+                        </span>
+                    </div>
+
+                    <!-- Opción 2: Agregar Manualmente -->
                     <div id="tarjetas-list"></div>
                     <button type="button" id="agregar-tarjeta-btn">Agregar Tarjeta</button>
                 </fieldset>
@@ -211,6 +281,21 @@
                             <label for="pdf-acta-path">Adjuntar Acta de Entrega (PDF):</label>
                             <input type="text" id="pdf-acta-path" placeholder="Ningún archivo seleccionado" readonly>
                             <button type="button" id="seleccionar-pdf-acta-btn" class="toggle-btn">Seleccionar Archivo</button>
+                            <button type="button" id="procesar-acta-ocr-btn" class="toggle-btn" style="background: #9C27B0; margin-left: 10px;">
+                                🔍 Extraer Datos con OCR
+                            </button>
+                        </div>
+                        
+                        <!-- Contenedor de progreso OCR para Acta -->
+                        <div id="acta-ocr-progress" style="display: none; margin-top: 15px; padding: 15px; background: #f5f5f5; border-radius: 5px;">
+                            <div style="margin-bottom: 10px;">
+                                <strong id="acta-ocr-status">🔄 Procesando acta con OCR...</strong>
+                            </div>
+                            <div class="progress-bar-container" style="height: 25px; background: #e0e0e0; border-radius: 5px; overflow: hidden;">
+                                <div id="acta-ocr-progress-bar" class="progress-bar" style="width: 0%; height: 100%; background: #9C27B0; transition: width 0.3s; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                                    0%
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </fieldset>
@@ -231,6 +316,9 @@
             <div class="crud-header">
                 <h2>📂 Gestión de Expedientes</h2>
                 <div class="crud-actions">
+                    <button id="exportar-excel-btn" class="btn-export-excel">
+                        📊 Exportar a Excel
+                    </button>
                     <button id="nuevo-expediente-btn" class="btn-primary">
                         ➕ Nuevo Expediente
                     </button>
@@ -239,6 +327,15 @@
 
             <!-- Filtros -->
             <div class="crud-filters">
+                <div class="filter-group filter-search-group">
+                    <label for="search-crud-input">🔍 Búsqueda Rápida:</label>
+                    <div class="search-input-wrapper">
+                        <input type="text" 
+                               id="search-crud-input" 
+                               placeholder="Buscar en la tabla (N° Expediente, Resolución, Empresa...)">
+                        <button id="clear-search-crud" class="clear-search-btn" style="display: none;">×</button>
+                    </div>
+                </div>
                 <div class="filter-group">
                     <label for="filter-anio">Año:</label>
                     <select id="filter-anio">
@@ -275,7 +372,7 @@
                             <th>Fecha</th>
                             <th>N° Resolución</th>
                             <th>Empresa</th>
-                            <th>Unidad</th>
+                            <th>U. Negocio</th>
                             <th>Tarjetas</th>
                             <th>Acciones</th>
                         </tr>
@@ -314,6 +411,15 @@
 
             <!-- Filtros -->
             <div class="crud-filters">
+                <div class="filter-group filter-search-group">
+                    <label for="search-tarjetas-crud-input">🔍 Búsqueda Rápida:</label>
+                    <div class="search-input-wrapper">
+                        <input type="text" 
+                               id="search-tarjetas-crud-input" 
+                               placeholder="Buscar en la tabla (Placa, N° Tarjeta, Estado...)">
+                        <button id="clear-search-tarjetas" class="clear-search-btn" style="display: none;">×</button>
+                    </div>
+                </div>
                 <button id="limpiar-filtros-tarjetas-btn" class="btn-outline">Limpiar Filtros</button>
                 <div class="filter-stats">
                     <span id="stats-tarjetas">Total: 0 tarjetas</span>
@@ -329,7 +435,7 @@
                             <th>N° Tarjeta</th>
                             <th>Expediente</th>
                             <th>Acta de Entrega</th>
-                            <th>Fecha Creación</th>
+                            <th>Estado</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
@@ -367,6 +473,15 @@
 
             <!-- Filtros -->
             <div class="crud-filters">
+                <div class="filter-group filter-search-group">
+                    <label for="search-actas-crud-input">🔍 Búsqueda Rápida:</label>
+                    <div class="search-input-wrapper">
+                        <input type="text" 
+                               id="search-actas-crud-input" 
+                               placeholder="Buscar en la tabla (N° Expediente, Fecha, Observaciones...)">
+                        <button id="clear-search-actas" class="clear-search-btn" style="display: none;">×</button>
+                    </div>
+                </div>
                 <button id="limpiar-filtros-actas-btn" class="btn-outline">Limpiar Filtros</button>
                 <div class="filter-stats">
                     <span id="stats-actas">Total: 0 actas</span>
@@ -473,13 +588,24 @@
     <script src="../scripts/diagnostico-db.js"></script>
     <script src="../scripts/auto-migrate-tarjetas.js"></script>
     
-    <!-- Librerías para OCR: PDF.js + Tesseract.js -->
+    <!-- Librerías para OCR: PDF.js + Tesseract.js + pdf-lib -->
     <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script>
         // Configurar PDF.js worker
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
-        console.log('📚 Librerías OCR cargadas: PDF.js y Tesseract.js');
+        
+        // Exponer pdf-lib globalmente para los módulos
+        // pdf-lib se carga como PDFLib en el objeto global window
+        if (typeof PDFLib === 'undefined') {
+            console.error('❌ Error: pdf-lib no se cargó correctamente');
+        } else {
+            window.PDFLib = PDFLib;
+            console.log('✅ pdf-lib expuesto como window.PDFLib:', PDFLib);
+        }
+        
+        console.log('📚 Librerías OCR cargadas: PDF.js, Tesseract.js y pdf-lib');
     </script>
     
     <script type="module" src="js/main.js"></script>

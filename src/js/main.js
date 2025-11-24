@@ -16,13 +16,18 @@ import { ocrProcessor } from './modules/ocrProcessor.js';
 import { ocrUI } from './modules/ocrUI.js';
 import { ocrParser } from './modules/ocrParser.js';
 import { formAutofill } from './modules/formAutofill.js';
+import batchOcrProcessor from './modules/batchOcrProcessor.js';
+import batchOcrUI from './modules/batchOcrUI.js';
+import actaOcrProcessor from './modules/actaOcrProcessor.js';
 
 // Inicializar visualizador de PDFs
 const simplePdfViewer = new SimplePDFViewer();
 
-
+// Estado global para tarjetas detectadas por batch
+let batchDetectedCards = [];
 let selectedPdfPath = null;
 let tarjetas = []; // Array para manejar las tarjetas a guardar
+let actaExtractedData = null; // Datos extraídos del Acta de Entrega
 
 document.addEventListener('DOMContentLoaded', () => {
     // Inicializar servicios
@@ -30,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Inicializar UI de OCR
     ocrUI.initialize();
+    batchOcrUI.initialize();
     
     // Inicializar auto-completado de formulario
     formAutofill.initializeFormElements();
@@ -43,6 +49,8 @@ document.addEventListener('DOMContentLoaded', () => {
     window.ocrUI = ocrUI;
     window.ocrParser = ocrParser;
     window.formAutofill = formAutofill;
+    window.batchOcrProcessor = batchOcrProcessor; // Exponer Batch OCR
+    window.batchOcrUI = batchOcrUI;
     window.searchManager = searchManager;
     window.dataService = dataService;
     window.ui = ui;
@@ -139,9 +147,330 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Botón para procesar Acta de Entrega con OCR
+    const procesarActaOcrBtn = document.getElementById('procesar-acta-ocr-btn');
+    const actaOcrProgress = document.getElementById('acta-ocr-progress');
+    const actaOcrStatus = document.getElementById('acta-ocr-status');
+    const actaOcrProgressBar = document.getElementById('acta-ocr-progress-bar');
+
+    procesarActaOcrBtn.addEventListener('click', async () => {
+        const pdfActaPath = document.getElementById('pdf-acta-path').value;
+        
+        if (!pdfActaPath || pdfActaPath === 'Ningún archivo seleccionado') {
+            ui.showNotification('⚠️ Primero debes seleccionar un PDF de Acta de Entrega', 'warning');
+            return;
+        }
+
+        try {
+            // Mostrar progreso
+            actaOcrProgress.style.display = 'block';
+            actaOcrStatus.textContent = '🔄 Procesando acta con OCR...';
+            actaOcrProgressBar.style.width = '20%';
+            actaOcrProgressBar.textContent = '20%';
+            
+            loadingManager.showButtonLoading(procesarActaOcrBtn, 'Procesando...');
+
+            console.log('🔍 Iniciando procesamiento OCR del Acta...');
+            console.log(`   PDF: ${selectedActaPdfPath}`);
+
+            // Procesar el PDF del Acta
+            const resultado = await actaOcrProcessor.procesarActaPdf(selectedActaPdfPath);
+
+            actaOcrProgressBar.style.width = '60%';
+            actaOcrProgressBar.textContent = '60%';
+
+            if (resultado.success && resultado.data) {
+                console.log('✅ Datos extraídos del Acta:', resultado.data);
+
+                // Guardar datos temporalmente
+                actaExtractedData = resultado.data;
+
+                actaOcrProgressBar.style.width = '80%';
+                actaOcrProgressBar.textContent = '80%';
+
+                // Llenar formulario con datos extraídos
+                if (resultado.data.fechaEntrega) {
+                    document.getElementById('fechaEntrega').value = resultado.data.fechaEntrega;
+                }
+
+                if (resultado.data.numeroTarjetas > 0) {
+                    document.getElementById('n_tarjetas_entregadas').value = resultado.data.numeroTarjetas;
+                }
+
+                if (resultado.data.observaciones) {
+                    document.getElementById('observacionesActa').value = resultado.data.observaciones;
+                }
+
+                actaOcrProgressBar.style.width = '100%';
+                actaOcrProgressBar.textContent = '100%';
+                actaOcrProgressBar.style.background = '#4CAF50';
+                actaOcrStatus.textContent = '✅ Datos extraídos correctamente';
+
+                ui.showNotification('✅ Datos del Acta extraídos exitosamente', 'success');
+
+                // Mostrar resumen en consola
+                console.log('\n📋 RESUMEN DE DATOS EXTRAÍDOS:');
+                console.log('─────────────────────────────────────────');
+                console.log(`Fecha de Entrega: ${resultado.data.fechaEntrega || 'No detectada'}`);
+                console.log(`Número de Tarjetas: ${resultado.data.numeroTarjetas || 0}`);
+                console.log(`Observaciones: ${resultado.data.observaciones ? resultado.data.observaciones.substring(0, 100) + '...' : 'No detectadas'}`);
+                console.log('─────────────────────────────────────────\n');
+
+                // Ocultar progreso después de 3 segundos
+                setTimeout(() => {
+                    actaOcrProgress.style.display = 'none';
+                    actaOcrProgressBar.style.width = '0%';
+                    actaOcrProgressBar.style.background = '#9C27B0';
+                }, 3000);
+
+            } else {
+                throw new Error(resultado.error || 'No se pudieron extraer datos del Acta');
+            }
+
+        } catch (error) {
+            console.error('❌ Error procesando Acta con OCR:', error);
+            
+            actaOcrProgressBar.style.background = '#f44336';
+            actaOcrProgressBar.style.width = '100%';
+            actaOcrProgressBar.textContent = 'Error';
+            actaOcrStatus.textContent = '❌ Error al procesar el Acta';
+
+            ui.showNotification(`❌ Error al procesar Acta: ${error.message}`, 'error');
+
+            setTimeout(() => {
+                actaOcrProgress.style.display = 'none';
+                actaOcrProgressBar.style.width = '0%';
+                actaOcrProgressBar.style.background = '#9C27B0';
+            }, 3000);
+
+        } finally {
+            loadingManager.hideButtonLoading(procesarActaOcrBtn);
+        }
+    });
+
     // -- Lógica para agregar tarjetas dinámicamente --
     agregarTarjetaBtn.addEventListener('click', () => {
         ui.addTarjetaInput();
+    });
+
+    // -- Procesamiento por lotes (Batch OCR) --
+    const seleccionarPdfBatchBtn = document.getElementById('seleccionar-pdf-batch-btn');
+    const pdfBatchPathInput = document.getElementById('pdf-batch-path');
+    const aplicarTarjetasBatchBtn = document.getElementById('aplicar-tarjetas-batch-btn');
+    const batchResultsContainer = document.getElementById('batch-results-container');
+
+    seleccionarPdfBatchBtn.addEventListener('click', async () => {
+        try {
+            loadingManager.showButtonLoading(seleccionarPdfBatchBtn, 'Procesando...');
+
+            // Seleccionar PDF
+            const pdfPath = await window.api.abrirDialogoPdf();
+            if (!pdfPath) {
+                console.log('Usuario canceló la selección de PDF batch');
+                return;
+            }
+
+            pdfBatchPathInput.value = pdfPath;
+            console.log('📄 PDF Batch seleccionado:', pdfPath);
+
+            // Resetear estado
+            batchDetectedCards = [];
+            batchOcrUI.reset();
+
+            // Mostrar contenedor de progreso
+            document.getElementById('batch-progress-container').style.display = 'block';
+            batchResultsContainer.style.display = 'none';
+
+            // Configurar callback de progreso
+            batchOcrProcessor.setProgressCallback((pageNum, totalPages, pageData) => {
+                batchOcrUI.updateProgress(pageNum, totalPages, pageData);
+            });
+
+            // Iniciar procesamiento
+            batchOcrUI.showProcessingStart(1); // Se actualizará con el total real
+            const results = await batchOcrProcessor.processPdfBatch(pdfPath);
+
+            // Guardar resultados temporalmente
+            batchDetectedCards = results.filter(r => r.success);
+
+            console.log(`✅ Procesamiento batch completado: ${batchDetectedCards.length} tarjetas detectadas`);
+
+            // Mostrar resultados
+            batchOcrUI.showProcessingComplete(results);
+            batchResultsContainer.style.display = 'block';
+
+            // Mostrar notificación
+            ui.showNotification(
+                `✅ ${batchDetectedCards.length} tarjeta(s) detectada(s) correctamente`,
+                'success'
+            );
+
+        } catch (error) {
+            console.error('❌ Error en procesamiento batch:', error);
+            batchOcrUI.showError(error.message);
+            ui.showNotification('Error al procesar el PDF. Verifica el archivo.', 'error');
+        } finally {
+            loadingManager.hideButtonLoading(seleccionarPdfBatchBtn);
+        }
+    });
+
+    // Aplicar todas las tarjetas detectadas al formulario
+    aplicarTarjetasBatchBtn.addEventListener('click', () => {
+        if (batchDetectedCards.length === 0) {
+            ui.showNotification('No hay tarjetas detectadas para aplicar', 'warning');
+            return;
+        }
+
+        console.log(`🎯 Aplicando ${batchDetectedCards.length} tarjetas al formulario...`);
+
+        // Limpiar tarjetas existentes
+        const tarjetasList = document.getElementById('tarjetas-list');
+        tarjetasList.innerHTML = '';
+        tarjetas = [];
+
+        // Agregar cada tarjeta detectada
+        batchDetectedCards.forEach((card, index) => {
+            if (card.data && (card.data.placaRodaje || card.data.codigoUnico)) {
+                ui.addTarjetaInput();
+                
+                // Obtener los inputs de la última tarjeta agregada
+                const tarjetaInputs = tarjetasList.querySelectorAll('.tarjeta-item');
+                const lastTarjeta = tarjetaInputs[tarjetaInputs.length - 1];
+                
+                if (lastTarjeta) {
+                    const placaInput = lastTarjeta.querySelector('input[placeholder="Placa"]');
+                    const numeroInput = lastTarjeta.querySelector('input[placeholder="N° Tarjeta"]');
+                    const pdfInput = lastTarjeta.querySelector('.pdf-tarjeta-path');
+                    
+                    if (placaInput && card.data.placaRodaje) {
+                        placaInput.value = card.data.placaRodaje;
+                        placaInput.classList.add('autofilled');
+                        setTimeout(() => placaInput.classList.remove('autofilled'), 2000);
+                    }
+                    
+                    if (numeroInput && card.data.codigoUnico) {
+                        numeroInput.value = card.data.codigoUnico;
+                        numeroInput.classList.add('autofilled');
+                        setTimeout(() => numeroInput.classList.remove('autofilled'), 2000);
+                    }
+                    
+                    // Si hay PDF generado, asignar la ruta directamente al input
+                    if (card.pdfPath && pdfInput) {
+                        pdfInput.value = card.pdfPath;
+                        pdfInput.classList.add('autofilled');
+                        setTimeout(() => pdfInput.classList.remove('autofilled'), 2000);
+                        
+                        console.log(`   📄 PDF asignado: ${card.pdfPath}`);
+                    }
+                    
+                    console.log(`✅ Tarjeta ${index + 1} aplicada:`, {
+                        placa: card.data.placaRodaje,
+                        numero: card.data.codigoUnico,
+                        pdfPath: card.pdfPath || 'No generado'
+                    });
+                }
+            }
+        });
+
+        ui.showNotification(
+            `✨ ${batchDetectedCards.length} tarjeta(s) aplicada(s) al formulario`,
+            'success'
+        );
+
+        // Scroll suave a la lista de tarjetas
+        tarjetasList.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // 🧹 Limpiar variables y ocultar resultados después de aplicar
+        console.log('🧹 Limpiando variables después de aplicar tarjetas...');
+        batchDetectedCards = [];
+        selectedPdfPath = null;
+        pdfBatchPathInput.value = '';
+        
+        // Ocultar tabla de resultados
+        batchResultsContainer.style.display = 'none';
+        batchOcrUI.reset();
+        
+        console.log('✅ Listo para nuevo procesamiento batch');
+    });
+
+    // Dividir PDF en páginas individuales con nombre de código único
+    const dividirPdfBtn = document.getElementById('dividir-pdf-btn');
+    dividirPdfBtn.addEventListener('click', async () => {
+        if (batchDetectedCards.length === 0) {
+            ui.showNotification('⚠️ Primero debes procesar un PDF con OCR', 'warning');
+            return;
+        }
+
+        const pdfPath = pdfBatchPathInput.value;
+        if (!pdfPath) {
+            ui.showNotification('⚠️ No hay PDF cargado para dividir', 'warning');
+            return;
+        }
+
+        try {
+            loadingManager.showButtonLoading(dividirPdfBtn, 'Dividiendo PDF...');
+            
+            console.log('📁 Iniciando división de PDF...');
+            console.log(`   PDF original: ${pdfPath}`);
+            console.log(`   Páginas procesadas: ${batchDetectedCards.length}`);
+
+            // Llamar al procesador para dividir el PDF
+            const resultado = await batchOcrProcessor.dividirPdfPorCodigos(pdfPath, batchDetectedCards);
+
+            if (resultado.success) {
+                const { archivosCreados, errores, carpetaDestino } = resultado;
+                
+                console.log('✅ División completada exitosamente');
+                console.log(`   Archivos creados: ${archivosCreados.length}`);
+                console.log(`   Errores: ${errores.length}`);
+                
+                // Actualizar la tabla con las rutas de los PDFs generados
+                batchOcrUI.updatePdfPaths(batchDetectedCards);
+                
+                // Mostrar resumen
+                let mensaje = `✅ PDF dividido exitosamente\n\n`;
+                mensaje += `📁 Carpeta: ${carpetaDestino}\n`;
+                mensaje += `📄 Archivos creados: ${archivosCreados.length}\n`;
+                
+                if (errores.length > 0) {
+                    mensaje += `⚠️ Errores: ${errores.length}`;
+                }
+
+                // Mostrar detalles en consola
+                console.log('\n📊 Archivos creados:');
+                archivosCreados.forEach(archivo => {
+                    console.log(`   ${archivo.nombreArchivo} (Página ${archivo.pagina})`);
+                });
+
+                ui.showNotification(
+                    `✅ ${archivosCreados.length} archivo(s) PDF creado(s) exitosamente`,
+                    'success'
+                );
+
+                // Preguntar si desea abrir la carpeta
+                const abrirCarpeta = confirm(mensaje + '\n\n¿Deseas abrir la carpeta donde se generaron los archivos?');
+                
+                if (abrirCarpeta) {
+                    await window.api.shell.openPath(carpetaDestino);
+                    console.log('📂 Carpeta abierta por el usuario');
+                } else {
+                    console.log('📂 Usuario optó por no abrir la carpeta');
+                }
+
+                // 📝 NOTA: NO limpiar batchDetectedCards aquí para permitir
+                // que el usuario pueda aplicar las tarjetas después de dividir
+                console.log('💡 Tarjetas siguen disponibles para aplicar al formulario');
+                
+            } else {
+                throw new Error(resultado.message || 'Error desconocido al dividir PDF');
+            }
+
+        } catch (error) {
+            console.error('❌ Error dividiendo PDF:', error);
+            ui.showNotification(`❌ Error al dividir PDF: ${error.message}`, 'error');
+        } finally {
+            loadingManager.hideButtonLoading(dividirPdfBtn);
+        }
     });
 
     // -- Lógica para guardar un expediente --
@@ -195,14 +524,32 @@ document.addEventListener('DOMContentLoaded', () => {
             
             console.log('📤 Enviando datos al backend:', expedienteData);
 
-            // Enviar al backend
-            const result = await dataService.createExpediente(expedienteData);
+            // Verificar si estamos editando o creando
+            const editingId = expedienteForm.dataset.editingId;
+            let result;
+            
+            if (editingId) {
+                // MODO EDICIÓN - Actualizar expediente existente
+                console.log('✏️ Modo edición - Actualizando expediente ID:', editingId);
+                result = await dataService.updateExpediente(parseInt(editingId), expedienteData);
+            } else {
+                // MODO CREACIÓN - Crear nuevo expediente
+                console.log('➕ Modo creación - Creando nuevo expediente');
+                result = await dataService.createExpediente(expedienteData);
+            }
             
             console.log('📥 Respuesta del backend:', result);
             
             if (result.success) {
-                ui.showNotification('✅ Expediente guardado exitosamente.', 'success');
+                const mensaje = editingId ? '✅ Expediente actualizado exitosamente.' : '✅ Expediente guardado exitosamente.';
+                ui.showNotification(mensaje, 'success');
                 ui.resetExpedienteForm();
+                
+                // Limpiar flag de edición
+                delete expedienteForm.dataset.editingId;
+                delete expedienteForm.dataset.tarjetas;
+                delete expedienteForm.dataset.actaEntregaId;
+                
                 selectedPdfPath = null;
                 tarjetas = []; // Limpiar array de tarjetas
                 

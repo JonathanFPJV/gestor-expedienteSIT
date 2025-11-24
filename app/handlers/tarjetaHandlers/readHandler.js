@@ -86,11 +86,19 @@ function registerReadHandlers(ipcMain, tarjetaService, db) {
                     ? db.actasEntrega.findOne({ _id: tarjeta.actaEntregaId }) 
                     : null;
                 
+                // Log detallado de PDFs encontrados
+                console.log('📄 PDFs encontrados para tarjeta', tarjeta.placa, ':', {
+                    tarjetaPdf: tarjeta.pdfPath || 'NO',
+                    expedientePdf: expediente?.pdfPathActa || 'NO',
+                    expedienteId: expediente?._id
+                });
+                
                 return {
                     _id: tarjeta._id,
                     placa: tarjeta.placa,
                     tarjeta: tarjeta.numeroTarjeta,
                     numeroTarjeta: tarjeta.numeroTarjeta,
+                    estado: tarjeta.estado || 'ACTIVA', // 🆕 Estado de la tarjeta
                     expediente: expediente ? expediente.numeroExpediente : 'N/A',
                     fecha: expediente ? expediente.fechaExpediente : 'N/A',
                     pdfPath: tarjeta.pdfPath || null,
@@ -105,9 +113,80 @@ function registerReadHandlers(ipcMain, tarjetaService, db) {
                 };
             });
             
+            console.log('✅ Resultados formateados:', resultados.length, 'tarjeta(s) con datos completos');
+            
             return { success: true, data: resultados };
         },
         'Error al buscar tarjeta'
+    ));
+
+    // 🔍 Buscar tarjetas con paginación (optimizado para tabla CRUD)
+    ipcMain.handle('buscar-tarjetas', handleError(
+        async (options) => {
+            const { searchTerm = '', page = 1, limit = 10 } = options;
+            console.log('📥 Buscar tarjetas (paginado):', { searchTerm, page, limit });
+
+            let tarjetasFiltradas = [];
+
+            if (!searchTerm || searchTerm.trim() === '') {
+                // Sin búsqueda: obtener todas las tarjetas
+                tarjetasFiltradas = db.tarjetas.find({});
+            } else {
+                // Con búsqueda: filtrar por placa, número de tarjeta o estado
+                const termUpper = searchTerm.toUpperCase().trim();
+                tarjetasFiltradas = db.tarjetas.find({})
+                    .filter(t => 
+                        (t.placa && t.placa.toUpperCase().includes(termUpper)) ||
+                        (t.numeroTarjeta && t.numeroTarjeta.toUpperCase().includes(termUpper)) ||
+                        (t.estado && t.estado.toUpperCase().includes(termUpper))
+                    );
+            }
+
+            const total = tarjetasFiltradas.length;
+            const totalPages = Math.ceil(total / limit);
+            const offset = (page - 1) * limit;
+            
+            // Aplicar paginación
+            const tarjetasPaginadas = tarjetasFiltradas.slice(offset, offset + limit);
+
+            // Enriquecer con datos del expediente y acta de entrega
+            const tarjetasConDatos = tarjetasPaginadas.map(tarjeta => {
+                const expediente = db.expedientes.findOne({ _id: tarjeta.resolucionId });
+                const actaEntrega = tarjeta.actaEntregaId 
+                    ? db.actasEntrega.findOne({ _id: tarjeta.actaEntregaId }) 
+                    : null;
+
+                return {
+                    _id: tarjeta._id,
+                    placa: tarjeta.placa,
+                    numeroTarjeta: tarjeta.numeroTarjeta,
+                    estado: tarjeta.estado || 'ACTIVA',
+                    expediente: expediente ? expediente.numeroExpediente : 'N/A',
+                    fecha: expediente ? expediente.fechaExpediente : 'N/A',
+                    pdfPath: tarjeta.pdfPath || null,
+                    expedientePdfPath: expediente ? expediente.pdfPathActa : null,
+                    resolucionId: tarjeta.resolucionId,
+                    actaEntregaId: tarjeta.actaEntregaId,
+                    actaEntrega: actaEntrega ? {
+                        _id: actaEntrega._id,
+                        fechaEntrega: actaEntrega.fechaEntrega,
+                        n_tarjetas_entregadas: actaEntrega.n_tarjetas_entregadas
+                    } : null
+                };
+            });
+
+            console.log(`✅ Tarjetas encontradas: ${total} | Página ${page}/${totalPages}`);
+
+            return {
+                success: true,
+                tarjetas: tarjetasConDatos,
+                total,
+                page,
+                limit,
+                totalPages
+            };
+        },
+        'Error al buscar tarjetas'
     ));
 }
 

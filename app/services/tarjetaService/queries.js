@@ -11,16 +11,18 @@ module.exports = {
         INSERT INTO TarjetasVehiculos (
             placa,
             numeroTarjeta,
+            estado,
             pdfPath,
             resolucionId,
             actaEntregaId
-        ) VALUES (?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?)
     `,
 
     updateTarjeta: `
         UPDATE TarjetasVehiculos
         SET placa = ?,
             numeroTarjeta = ?,
+            estado = ?,
             pdfPath = ?,
             resolucionId = ?,
             actaEntregaId = ?,
@@ -68,6 +70,12 @@ module.exports = {
         ORDER BY _id DESC
     `,
 
+    getTarjetasByEstado: `
+        SELECT * FROM TarjetasVehiculos
+        WHERE estado = ?
+        ORDER BY _id DESC
+    `,
+
     // ==================== ESTADÍSTICAS ====================
 
     countTotalTarjetas: `
@@ -90,5 +98,17 @@ module.exports = {
         SELECT COUNT(*) as count 
         FROM TarjetasVehiculos 
         WHERE actaEntregaId IS NOT NULL
+    `,
+
+    countTarjetasActivas: `
+        SELECT COUNT(*) as count 
+        FROM TarjetasVehiculos 
+        WHERE estado = 'ACTIVA'
+    `,
+
+    countTarjetasCanceladas: `
+        SELECT COUNT(*) as count 
+        FROM TarjetasVehiculos 
+        WHERE estado = 'CANCELADA'
     `
 };

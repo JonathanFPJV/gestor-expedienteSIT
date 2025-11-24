@@ -152,9 +152,9 @@ class ExpedienteService {
         const numeroResolucion = expedienteData.numeroResolucion || expedienteExistente.numeroResolucion;
         const numeroExpediente = expedienteData.numeroExpediente || expedienteExistente.numeroExpediente;
 
-        // Manejo de PDF del acta - ELIMINAR EL ANTIGUO SI SE PROPORCIONA UNO NUEVO
+        // Manejo de PDF del acta
         if (expedienteData.pdfSourcePath) {
-            // Eliminar PDF antiguo si existe
+            // Usuario seleccionó un NUEVO PDF - ELIMINAR EL ANTIGUO
             if (expedienteExistente.pdfPathActa) {
                 await this.pdfManager.deletePdf(expedienteExistente.pdfPathActa);
             }
@@ -166,6 +166,12 @@ class ExpedienteService {
             );
             expedienteData.pdfPathActa = pdfPath;
             delete expedienteData.pdfSourcePath;
+        } else if (expedienteData.pdfPath) {
+            // Usuario NO cambió el PDF - PRESERVAR el existente
+            // No hacemos nada, mantenemos el pdfPath actual
+            console.log('📎 Manteniendo PDF existente:', expedienteData.pdfPath);
+            expedienteData.pdfPathActa = expedienteData.pdfPath;
+            delete expedienteData.pdfPath;
         }
 
         // Preparar datos para actualización

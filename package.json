@@ -5,10 +5,12 @@
   "productName": "SIT Gestor Vehículos",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --win --x64",
-    "build:portable": "electron-builder --win --x64 && node scripts/create-portable-marker.js",
-    "dist": "electron-builder --win --x64",
-    "postinstall": "electron-builder install-app-deps"
+    "build": "npm run backup && electron-builder --win --x64",
+    "build:portable": "npm run backup && electron-builder --win --x64 && node scripts/create-portable-marker.js",
+    "dist": "npm run backup && electron-builder --win --x64",
+    "postinstall": "electron-builder install-app-deps",
+    "backup": "node scripts/backup-data.js",
+    "restore": "node scripts/restore-data.js"
   },
   "keywords": [
     "electron",
@@ -22,7 +24,8 @@
     "better-sqlite3": "^12.4.1",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^5.4.394",
-    "tesseract.js": "^6.0.1"
+    "tesseract.js": "^6.0.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "electron": "^38.0.0",

@@ -82,6 +82,51 @@ function registerReadHandlers(actaEntregaService) {
     });
 
     /**
+     * 🔍 Buscar actas de entrega con paginación (optimizado para tabla CRUD)
+     * Busca en múltiples campos con soporte de paginación
+     */
+    ipcMain.handle('buscar-actas-entrega', (event, options) => {
+        try {
+            const { searchTerm = '', page = 1, limit = 10 } = options;
+            console.log('📥 Buscar actas (paginado):', { searchTerm, page, limit });
+
+            // Obtener todas las actas y filtrar si hay búsqueda
+            let actasFiltradas = [];
+            
+            if (!searchTerm || searchTerm.trim() === '') {
+                actasFiltradas = actaEntregaService.getAllActasEntrega();
+            } else {
+                actasFiltradas = actaEntregaService.searchActasEntrega(searchTerm);
+            }
+
+            const total = actasFiltradas.length;
+            const totalPages = Math.ceil(total / limit);
+            const offset = (page - 1) * limit;
+            
+            // Aplicar paginación
+            const actasPaginadas = actasFiltradas.slice(offset, offset + limit);
+
+            console.log(`✅ Actas encontradas: ${total} | Página ${page}/${totalPages}`);
+
+            return handleSuccess({
+                actas: actasPaginadas,
+                total,
+                page,
+                limit,
+                totalPages
+            });
+        } catch (error) {
+            return handleError(error, 'buscar actas con paginación', { 
+                actas: [], 
+                total: 0, 
+                page: 1, 
+                limit: 10, 
+                totalPages: 0 
+            });
+        }
+    });
+
+    /**
      * Obtener tarjetas disponibles para asignar a actas
      * Retorna tarjetas que no tienen actaEntregaId
      */

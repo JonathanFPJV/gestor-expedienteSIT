@@ -32,6 +32,7 @@ const registerCreateHandlers = require('./createHandler');
 const registerUpdateHandlers = require('./updateHandler');
 const registerDeleteHandlers = require('./deleteHandler');
 const registerStatsHandlers = require('./statsHandler');
+const registerExportHandler = require('./exportHandler');
 
 class ExpedienteHandlers {
     /**
@@ -65,6 +66,7 @@ class ExpedienteHandlers {
         registerUpdateHandlers(this.expedienteService);
         registerDeleteHandlers(this.expedienteService);
         registerStatsHandlers(this.db);
+        registerExportHandler(this.expedienteService, null); // null para tarjetaService por ahora
 
         // Resumen final
         console.log('='.repeat(60));
@@ -75,7 +77,8 @@ class ExpedienteHandlers {
         console.log('      - updateHandler: 1 canal (actualizar)');
         console.log('      - deleteHandler: 1 canal (eliminar)');
         console.log('      - statsHandler: 1 canal (estadísticas)');
-        console.log('   📈 Total: 9 canales IPC activos');
+        console.log('      - exportHandler: 1 canal (exportar a Excel)');
+        console.log('   📈 Total: 10 canales IPC activos');
         console.log('='.repeat(60));
     }
 

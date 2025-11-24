@@ -10,9 +10,15 @@
 <body>
     <div class="editor-container">
         <div class="editor-header">
-            <div>
-                <h1 id="editor-title">Editar Expediente</h1>
-                <p class="badge-outline" id="editor-subtitle">Cargando datos...</p>
+            <div class="editor-header-left">
+                <button id="btn-volver" class="btn-back" title="Volver a la lista">
+                    <span class="back-icon">←</span>
+                    <span class="back-text">Atrás</span>
+                </button>
+                <div class="editor-title-group">
+                    <h1 id="editor-title">Editar Expediente</h1>
+                    <p class="badge-outline" id="editor-subtitle">Cargando datos...</p>
+                </div>
             </div>
             <div class="editor-actions">
                 <button id="btn-cancelar" class="btn-outline">Cancelar</button>
@@ -125,6 +131,16 @@
                 <div class="form-group">
                     <label>N° Tarjeta</label>
                     <input type="text" class="tarjeta-numero" required>
+                </div>
+                <div class="form-group">
+                    <label>Estado</label>
+                    <select class="tarjeta-estado" required>
+                        <option value="ACTIVA">✅ ACTIVA</option>
+                        <option value="CANCELADA">❌ CANCELADA</option>
+                        <option value="SUSPENDIDA">⏸ SUSPENDIDA</option>
+                        <option value="VENCIDA">⏱ VENCIDA</option>
+                        <option value="EN_TRAMITE">⟳ EN TRÁMITE</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label>PDF asociado</label>

@@ -7,7 +7,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../../../node_modules/pdfjs-dist/build
 export class SimplePDFViewer {
     constructor() {
         this.currentPdf = null;
-        this.scale = 1.0;
+        this.scale = 1.4; // Aumentado de 1.0 a 1.4 para mejor visibilidad
         this.rotation = 0;
         this.renderedPages = new Map();
         this.isLoading = false;
@@ -48,11 +48,15 @@ export class SimplePDFViewer {
         try {
             const page = await this.currentPdf.getPage(pageNumber);
             const currentScale = scale !== null ? scale : this.scale;
-            const currentRotation = rotation !== null ? rotation : this.rotation;
+            
+            // Obtener la rotación original del PDF y combinarla con la rotación del usuario
+            const pageRotation = page.rotate || 0;
+            const userRotation = rotation !== null ? rotation : this.rotation;
+            const totalRotation = (pageRotation + userRotation) % 360;
             
             const viewport = page.getViewport({ 
                 scale: currentScale, 
-                rotation: currentRotation 
+                rotation: totalRotation 
             });
             
             const context = canvas.getContext('2d');
@@ -122,6 +126,10 @@ export class SimplePDFViewer {
                         
                         <div class="control-separator"></div>
                         
+                        <button class="pdf-control-btn print-pdf" title="Imprimir PDF (Clic derecho: Ver impresoras)">
+                            <span class="control-icon">🖨️</span>
+                            <span class="control-text">Imprimir</span>
+                        </button>
                         <button class="pdf-control-btn download-pdf" title="Descargar PDF">
                             <span class="control-icon">💾</span>
                         </button>
@@ -165,20 +173,30 @@ export class SimplePDFViewer {
         // Configurar controles
         this.setupSimpleControls(viewer, pdfPath);
         
+        // Inicializar zoom display
+        this.initializeZoomDisplay(viewer);
+        
         return viewer;
     }
 
-    async loadAndDisplay(pdfPath, viewer) {
+    async loadAndDisplay(pdfPath, viewer, retryCount = 0) {
         const loadingDiv = viewer.querySelector('.pdf-loading-state');
         const errorDiv = viewer.querySelector('.pdf-error-state');
         const scrollContainer = viewer.querySelector('.pdf-scroll-container');
         const pagesWrapper = viewer.querySelector('.pdf-pages-wrapper');
         const pagesInfo = viewer.querySelector('.pdf-pages-info');
         
+        const MAX_RETRIES = 2; // Intentar hasta 3 veces (0, 1, 2)
+        
         // Mostrar loading
         loadingDiv.style.display = 'flex';
         errorDiv.style.display = 'none';
         scrollContainer.style.display = 'none';
+        
+        // Pequeño delay antes de cargar para evitar problemas de timing
+        if (retryCount === 0) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+        }
         
         const success = await this.loadPDF(pdfPath);
         loadingDiv.style.display = 'none';
@@ -196,6 +214,16 @@ export class SimplePDFViewer {
             
             scrollContainer.style.display = 'block';
         } else {
+            // Si falla y no hemos alcanzado el máximo de reintentos, reintentar automáticamente
+            if (retryCount < MAX_RETRIES) {
+                console.log(`⚠️ Reintentando cargar PDF (intento ${retryCount + 2}/${MAX_RETRIES + 1})...`);
+                const retryDelay = 500 * (retryCount + 1); // Delay creciente: 500ms, 1000ms
+                await new Promise(resolve => setTimeout(resolve, retryDelay));
+                return this.loadAndDisplay(pdfPath, viewer, retryCount + 1);
+            }
+            
+            // Si ya agotamos los reintentos, mostrar error
+            console.error('❌ No se pudo cargar el PDF después de', MAX_RETRIES + 1, 'intentos');
             errorDiv.style.display = 'flex';
         }
     }
@@ -282,8 +310,64 @@ export class SimplePDFViewer {
         });
 
         // Controles de archivo
+        const printBtn = viewer.querySelector('.print-pdf');
         const downloadBtn = viewer.querySelector('.download-pdf');
         const openExternalBtn = viewer.querySelector('.open-external');
+
+        printBtn.addEventListener('click', async () => {
+            try {
+                console.log('🖨️ Iniciando impresión del PDF:', pdfPath);
+                
+                // Mostrar mensaje de carga
+                const originalText = printBtn.querySelector('.control-text');
+                const originalContent = originalText ? originalText.textContent : '';
+                if (originalText) {
+                    originalText.textContent = 'Preparando...';
+                }
+                printBtn.disabled = true;
+
+                // Llamar a la función de impresión
+                const result = await window.api.imprimirPdf(pdfPath);
+                
+                // Restaurar botón
+                printBtn.disabled = false;
+                if (originalText) {
+                    originalText.textContent = originalContent;
+                }
+
+                if (result && result.success) {
+                    console.log('✅ PDF enviado a impresión');
+                    console.log(`📊 Impresoras disponibles: ${result.printers}`);
+                    
+                    // Mostrar confirmación visual temporal
+                    if (originalText) {
+                        originalText.textContent = '✓ Enviado';
+                        setTimeout(() => {
+                            originalText.textContent = originalContent;
+                        }, 2000);
+                    }
+                } else {
+                    console.warn('⚠️ Impresión cancelada o fallida');
+                }
+            } catch (error) {
+                console.error('❌ Error al imprimir PDF:', error);
+                printBtn.disabled = false;
+                const originalText = printBtn.querySelector('.control-text');
+                if (originalText) {
+                    originalText.textContent = 'Error';
+                    setTimeout(() => {
+                        originalText.textContent = 'Imprimir';
+                    }, 2000);
+                }
+                alert('Error al intentar imprimir el PDF. Por favor, intente nuevamente.');
+            }
+        });
+
+        // Clic derecho en el botón de impresión para ver impresoras disponibles
+        printBtn.addEventListener('contextmenu', async (e) => {
+            e.preventDefault();
+            await this.showPrintersInfo();
+        });
 
         downloadBtn.addEventListener('click', () => {
             window.api.enviar('descargar-pdf', pdfPath);
@@ -307,6 +391,24 @@ export class SimplePDFViewer {
             e.preventDefault();
             scrollContainer.scrollTop += e.deltaY * 0.5; // Scroll más suave
         });
+
+        // Atajo de teclado Ctrl+P para imprimir
+        const handleKeyPress = async (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+                e.preventDefault();
+                console.log('🖨️ Atajo Ctrl+P detectado - Iniciando impresión...');
+                
+                // Simular click en el botón de impresión
+                printBtn.click();
+            }
+        };
+
+        // Agregar listener al visor y al documento
+        viewer.addEventListener('keydown', handleKeyPress);
+        document.addEventListener('keydown', handleKeyPress);
+
+        // Guardar referencia para poder limpiar después si es necesario
+        viewer.dataset.keypressHandler = 'active';
     }
 
     async refreshAllPages(viewer) {
@@ -337,269 +439,66 @@ export class SimplePDFViewer {
         zoomDisplay.textContent = `${percentage}%`;
     }
 
+    // Método para inicializar el zoom display con el valor correcto
+    initializeZoomDisplay(viewer) {
+        const zoomDisplay = viewer.querySelector('.zoom-display');
+        if (zoomDisplay) {
+            this.updateZoomDisplay(zoomDisplay);
+        }
+    }
+
     addSimpleStyles() {
-        if (document.getElementById('simple-pdf-styles')) return;
+        // Los estilos ahora se cargan desde pdfViewer.css
+        // Este método se mantiene por compatibilidad pero ya no hace nada
+        return;
+    }
+
+    /**
+     * Obtiene la lista de impresoras disponibles en el sistema
+     * @returns {Array} Lista de impresoras con sus detalles
+     */
+    async getAvailablePrinters() {
+        try {
+            if (window.api && window.api.obtenerImpresoras) {
+                const printers = await window.api.obtenerImpresoras();
+                console.log('🖨️ Impresoras disponibles:', printers);
+                return printers;
+            }
+            return [];
+        } catch (error) {
+            console.error('❌ Error al obtener impresoras:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Muestra un diálogo con información de impresoras disponibles
+     */
+    async showPrintersInfo() {
+        const printers = await this.getAvailablePrinters();
         
-        const style = document.createElement('style');
-        style.id = 'simple-pdf-styles';
-        style.textContent = `
-            .simple-pdf-viewer {
-                border: 1px solid #ddd;
-                border-radius: 8px;
-                margin: 15px 0;
-                background: white;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            }
+        if (printers.length === 0) {
+            alert('No se detectaron impresoras en el sistema.');
+            return;
+        }
 
-            .pdf-controls-bar {
-                background: #f8f9fa;
-                border-bottom: 1px solid #ddd;
-                border-radius: 8px 8px 0 0;
-                padding: 10px 15px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                flex-wrap: wrap;
-                gap: 10px;
+        const defaultPrinter = printers.find(p => p.isDefault);
+        let message = `Se detectaron ${printers.length} impresora(s):\n\n`;
+        
+        printers.forEach((printer, index) => {
+            message += `${index + 1}. ${printer.displayName || printer.name}`;
+            if (printer.isDefault) {
+                message += ' (Predeterminada)';
             }
+            message += `\n   Estado: ${printer.status || 'Desconocido'}\n`;
+            if (printer.description) {
+                message += `   ${printer.description}\n`;
+            }
+            message += '\n';
+        });
 
-            .pdf-title h4 {
-                margin: 0 0 5px 0;
-                color: #333;
-                font-size: 1rem;
-            }
-
-            .pdf-pages-info {
-                font-size: 0.85rem;
-                color: #666;
-            }
-
-            .pdf-controls {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                flex-wrap: wrap;
-            }
-
-            .pdf-control-btn {
-                display: flex;
-                align-items: center;
-                gap: 4px;
-                padding: 6px 10px;
-                border: 1px solid #ddd;
-                background: white;
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 0.8rem;
-                transition: all 0.2s ease;
-                min-height: 32px;
-            }
-
-            .pdf-control-btn:hover {
-                background: #f0f0f0;
-                border-color: #bbb;
-                transform: translateY(-1px);
-            }
-
-            .pdf-control-btn:active {
-                background: #e0e0e0;
-                transform: translateY(0);
-            }
-
-            .control-icon {
-                font-size: 0.9rem;
-            }
-
-            .control-text {
-                font-size: 0.75rem;
-                font-weight: 500;
-            }
-
-            .control-separator {
-                width: 1px;
-                height: 24px;
-                background: #ddd;
-                margin: 0 4px;
-            }
-
-            .zoom-display {
-                font-size: 0.8rem;
-                color: #333;
-                font-weight: 500;
-                min-width: 40px;
-                text-align: center;
-            }
-
-            .pdf-viewer-container {
-                background: #f5f5f5;
-                border-radius: 0 0 8px 8px;
-            }
-
-            .pdf-loading-state,
-            .pdf-error-state {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                height: 200px;
-                color: #666;
-                gap: 15px;
-            }
-
-            .loading-spinner {
-                width: 32px;
-                height: 32px;
-                border: 3px solid #f3f3f3;
-                border-top: 3px solid #007bff;
-                border-radius: 50%;
-                animation: spin 1s linear infinite;
-            }
-
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-
-            .pdf-error-state {
-                color: #dc3545;
-            }
-
-            .error-icon {
-                font-size: 2rem;
-            }
-
-            .retry-button {
-                padding: 8px 16px;
-                background: #007bff;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 0.85rem;
-            }
-
-            .retry-button:hover {
-                background: #0056b3;
-            }
-
-            .pdf-scroll-container {
-                height: 500px;
-                overflow-y: auto;
-                overflow-x: hidden;
-                background: #f5f5f5;
-                border-radius: 0 0 8px 8px;
-                scroll-behavior: smooth;
-            }
-
-            .pdf-scroll-container::-webkit-scrollbar {
-                width: 8px;
-            }
-
-            .pdf-scroll-container::-webkit-scrollbar-track {
-                background: #f1f1f1;
-                border-radius: 4px;
-            }
-
-            .pdf-scroll-container::-webkit-scrollbar-thumb {
-                background: #c1c1c1;
-                border-radius: 4px;
-            }
-
-            .pdf-scroll-container::-webkit-scrollbar-thumb:hover {
-                background: #a8a8a8;
-            }
-
-            .pdf-pages-wrapper {
-                padding: 20px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 20px;
-            }
-
-            .pdf-page-container {
-                background: white;
-                border-radius: 6px;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                overflow: hidden;
-                max-width: 100%;
-                transition: transform 0.2s ease;
-            }
-
-            .pdf-page-container:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            }
-
-            .page-header {
-                background: #f8f9fa;
-                padding: 8px 15px;
-                border-bottom: 1px solid #eee;
-                text-align: center;
-            }
-
-            .page-number {
-                font-size: 0.8rem;
-                color: #666;
-                font-weight: 500;
-            }
-
-            .page-canvas-container {
-                padding: 15px;
-                text-align: center;
-                background: white;
-            }
-
-            .pdf-page-canvas {
-                display: block;
-                margin: 0 auto;
-                border: 1px solid #ddd;
-                border-radius: 4px;
-                max-width: 100%;
-                height: auto;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            }
-
-            /* Responsive */
-            @media (max-width: 768px) {
-                .pdf-controls-bar {
-                    flex-direction: column;
-                    align-items: stretch;
-                    text-align: center;
-                }
-                
-                .pdf-controls {
-                    justify-content: center;
-                    flex-wrap: wrap;
-                }
-                
-                .pdf-scroll-container {
-                    height: 400px;
-                }
-                
-                .pdf-pages-wrapper {
-                    padding: 15px 10px;
-                }
-                
-                .control-separator {
-                    display: none;
-                }
-            }
-
-            @media (max-width: 480px) {
-                .pdf-control-btn .control-text {
-                    display: none;
-                }
-                
-                .pdf-control-btn {
-                    padding: 8px;
-                    min-width: 36px;
-                    justify-content: center;
-                }
-            }
-        `;
-        document.head.appendChild(style);
+        console.log(message);
+        alert(message);
     }
 }
 

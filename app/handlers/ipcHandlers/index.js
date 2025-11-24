@@ -18,6 +18,7 @@
  * @module ipcHandlers
  */
 
+const { ipcMain, shell } = require('electron');
 const database = require('../../db/database');
 const FileHandlers = require('../fileHandlers');
 const DeletionService = require('../../services/deletionService');
@@ -84,6 +85,23 @@ function registerIpcHandlers(appInstance) {
     registerWindowHandlers(appInstance, editorWindows);
     registerPdfHandlers(fileHandlers);
     registerDeletionHandlers(deletionService);
+    
+    // Handler para abrir carpeta con el explorador del sistema
+    ipcMain.handle('shell-open-path', async (event, path) => {
+        console.log('📂 Abriendo ruta en explorador:', path);
+        try {
+            const result = await shell.openPath(path);
+            if (result) {
+                console.error('❌ Error abriendo ruta:', result);
+                return { success: false, error: result };
+            }
+            console.log('✅ Ruta abierta exitosamente');
+            return { success: true };
+        } catch (error) {
+            console.error('❌ Error en shell.openPath:', error);
+            return { success: false, error: error.message };
+        }
+    });
     
     // ============================================
     // 4. RESUMEN FINAL

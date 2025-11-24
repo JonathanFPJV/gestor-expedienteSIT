@@ -16,9 +16,17 @@ const { app } = require('electron');
  * @returns {boolean}
  */
 function isPortable() {
-    // SIEMPRE PORTABLE: La aplicación SIEMPRE guarda datos junto al ejecutable
-    // tanto en desarrollo como en producción
+    // La aplicación SIEMPRE usa modo portable (guarda datos junto al ejecutable)
     return true;
+}
+
+/**
+ * Determina si estamos en modo desarrollo
+ * @returns {boolean}
+ */
+function isDevelopment() {
+    // En desarrollo, el ejecutable está en node_modules/electron/dist/
+    return process.execPath.includes('node_modules');
 }
 
 /**
@@ -30,7 +38,20 @@ function getDataPath() {
         // Modo portable: carpeta 'data' junto al ejecutable
         const exePath = process.execPath;
         const exeDir = path.dirname(exePath);
-        return path.join(exeDir, 'data');
+        
+        if (isDevelopment()) {
+            // EN DESARROLLO: Usar carpeta data en la raíz del proyecto
+            // Esto evita que se borre al recompilar dist/
+            const projectRoot = path.join(__dirname, '..', '..');
+            const dataPath = path.join(projectRoot, 'data');
+            console.log('🔧 MODO DESARROLLO - Datos en:', dataPath);
+            return dataPath;
+        } else {
+            // EN PRODUCCIÓN: Carpeta data junto al .exe
+            const dataPath = path.join(exeDir, 'data');
+            console.log('🎒 MODO PRODUCCIÓN - Datos en:', dataPath);
+            return dataPath;
+        }
     } else {
         // Modo desarrollo/instalado: usar userData por defecto
         return app.getPath('userData');
@@ -78,21 +99,24 @@ function ensureDirectories() {
  * Debe llamarse antes de usar cualquier otra funcionalidad
  */
 function initialize() {
-    const mode = isPortable() ? '🎒 PORTABLE' : '💻 DESARROLLO/INSTALADO';
+    const devMode = isDevelopment() ? '🔧 DESARROLLO' : '🚀 PRODUCCIÓN';
+    const portableMode = isPortable() ? '🎒 PORTABLE' : '💻 INSTALADO';
     const dataPath = getDataPath();
     
-    console.log('========================================');
-    console.log(`📂 Modo de ejecución: ${mode}`);
+    console.log('========================================')
+    console.log(`📂 Entorno: ${devMode}`);
+    console.log(`📦 Modo: ${portableMode}`);
     console.log(`📍 Ruta de datos: ${dataPath}`);
     console.log(`🗄️  Base de datos: ${getDatabasePath()}`);
     console.log(`📄 Archivos PDF: ${getFilesPath()}`);
-    console.log('========================================');
+    console.log('========================================')
     
     ensureDirectories();
 }
 
 module.exports = {
     isPortable,
+    isDevelopment,
     getDataPath,
     getDatabasePath,
     getFilesPath,

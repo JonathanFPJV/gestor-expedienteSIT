@@ -76,6 +76,7 @@ module.exports = function createTarjetaManager(db, fileHandlers) {
                 const tarjetaToInsert = {
                     placa: tarjetaData.placa ? tarjetaData.placa.toUpperCase() : null,
                     numeroTarjeta: tarjetaData.numeroTarjeta || tarjetaData.tarjeta || null,
+                    estado: tarjetaData.estado || 'ACTIVA',
                     pdfPath: tarjetaData.pdfPath || null,
                     resolucionId: resolucionId,
                     actaEntregaId: actaEntregaId || tarjetaData.actaEntregaId || null
@@ -84,6 +85,7 @@ module.exports = function createTarjetaManager(db, fileHandlers) {
                 console.log('💾 Insertando tarjeta en BD:', {
                     placa: tarjetaToInsert.placa,
                     numeroTarjeta: tarjetaToInsert.numeroTarjeta,
+                    estado: tarjetaToInsert.estado,
                     pdfPath: tarjetaToInsert.pdfPath || '❌ NULL',
                     resolucionId: tarjetaToInsert.resolucionId,
                     actaEntregaId: tarjetaToInsert.actaEntregaId || '❌ NULL'

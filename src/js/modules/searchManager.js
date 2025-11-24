@@ -3,10 +3,11 @@ import { debounceSearch } from './debounce.js';
 
 export class SearchManager {
     constructor() {
-        this.isSearching = false;
+        this.searchPromises = new Map(); // Promesas de búsqueda en progreso
         this.searchTimeouts = new Map();
         this.lastSearchTerms = new Map(); // Para evitar búsquedas duplicadas
         this.hasResults = new Map(); // Para rastrear si ya hay resultados
+        this.eventListenersAdded = new Set(); // Track de listeners agregados
         // Esperar a que el DOM esté listo y las funciones disponibles
         setTimeout(() => {
             this.initializeSearch();
@@ -42,15 +43,13 @@ export class SearchManager {
         
         if (!input || !button) return;
 
-        // Limpiar eventos previos
-        const newInput = input.cloneNode(true);
-        input.parentNode.replaceChild(newInput, input);
-        
-        const newButton = button.cloneNode(true);
-        button.parentNode.replaceChild(newButton, button);
+        // Asegurar que el input esté habilitado
+        input.disabled = false;
+        input.style.cursor = 'text';
+        input.style.pointerEvents = 'auto';
 
-        // Configurar nuevos eventos
-        this.setupInputEvents(newInput, newButton, section, 'tarjetas');
+        // Configurar eventos (sin clonar)
+        this.setupInputEvents(input, button, section, 'tarjetas');
     }
 
     setupExpedientesSearch() {
@@ -60,22 +59,34 @@ export class SearchManager {
         
         if (!input || !button) return;
 
-        // Limpiar eventos previos
-        const newInput = input.cloneNode(true);
-        input.parentNode.replaceChild(newInput, input);
-        
-        const newButton = button.cloneNode(true);
-        button.parentNode.replaceChild(newButton, button);
+        // Asegurar que el input esté habilitado
+        input.disabled = false;
+        input.style.cursor = 'text';
+        input.style.pointerEvents = 'auto';
 
-        // Configurar nuevos eventos
-        this.setupInputEvents(newInput, newButton, section, 'expedientes');
+        // Configurar eventos (sin clonar)
+        this.setupInputEvents(input, button, section, 'expedientes');
     }
 
     setupInputEvents(input, button, section, type) {
+        const eventKey = `${type}-events`;
+        
+        // Verificar si ya se configuraron los eventos para evitar duplicados
+        if (this.eventListenersAdded.has(eventKey)) {
+            console.log(`Eventos ya configurados para ${type}, saltando...`);
+            // Asegurar que el input esté habilitado
+            input.disabled = false;
+            input.style.cursor = 'text';
+            input.style.pointerEvents = 'auto';
+            input.readOnly = false;
+            return;
+        }
+
         // Asegurar que el input esté habilitado y tenga el cursor correcto
         input.disabled = false;
         input.style.cursor = 'text';
         input.style.pointerEvents = 'auto';
+        input.readOnly = false;
         
         // Agregar indicador de búsqueda si no existe
         if (section && !section.querySelector('.search-indicator')) {
@@ -140,17 +151,21 @@ export class SearchManager {
 
         // Asegurar foco correcto
         input.addEventListener('focus', () => {
+            input.disabled = false;
             input.style.cursor = 'text';
+            input.style.pointerEvents = 'auto';
+            input.readOnly = false;
         });
 
-        input.addEventListener('blur', () => {
-            // Permitir que el input mantenga su funcionalidad después del blur
-            setTimeout(() => {
-                input.disabled = false;
-                input.style.cursor = 'text';
-                input.style.pointerEvents = 'auto';
-            }, 100);
+        // Prevenir que se bloquee al hacer click
+        input.addEventListener('click', () => {
+            input.disabled = false;
+            input.readOnly = false;
         });
+
+        // Marcar como configurado
+        this.eventListenersAdded.add(eventKey);
+        input.dataset.eventsConfigured = 'true';
     }
 
     shouldSkipSearch(type, searchTerm) {
@@ -166,7 +181,11 @@ export class SearchManager {
     }
 
     async performSearch(type, searchTerm, section, forceRefresh = false) {
-        if (this.isSearching && !forceRefresh) return;
+        // Si ya hay búsqueda en progreso para este tipo y no es forzada, esperar
+        if (this.searchPromises.has(type) && !forceRefresh) {
+            console.log(`Búsqueda de ${type} ya en progreso, saltando...`);
+            return;
+        }
         
         // Si es búsqueda forzada, resetear estado
         if (forceRefresh) {
@@ -174,8 +193,8 @@ export class SearchManager {
             this.lastSearchTerms.delete(type);
         }
         
-        this.isSearching = true;
-        
+        // Crear promesa de búsqueda
+        const searchPromise = (async () => {
         try {
             // Mostrar indicador de carga
             if (section) {
@@ -208,13 +227,30 @@ export class SearchManager {
             // En caso de error, no marcar como que tenemos resultados
             this.hasResults.delete(type);
         } finally {
-            this.isSearching = false;
-            
             // Ocultar indicador de carga
             if (section) {
                 section.classList.remove('searching');
             }
+            
+            // Limpiar promesa de búsqueda
+            this.searchPromises.delete(type);
+            
+            // Asegurar que el input esté disponible
+            const input = type === 'tarjetas' 
+                ? document.getElementById('search-tarjetas-input')
+                : document.getElementById('search-expedientes-input');
+            if (input) {
+                input.disabled = false;
+                input.readOnly = false;
+                input.style.cursor = 'text';
+                input.style.pointerEvents = 'auto';
+            }
         }
+        })();
+        
+        // Guardar promesa
+        this.searchPromises.set(type, searchPromise);
+        await searchPromise;
     }
 
     clearResults(type) {
@@ -283,39 +319,48 @@ export class SearchManager {
 
         if (!tabTarjetas || !tabExpedientes) return;
 
-        // Limpiar eventos previos
-        const newTabTarjetas = tabTarjetas.cloneNode(true);
-        tabTarjetas.parentNode.replaceChild(newTabTarjetas, tabTarjetas);
-        
-        const newTabExpedientes = tabExpedientes.cloneNode(true);
-        tabExpedientes.parentNode.replaceChild(newTabExpedientes, tabExpedientes);
+        // Verificar si ya se configuraron los eventos
+        if (tabTarjetas.dataset.eventsConfigured === 'true') {
+            console.log('Tabs ya configurados, saltando...');
+            return;
+        }
 
-        // Configurar nuevos eventos
-        newTabTarjetas.addEventListener('click', () => {
-            newTabTarjetas.classList.add('active');
-            newTabExpedientes.classList.remove('active');
+        // Configurar eventos
+        tabTarjetas.addEventListener('click', () => {
+            tabTarjetas.classList.add('active');
+            tabExpedientes.classList.remove('active');
             if (searchTarjetasSection) searchTarjetasSection.style.display = 'block';
             if (searchExpedientesSection) searchExpedientesSection.style.display = 'none';
             
-            // Enfocar input de tarjetas
+            // Asegurar que el input esté habilitado y enfocarlo
             const input = document.getElementById('search-tarjetas-input');
             if (input) {
+                input.disabled = false;
+                input.style.cursor = 'text';
+                input.style.pointerEvents = 'auto';
                 setTimeout(() => input.focus(), 100);
             }
         });
 
-        newTabExpedientes.addEventListener('click', () => {
-            newTabExpedientes.classList.add('active');
-            newTabTarjetas.classList.remove('active');
+        tabExpedientes.addEventListener('click', () => {
+            tabExpedientes.classList.add('active');
+            tabTarjetas.classList.remove('active');
             if (searchExpedientesSection) searchExpedientesSection.style.display = 'block';
             if (searchTarjetasSection) searchTarjetasSection.style.display = 'none';
             
-            // Enfocar input de expedientes
+            // Asegurar que el input esté habilitado y enfocarlo
             const input = document.getElementById('search-expedientes-input');
             if (input) {
+                input.disabled = false;
+                input.style.cursor = 'text';
+                input.style.pointerEvents = 'auto';
                 setTimeout(() => input.focus(), 100);
             }
         });
+
+        // Marcar como configurado
+        tabTarjetas.dataset.eventsConfigured = 'true';
+        tabExpedientes.dataset.eventsConfigured = 'true';
     }
 
     // Método para resetear la búsqueda cuando se cambia de vista
@@ -335,22 +380,43 @@ export class SearchManager {
         // Limpiar indicadores de carga
         const sections = document.querySelectorAll('.search-section');
         sections.forEach(section => {
-            section.classList.remove('searching');
+            section.classList.remove('searching', 'completed');
         });
         
-        // Habilitar inputs
+        // Asegurar que los inputs estén habilitados
         const inputs = document.querySelectorAll('#search-tarjetas-input, #search-expedientes-input');
         inputs.forEach(input => {
             input.disabled = false;
             input.style.cursor = 'text';
             input.style.pointerEvents = 'auto';
         });
+        
+        console.log('🔄 Búsqueda reseteada');
     }
 
     // Método para reinicializar cuando se cambia de vista
     reinitialize() {
-        this.resetSearch();
-        this.initializeSearch();
+        console.log('🔄 Reinicializando SearchManager...');
+        
+        // Limpiar todas las promesas de búsqueda
+        this.searchPromises.clear();
+        
+        // Limpiar timeouts
+        this.searchTimeouts.forEach((timeout) => {
+            clearTimeout(timeout);
+        });
+        this.searchTimeouts.clear();
+        
+        // Asegurar que los inputs estén habilitados
+        const inputs = document.querySelectorAll('#search-tarjetas-input, #search-expedientes-input');
+        inputs.forEach(input => {
+            input.disabled = false;
+            input.readOnly = false;
+            input.style.cursor = 'text';
+            input.style.pointerEvents = 'auto';
+        });
+        
+        console.log('✅ SearchManager reinicializado');
     }
 }
 

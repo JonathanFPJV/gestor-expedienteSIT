@@ -50,6 +50,7 @@ function initializeTables(db) {
             placa TEXT NOT NULL,
             numeroTarjeta TEXT,
             pdfPath TEXT,
+            estado TEXT DEFAULT 'ACTIVA',
             resolucionId INTEGER,
             actaEntregaId INTEGER,
             fechaCreacion DATETIME DEFAULT CURRENT_TIMESTAMP,

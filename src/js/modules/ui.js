@@ -49,6 +49,35 @@ export const getExpedienteData = () => {
     };
 };
 
+// Función para cargar estados disponibles desde el backend
+export const cargarEstadosEnSelector = async (selectElement, estadoSeleccionado = 'ACTIVA') => {
+    if (!selectElement) return;
+    
+    try {
+        const resultado = await window.api.invoke('tarjeta:obtener-estados-disponibles');
+        
+        if (resultado && resultado.success && Array.isArray(resultado.estados)) {
+            selectElement.innerHTML = '';
+            
+            resultado.estados.forEach(estado => {
+                const option = document.createElement('option');
+                option.value = estado.valor;
+                option.textContent = `${estado.icono} ${estado.valor}`;
+                
+                if (estado.valor === estadoSeleccionado) {
+                    option.selected = true;
+                }
+                
+                selectElement.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('❌ Error al cargar estados:', error);
+        // Mantener valor por defecto si hay error
+        selectElement.innerHTML = '<option value="ACTIVA">✅ ACTIVA</option>';
+    }
+};
+
 export const getTarjetaData = () => {
     const tarjetas = [];
     const tarjetaItems = tarjetasList.querySelectorAll('.tarjeta-item');
@@ -56,14 +85,17 @@ export const getTarjetaData = () => {
     tarjetaItems.forEach(item => {
         const placa = item.querySelector('.placa-input').value.trim();
         const numeroTarjeta = item.querySelector('.tarjeta-input').value.trim();
+        const estadoSelect = item.querySelector('.estado-input');
+        const estado = estadoSelect ? estadoSelect.value : 'ACTIVA';
         const pdfInput = item.querySelector('.pdf-tarjeta-path');
         const selectedPdfPath = pdfInput ? pdfInput.value : '';
         
         if (placa) {
             tarjetas.push({ 
                 placa, 
-                numeroTarjeta: numeroTarjeta || null,  // Nombre correcto del campo
-                pdfSourcePath: selectedPdfPath || null  // Ruta temporal del PDF seleccionado
+                numeroTarjeta: numeroTarjeta || null,
+                estado: estado || 'ACTIVA',
+                pdfSourcePath: selectedPdfPath || null
             });
         }
     });
@@ -77,11 +109,18 @@ export const addTarjetaInput = () => {
     div.innerHTML = `
         <input type="text" class="placa-input" placeholder="Placa" required>
         <input type="text" class="tarjeta-input" placeholder="N° Tarjeta" required>
+        <select class="estado-input" title="Estado de la tarjeta">
+            <option value="ACTIVA">✅ ACTIVA</option>
+        </select>
         <input type="text" class="pdf-tarjeta-path" placeholder="PDF de tarjeta" readonly>
         <button type="button" class="seleccionar-pdf-tarjeta-btn">PDF</button>
         <button type="button" class="eliminar-tarjeta-btn">X</button>
     `;
     tarjetasList.appendChild(div);
+    
+    // Cargar estados disponibles en el selector
+    cargarEstadosEnSelector(div.querySelector('.estado-input'));
+    
     div.querySelector('.eliminar-tarjeta-btn').addEventListener('click', () => {
         div.remove();
     });
@@ -98,6 +137,23 @@ export const addTarjetaInput = () => {
 export const resetExpedienteForm = () => {
     const expedienteForm = document.getElementById('expediente-form');
     expedienteForm.reset();
+    
+    // Limpiar flags de edición
+    delete expedienteForm.dataset.editingId;
+    delete expedienteForm.dataset.tarjetas;
+    delete expedienteForm.dataset.actaEntregaId;
+    
+    // Restaurar título del formulario
+    const formTitle = document.querySelector('#vista-registro h2');
+    if (formTitle) {
+        formTitle.textContent = '📝 Registrar Nuevo Expediente';
+    }
+    
+    // Restaurar texto del botón de guardar
+    const guardarBtn = document.getElementById('guardar-expediente-btn');
+    if (guardarBtn) {
+        guardarBtn.textContent = '💾 Guardar Expediente';
+    }
     
     // Restaurar valores por defecto
     document.getElementById('anioExpediente').value = new Date().getFullYear();
@@ -293,7 +349,7 @@ function removeNotification(notification) {
     }, 300);
 }
 
-// Función mejorada para mostrar resultados de tarjetas
+// Función mejorada para mostrar resultados de tarjetas con PDF dual
 export const displayTarjetasResults = (results) => {
     try {
         searchTarjetasResults.innerHTML = '';
@@ -305,30 +361,108 @@ export const displayTarjetasResults = (results) => {
             
             results.forEach((r, index) => {
                 const item = document.createElement('div');
-                item.className = 'search-result-item fade-in';
+                item.className = 'search-result-item-dual fade-in';
                 const resultId = `tarjeta-result-${index}`;
                 item.id = resultId;
                 
+                // 🎨 Agregar atributo data-estado para estilos dinámicos
+                const estado = r.estado || 'ACTIVA';
+                item.setAttribute('data-estado', estado);
+                
+                // Iconos para cada estado
+                const estadoIconos = {
+                    'ACTIVA': '✓',
+                    'CANCELADA': '✕',
+                    'SUSPENDIDA': '⏸',
+                    'VENCIDA': '⏱',
+                    'EN_TRAMITE': '⟳',
+                    'EN-TRAMITE': '⟳'
+                };
+                
+                const estadoNormalizado = estado.toUpperCase().replace(/ /g, '_');
+                const iconoEstado = estadoIconos[estadoNormalizado] || '●';
+                
+                // Crear estructura de dos columnas para información y PDFs
                 item.innerHTML = `
-                    <div class="result-header">
-                        <p><strong>Placa:</strong> ${r.placa}</p>
-                        <p><strong>N° Expediente:</strong> ${r.expediente}</p>
-                        <p><strong>N° Tarjeta:</strong> ${r.numeroTarjeta || r.tarjeta || 'N/A'}</p>
-                        <p><strong>Fecha:</strong> ${r.fecha}</p>
-                    </div>
-                    <div class="result-actions">
-                        ${r.actaPdfPath ? `<button class="ver-pdf-btn" onclick="window.api.enviar('abrir-pdf', '${r.actaPdfPath}')">Ver PDF Acta (Externo)</button>` : ''}
+                    <div class="result-info-section">
+                        <div class="result-header-compact">
+                            <h3>🚗 Tarjeta - ${r.placa}</h3>
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <span class="info-label">N° Tarjeta:</span>
+                                    <span class="info-value">${r.numeroTarjeta || r.tarjeta || 'N/A'}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Estado:</span>
+                                    <span class="estado-badge estado-${estado.toLowerCase().replace(/ /g, '-').replace(/_/g, '-')}">
+                                        <span class="estado-icon">${iconoEstado}</span>
+                                        ${estado}
+                                    </span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Expediente:</span>
+                                    <span class="info-value">${r.expediente}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Fecha:</span>
+                                    <span class="info-value">${r.fecha}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="pdf-viewers-dual">
+                            <div class="pdf-viewer-column" id="${resultId}-tarjeta">
+                                <div class="pdf-column-header">
+                                    <span class="pdf-icon">🗂️</span>
+                                    <span>Tarjeta de Propiedad</span>
+                                </div>
+                            </div>
+                            <div class="pdf-viewer-column" id="${resultId}-expediente">
+                                <div class="pdf-column-header">
+                                    <span class="pdf-icon">📋</span>
+                                    <span>Resolución</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        ${r.actaPdfPath ? `
+                        <div class="additional-actions">
+                            <button class="ver-pdf-acta-btn" onclick="window.api.enviar('abrir-pdf', '${r.actaPdfPath}')">
+                                📎 Ver Acta de Entrega
+                            </button>
+                        </div>
+                        ` : ''}
                     </div>
                 `;
                 
                 resultsContainer.appendChild(item);
                 
-                // Solo mostrar PDF de la tarjeta (no del acta) usando el visor simple
-                if (r.pdfPath) {
-                    setTimeout(() => {
-                        simplePdfViewer.createViewer(resultId, r.pdfPath, `PDF Tarjeta - ${r.placa}`);
-                    }, index * 100); // Animación escalonada
-                }
+                // Mostrar ambos PDFs con delay escalonado
+                setTimeout(() => {
+                    // PDF de la tarjeta (izquierda)
+                    if (r.pdfPath) {
+                        simplePdfViewer.createViewer(
+                            `${resultId}-tarjeta`, 
+                            r.pdfPath, 
+                            `${r.placa}`
+                        );
+                    } else {
+                        document.getElementById(`${resultId}-tarjeta`).innerHTML += 
+                            '<div class="no-pdf-message">📭 Sin PDF</div>';
+                    }
+                    
+                    // PDF del expediente (derecha)
+                    if (r.expedientePdfPath) {
+                        simplePdfViewer.createViewer(
+                            `${resultId}-expediente`, 
+                            r.expedientePdfPath, 
+                            `Exp. ${r.expediente}`
+                        );
+                    } else {
+                        document.getElementById(`${resultId}-expediente`).innerHTML += 
+                            '<div class="no-pdf-message">📭 Sin PDF</div>';
+                    }
+                }, index * 150); // Animación escalonada
             });
             
             searchTarjetasResults.appendChild(resultsContainer);
@@ -430,9 +564,21 @@ export const displayExpedientesResults = (results) => {
                             <div class="tarjeta-info">
                                 <span class="tarjeta-badge">${index + 1}</span>
                                 <span class="tarjeta-datos">Placa: <strong>${tarjeta.placa}</strong> - Tarjeta: <strong>${numeroTarjeta}</strong></span>
-                                ${tarjeta.pdfPath ? `<button class="ver-pdf-tarjeta-btn" onclick="window.api.enviar('abrir-pdf', '${tarjeta.pdfPath}')">📄 Ver PDF</button>` : ''}
+                                ${tarjeta.pdfPath ? `<button class="ver-pdf-tarjeta-btn" data-pdf-path="${tarjeta.pdfPath.replace(/"/g, '&quot;')}">📄 Ver PDF</button>` : ''}
                             </div>
                         `;
+                        
+                        // Agregar event listener al botón de PDF si existe
+                        if (tarjeta.pdfPath) {
+                            const pdfBtn = tarjetaItem.querySelector('.ver-pdf-tarjeta-btn');
+                            if (pdfBtn) {
+                                pdfBtn.addEventListener('click', () => {
+                                    const pdfPath = pdfBtn.getAttribute('data-pdf-path');
+                                    console.log('🔍 Abriendo PDF de tarjeta:', pdfPath);
+                                    window.api.enviar('abrir-pdf', pdfPath);
+                                });
+                            }
+                        }
                         
                         tarjetasList.appendChild(tarjetaItem);
                     });

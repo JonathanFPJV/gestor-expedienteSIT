@@ -21,13 +21,14 @@ module.exports = (db) => ({
         try {
             const stmt = db.prepare(`
                 INSERT INTO TarjetasVehiculos (
-                    placa, numeroTarjeta, resolucionId, actaEntregaId, pdfPath
-                ) VALUES (?, ?, ?, ?, ?)
+                    placa, numeroTarjeta, estado, resolucionId, actaEntregaId, pdfPath
+                ) VALUES (?, ?, ?, ?, ?, ?)
             `);
 
             const info = stmt.run(
                 doc.placa,
                 doc.numeroTarjeta,
+                doc.estado || 'ACTIVA',
                 doc.expedienteId || doc.resolucionId,
                 doc.actaEntregaId || null,
                 doc.pdfPath || null
@@ -35,7 +36,8 @@ module.exports = (db) => ({
 
             return {
                 _id: info.lastInsertRowid,
-                ...doc
+                ...doc,
+                estado: doc.estado || 'ACTIVA'
             };
         } catch (error) {
             console.error('❌ Error al insertar tarjeta:', error);

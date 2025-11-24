@@ -16,6 +16,8 @@ class TarjetasCRUD {
         this.itemsPerPage = 10;
         this.totalPages = 1;
         this.searchTerm = '';
+        this.searchDebounceTimer = null; // 🔍 Timer para debounce de búsqueda
+        this.searchDebounceDelay = 500; // 🔍 Delay de 500ms para búsqueda
         this.currentTarjetaId = null;
         this.selectedPdfPath = null; // Para almacenar la ruta del PDF seleccionado
         this.isInitialized = false; // Para controlar la carga inicial de datos
@@ -90,8 +92,8 @@ class TarjetasCRUD {
     cacheElements() {
         // Botones principales
         this.elements.nuevaTarjetaBtn = document.getElementById('nueva-tarjeta-btn');
-        this.elements.searchCrudInput = document.getElementById('search-crud-tarjetas-input');
-        this.elements.searchCrudBtn = document.getElementById('search-crud-tarjetas-btn');
+        this.elements.searchCrudInput = document.getElementById('search-tarjetas-crud-input');
+        this.elements.clearSearchBtn = document.getElementById('clear-search-tarjetas');
         this.elements.limpiarFiltrosBtn = document.getElementById('limpiar-filtros-tarjetas-btn');
         
         // Tabla
@@ -123,17 +125,16 @@ class TarjetasCRUD {
             this.elements.nuevaTarjetaBtn.addEventListener('click', () => this.abrirModalNuevaTarjeta());
         }
 
-        // Búsqueda
-        if (this.elements.searchCrudBtn) {
-            this.elements.searchCrudBtn.addEventListener('click', () => this.buscarTarjetas());
-        }
-
+        // Búsqueda en tiempo real
         if (this.elements.searchCrudInput) {
-            this.elements.searchCrudInput.addEventListener('keyup', (e) => {
-                if (e.key === 'Enter') {
-                    this.buscarTarjetas();
-                }
-            });
+            this.elements.searchCrudInput.addEventListener('input', (e) => 
+                this.filterTableInRealTime(e.target.value)
+            );
+        }
+        
+        // Botón limpiar búsqueda
+        if (this.elements.clearSearchBtn) {
+            this.elements.clearSearchBtn.addEventListener('click', () => this.clearQuickSearch());
         }
 
         // Limpiar filtros
@@ -259,6 +260,103 @@ class TarjetasCRUD {
             this.elements.searchCrudInput.value = '';
         }
         
+        // Limpiar búsqueda rápida también
+        this.clearQuickSearch();
+        
+        this.filteredTarjetas = [...this.tarjetas];
+        this.currentPage = 1;
+        this.renderTarjetas();
+    }
+    
+    // 🔍 Filtrar tabla en tiempo real con debounce y búsqueda en backend
+    filterTableInRealTime(searchTerm) {
+        const term = searchTerm.trim();
+        
+        // Mostrar/ocultar botón de limpiar
+        if (this.elements.clearSearchBtn) {
+            this.elements.clearSearchBtn.style.display = term ? 'block' : 'none';
+        }
+        
+        // Limpiar el timer anterior
+        if (this.searchDebounceTimer) {
+            clearTimeout(this.searchDebounceTimer);
+        }
+        
+        // Si no hay término, cargar todas las tarjetas
+        if (!term) {
+            this.loadTarjetas();
+            return;
+        }
+        
+        // Mostrar indicador de búsqueda
+        this.showSearchingIndicator();
+        
+        // Configurar nuevo timer con debounce
+        this.searchDebounceTimer = setTimeout(async () => {
+            try {
+                console.log(`🔍 Buscando tarjetas en backend: "${term}"`);
+                
+                // Llamar al backend con búsqueda y paginación
+                const resultado = await window.api.invoke('buscar-tarjetas', {
+                    searchTerm: term,
+                    page: 1, // Siempre empezar en página 1 al buscar
+                    limit: this.itemsPerPage
+                });
+                
+                if (resultado.success) {
+                    // Actualizar datos con resultados de búsqueda
+                    this.tarjetas = resultado.tarjetas;
+                    this.filteredTarjetas = resultado.tarjetas;
+                    this.currentPage = resultado.page;
+                    this.totalPages = resultado.totalPages;
+                    
+                    // Renderizar tabla con resultados
+                    this.renderTarjetas();
+                    
+                    console.log(`✅ Búsqueda completada: ${resultado.total} resultados encontrados`);
+                } else {
+                    console.error('❌ Error en búsqueda:', resultado.error);
+                    this.tarjetas = [];
+                    this.filteredTarjetas = [];
+                    this.renderTarjetas();
+                }
+            } catch (error) {
+                console.error('❌ Error al buscar tarjetas:', error);
+                this.tarjetas = [];
+                this.filteredTarjetas = [];
+                this.renderTarjetas();
+            } finally {
+                this.hideSearchingIndicator();
+            }
+        }, this.searchDebounceDelay);
+    }
+    
+    // 🔄 Mostrar indicador de búsqueda
+    showSearchingIndicator() {
+        const tbody = this.elements.tablaTarjetasBody;
+        if (tbody) {
+            tbody.style.opacity = '0.5';
+        }
+    }
+    
+    // 🔄 Ocultar indicador de búsqueda
+    hideSearchingIndicator() {
+        const tbody = this.elements.tablaTarjetasBody;
+        if (tbody) {
+            tbody.style.opacity = '1';
+        }
+    }
+    
+    // 🧹 Limpiar búsqueda rápida
+    clearQuickSearch() {
+        if (this.elements.searchCrudInput) {
+            this.elements.searchCrudInput.value = '';
+        }
+        if (this.elements.clearSearchBtn) {
+            this.elements.clearSearchBtn.style.display = 'none';
+        }
+        
+        // Mostrar todas las tarjetas
         this.filteredTarjetas = [...this.tarjetas];
         this.currentPage = 1;
         this.renderTarjetas();
@@ -300,6 +398,29 @@ class TarjetasCRUD {
     }
 
     /**
+     * Crear badge visual para el estado de la tarjeta
+     */
+    async crearBadgeEstado(estado) {
+        try {
+            const info = await window.api.invoke('tarjeta:obtener-info-estado', estado);
+            
+            if (info && info.success) {
+                const { valor, color, icono } = info.info;
+                return `<span class="estado-badge" style="background: ${color}; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.85rem; font-weight: 500;">
+                    ${icono} ${valor}
+                </span>`;
+            }
+        } catch (error) {
+            console.warn('⚠️ Error al obtener info de estado:', error);
+        }
+        
+        // Fallback si falla la obtención de info
+        return `<span class="estado-badge" style="background: #6c757d; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.85rem;">
+            ${estado || 'ACTIVA'}
+        </span>`;
+    }
+
+    /**
      * Crear fila de tabla para una tarjeta
      */
     crearFilaTarjeta(tarjeta) {
@@ -317,12 +438,15 @@ class TarjetasCRUD {
             expedienteHtml = '✅ Sí';
         }
         
+        // Crear badge de estado (temporal, se actualizará después)
+        const estadoBadge = '<span class="loading-badge">⏳ Cargando...</span>';
+        
         tr.innerHTML = `
             <td>${tarjeta.placa || '-'}</td>
             <td>${tarjeta.numeroTarjeta || '-'}</td>
             <td>${expedienteHtml}</td>
             <td>${actaEntregaHtml}</td>
-            <td>${this.formatearFecha(tarjeta.fechaCreacion)}</td>
+            <td data-estado-cell="${tarjeta._id}">${estadoBadge}</td>
             <td>
                 ${tarjeta.pdfPath ? '<button class="btn-action" data-id="' + tarjeta._id + '" data-pdf="' + tarjeta.pdfPath + '" title="Ver PDF Tarjeta">📄</button>' : ''}
                 <button class="btn-action btn-edit" data-id="${tarjeta._id}" title="Editar">
@@ -350,6 +474,14 @@ class TarjetasCRUD {
         if (btnDelete) {
             btnDelete.addEventListener('click', () => this.confirmarEliminarTarjeta(tarjeta._id));
         }
+
+        // Cargar badge de estado de forma asíncrona
+        this.crearBadgeEstado(tarjeta.estado || 'ACTIVA').then(badge => {
+            const estadoCell = tr.querySelector(`[data-estado-cell="${tarjeta._id}"]`);
+            if (estadoCell) {
+                estadoCell.innerHTML = badge;
+            }
+        });
 
         return tr;
     }
@@ -394,7 +526,7 @@ class TarjetasCRUD {
     /**
      * Abrir modal para nueva tarjeta
      */
-    abrirModalNuevaTarjeta() {
+    async abrirModalNuevaTarjeta() {
         this.currentTarjetaId = null;
         this.selectedPdfPath = null; // Resetear PDF seleccionado
         this.elements.modalTitle.textContent = 'Nueva Tarjeta';
@@ -409,6 +541,15 @@ class TarjetasCRUD {
             <div class="form-group">
                 <label for="modal-numero-tarjeta">Número de Tarjeta:</label>
                 <input type="text" id="modal-numero-tarjeta" placeholder="Ej: T-12345">
+            </div>
+            <div class="form-group">
+                <label for="modal-estado">Estado de la Tarjeta:</label>
+                <select id="modal-estado">
+                    <option value="ACTIVA">Cargando estados...</option>
+                </select>
+                <small style="color: #666; margin-top: 0.25rem; display: block;">
+                    Indica el estado actual de la tarjeta
+                </small>
             </div>
             <div class="form-group">
                 <label>
@@ -476,6 +617,9 @@ class TarjetasCRUD {
             });
         }
 
+        // Cargar estados disponibles
+        await this.cargarEstadosEnSelect();
+
         this.abrirModal();
     }
 
@@ -505,6 +649,15 @@ class TarjetasCRUD {
                     <div class="form-group">
                         <label for="modal-numero-tarjeta">Número de Tarjeta:</label>
                         <input type="text" id="modal-numero-tarjeta" value="${tarjeta.numeroTarjeta || ''}" placeholder="Ej: T-12345">
+                    </div>
+                    <div class="form-group">
+                        <label for="modal-estado">Estado de la Tarjeta:</label>
+                        <select id="modal-estado">
+                            <option value="${tarjeta.estado || 'ACTIVA'}">Cargando estados...</option>
+                        </select>
+                        <small style="color: #666; margin-top: 0.25rem; display: block;">
+                            Cambie el estado de la tarjeta según corresponda
+                        </small>
                     </div>
                     <div class="form-group">
                         <label>
@@ -589,6 +742,9 @@ class TarjetasCRUD {
                     await this.cargarActasEntregaEnSelect(tarjeta.actaEntregaId);
                 }
 
+                // Cargar estados disponibles
+                await this.cargarEstadosEnSelect(tarjeta.estado || 'ACTIVA');
+
                 this.abrirModal();
             } else {
                 this.mostrarError(resultado.message);
@@ -628,6 +784,37 @@ class TarjetasCRUD {
             }
         } catch (error) {
             console.error('❌ Error al cargar expedientes:', error);
+        }
+    }
+
+    /**
+     * Cargar estados disponibles en el select
+     */
+    async cargarEstadosEnSelect(estadoSeleccionado = 'ACTIVA') {
+        try {
+            const resultado = await window.api.invoke('tarjeta:obtener-estados-disponibles');
+            
+            if (resultado && resultado.success && Array.isArray(resultado.estados)) {
+                const select = document.getElementById('modal-estado');
+                if (select) {
+                    select.innerHTML = '';
+                    
+                    resultado.estados.forEach(estado => {
+                        const option = document.createElement('option');
+                        option.value = estado.valor;
+                        option.textContent = `${estado.icono} ${estado.valor} - ${estado.descripcion}`;
+                        
+                        if (estado.valor === estadoSeleccionado) {
+                            option.selected = true;
+                        }
+                        
+                        select.appendChild(option);
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error al cargar estados:', error);
+            // Mantener valor por defecto si hay error
         }
     }
 
@@ -697,9 +884,12 @@ class TarjetasCRUD {
             const textoLoading = this.currentTarjetaId ? 'Actualizando tarjeta...' : 'Creando tarjeta...';
             loadingManager.show(operacion, textoLoading);
 
+            const estado = document.getElementById('modal-estado')?.value || 'ACTIVA';
+
             const tarjetaData = {
                 placa: placa || null,
                 numeroTarjeta: numeroTarjeta || null,
+                estado,
                 expedienteId: expedienteId || null,
                 actaEntregaId: actaEntregaId || null
             };
@@ -709,10 +899,10 @@ class TarjetasCRUD {
 
             if (tarjetaIdAnterior) {
                 // Actualizar (con PDF opcional)
-                resultado = await window.api.invoke('tarjeta:actualizar', tarjetaIdAnterior, tarjetaData, this.selectedPdfPath);
+                resultado = await window.api.invoke('tarjeta:actualizar', tarjetaIdAnterior, tarjetaData, this.selectedPdfPath || null);
             } else {
                 // Crear (con PDF opcional)
-                resultado = await window.api.invoke('tarjeta:crear', tarjetaData, this.selectedPdfPath);
+                resultado = await window.api.invoke('tarjeta:crear', tarjetaData, this.selectedPdfPath || null);
             }
 
             // Ocultar loading inmediatamente después de recibir respuesta

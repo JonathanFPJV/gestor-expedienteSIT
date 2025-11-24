@@ -12,6 +12,8 @@ class ActasEntregaCRUD {
         this.currentPage = 1;
         this.itemsPerPage = 10;
         this.searchTerm = '';
+        this.searchDebounceTimer = null; // 🔍 Timer para debounce de búsqueda
+        this.searchDebounceDelay = 500; // 🔍 Delay de 500ms para búsqueda
         this.currentActaId = null;
         this.isEditMode = false;
 
@@ -83,6 +85,10 @@ class ActasEntregaCRUD {
             searchInput: document.getElementById('search-actas-input'),
             clearFiltersBtn: document.getElementById('limpiar-filtros-actas-btn'),
             
+            // 🔍 Nuevo: Input de búsqueda en tiempo real
+            searchCrudInput: document.getElementById('search-actas-crud-input'),
+            clearSearchBtn: document.querySelector('#search-actas-crud-input + .clear-search-btn'),
+            
             // Tabla
             tbody: document.getElementById('actas-tbody'),
             
@@ -119,6 +125,19 @@ class ActasEntregaCRUD {
         this.elements.searchBtn?.addEventListener('click', () => this.handleSearch());
         this.elements.searchInput?.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.handleSearch();
+        });
+        
+        // 🔍 Búsqueda en tiempo real con debounce
+        this.elements.searchCrudInput?.addEventListener('input', (e) => {
+            this.filterTableInRealTime(e.target.value);
+        });
+        
+        // 🔍 Botón limpiar búsqueda
+        this.elements.clearSearchBtn?.addEventListener('click', () => {
+            if (this.elements.searchCrudInput) {
+                this.elements.searchCrudInput.value = '';
+                this.filterTableInRealTime('');
+            }
         });
         
         // Limpiar filtros
@@ -322,6 +341,88 @@ class ActasEntregaCRUD {
             this.renderTable();
         }
     }
+
+    /**
+     * 🔍 Filtrar tabla en tiempo real con debounce y búsqueda en backend
+     */
+    filterTableInRealTime(searchTerm) {
+        const term = searchTerm.trim();
+        
+        // Mostrar/ocultar botón de limpiar
+        if (this.elements.clearSearchBtn) {
+            this.elements.clearSearchBtn.style.display = term ? 'block' : 'none';
+        }
+        
+        // Limpiar el timer anterior
+        if (this.searchDebounceTimer) {
+            clearTimeout(this.searchDebounceTimer);
+        }
+        
+        // Si no hay término, cargar todas las actas
+        if (!term) {
+            this.loadActas();
+            return;
+        }
+        
+        // Mostrar indicador de búsqueda
+        this.showSearchingIndicator();
+        
+        // Configurar nuevo timer con debounce
+        this.searchDebounceTimer = setTimeout(async () => {
+            try {
+                console.log(`🔍 Buscando actas en backend: "${term}"`);
+                
+                // Llamar al backend con búsqueda y paginación
+                const resultado = await window.api.invoke('buscar-actas-entrega', {
+                    searchTerm: term,
+                    page: 1, // Siempre empezar en página 1 al buscar
+                    limit: this.itemsPerPage
+                });
+                
+                if (resultado.success) {
+                    // Actualizar datos con resultados de búsqueda
+                    this.actas = resultado.actas;
+                    this.currentPage = resultado.page;
+                    const totalPages = resultado.totalPages;
+                    
+                    // Renderizar tabla con resultados
+                    this.renderTable();
+                    this.updateStats();
+                    
+                    console.log(`✅ Búsqueda completada: ${resultado.total} resultados encontrados`);
+                } else {
+                    console.error('❌ Error en búsqueda:', resultado.error);
+                    this.actas = [];
+                    this.renderTable();
+                }
+            } catch (error) {
+                console.error('❌ Error al buscar actas:', error);
+                this.actas = [];
+                this.renderTable();
+            } finally {
+                this.hideSearchingIndicator();
+            }
+        }, this.searchDebounceDelay);
+    }
+    
+    /**
+     * 🔄 Mostrar indicador de búsqueda
+     */
+    showSearchingIndicator() {
+        if (this.elements.tbody) {
+            this.elements.tbody.style.opacity = '0.5';
+        }
+    }
+    
+    /**
+     * 🔄 Ocultar indicador de búsqueda
+     */
+    hideSearchingIndicator() {
+        if (this.elements.tbody) {
+            this.elements.tbody.style.opacity = '1';
+        }
+    }
+
 
     /**
      * Buscar actas

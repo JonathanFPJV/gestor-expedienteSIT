@@ -15,6 +15,7 @@ const path = require('path');
 const fs = require('fs');
 const pathConfig = require('../config/pathConfig');
 const initializeTables = require('./migrations/initTables');
+const { migrate: addEstadoToTarjetas } = require('./migrations/addEstadoToTarjetas');
 
 // Inicializar configuración de rutas (portable o estándar)
 pathConfig.initialize();
@@ -42,6 +43,11 @@ console.log('📂 Base de datos SQLite inicializada en:', dbPath);
 
 // Inicializar tablas y schema
 initializeTables(db);
+
+// Ejecutar migraciones
+console.log('🔄 Ejecutando migraciones pendientes...');
+addEstadoToTarjetas(db);
+console.log('✅ Migraciones completadas');
 
 // Importar modelos
 const expedienteModel = require('./models/expedienteModel');

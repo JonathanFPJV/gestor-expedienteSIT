@@ -85,25 +85,28 @@ export function throttle(func, limit = 300) {
  */
 export function debounceSearch(searchFunc, delay = 500) {
     let timeoutId;
-    let isSearching = false;
+    let currentPromise = null;
     
     return function(searchTerm, ...args) {
+        // Limpiar timeout anterior
         clearTimeout(timeoutId);
         
-        // Si ya hay una búsqueda en progreso, no iniciar otra
-        if (isSearching) {
+        // Si hay búsqueda en progreso y es el mismo término, no hacer nada
+        if (currentPromise && this.lastTerm === searchTerm) {
             return;
         }
         
+        this.lastTerm = searchTerm;
+        
         timeoutId = setTimeout(async () => {
             if (searchTerm && searchTerm.trim()) {
-                isSearching = true;
                 try {
-                    await searchFunc(searchTerm, ...args);
+                    currentPromise = searchFunc(searchTerm, ...args);
+                    await currentPromise;
                 } catch (error) {
                     console.error('Error en búsqueda debounced:', error);
                 } finally {
-                    isSearching = false;
+                    currentPromise = null;
                 }
             }
         }, delay);

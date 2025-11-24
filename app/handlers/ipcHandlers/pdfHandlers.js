@@ -122,7 +122,181 @@ function registerPdfHandlers(fileHandlers) {
         }
     });
 
-    console.log('✅ PDF Handlers registrados (5 canales IPC)');
+    /**
+     * Crea un directorio para guardar PDFs divididos
+     * Usado por el procesamiento por lotes
+     */
+    ipcMain.handle('crear-directorio', async (event, dirPath) => {
+        try {
+            if (!fs.existsSync(dirPath)) {
+                await fs.promises.mkdir(dirPath, { recursive: true });
+                console.log('📁 Directorio creado:', dirPath);
+            }
+            return dirPath;
+        } catch (error) {
+            console.error('❌ Error al crear directorio:', error);
+            throw error;
+        }
+    });
+
+    /**
+     * Guarda una página de PDF individual
+     * Usado por el divisor de PDFs
+     */
+    ipcMain.handle('guardar-pagina-pdf', async (event, outputDir, fileName, pdfBytes) => {
+        try {
+            const filePath = `${outputDir}\\${fileName}`;
+            
+            // Convertir Uint8Array a Buffer
+            const buffer = Buffer.from(pdfBytes);
+            
+            await fs.promises.writeFile(filePath, buffer);
+            console.log('💾 Página PDF guardada:', filePath);
+            
+            return filePath;
+        } catch (error) {
+            console.error('❌ Error al guardar página PDF:', error);
+            throw error;
+        }
+    });
+
+    /**
+     * Abre diálogo para seleccionar carpeta de salida
+     * Usado para guardar PDFs divididos
+     */
+    ipcMain.handle('abrir-dialogo-carpeta', async () => {
+        try {
+            const result = await dialog.showOpenDialog({
+                title: 'Seleccionar carpeta de destino',
+                properties: ['openDirectory', 'createDirectory']
+            });
+            
+            if (!result.canceled && result.filePaths.length > 0) {
+                console.log('📂 Carpeta seleccionada:', result.filePaths[0]);
+                return result.filePaths[0];
+            }
+            
+            return null;
+        } catch (error) {
+            console.error('❌ Error en diálogo de carpeta:', error);
+            return null;
+        }
+    });
+
+    /**
+     * Imprime un PDF usando el sistema de impresión de Electron
+     * Abre diálogo de impresión con opciones de configuración
+     */
+    ipcMain.handle('imprimir-pdf', async (event, fileName) => {
+        try {
+            const { BrowserWindow } = require('electron');
+            const path = require('path');
+            
+            console.log('🖨️ Iniciando impresión de PDF:', fileName);
+            
+            const filePath = fileHandlers.getFullPath(fileName);
+            
+            if (!fs.existsSync(filePath)) {
+                console.error('❌ PDF no encontrado para imprimir:', filePath);
+                throw new Error('Archivo PDF no encontrado');
+            }
+
+            // Crear ventana oculta para cargar el PDF
+            const printWindow = new BrowserWindow({
+                show: false,
+                title: 'Gestor de Expedientes SIT',
+                webPreferences: {
+                    nodeIntegration: false,
+                    contextIsolation: true,
+                    enableRemoteModule: false,
+                    plugins: true
+                }
+            });
+
+            // Cargar el PDF en la ventana
+            await printWindow.loadFile(filePath);
+
+            // Esperar a que el contenido esté completamente listo
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Obtener lista de impresoras disponibles
+            const printers = await printWindow.webContents.getPrintersAsync();
+            console.log('🖨️ Impresoras disponibles:', printers.length);
+
+            // Abrir diálogo de impresión con todas las configuraciones
+            printWindow.webContents.print({
+                silent: false, // Mostrar diálogo de impresión
+                printBackground: true,
+                deviceName: '', // Dejarlo vacío para que el usuario elija
+                color: true,
+                margins: {
+                    marginType: 'printableArea'
+                },
+                landscape: false,
+                pagesPerSheet: 1,
+                collate: false,
+                copies: 1,
+                pageRanges: [],
+                duplexMode: 'simplex',
+                dpi: {
+                    horizontal: 300,
+                    vertical: 300
+                },
+                scaleFactor: 100
+            }, (success, failureReason) => {
+                if (success) {
+                    console.log('✅ PDF enviado a impresora exitosamente');
+                } else {
+                    console.error('❌ Error al imprimir:', failureReason);
+                }
+                // Cerrar la ventana después de imprimir o cancelar
+                printWindow.close();
+            });
+
+            return { success: true, printers: printers.length };
+
+        } catch (error) {
+            console.error('❌ Error al imprimir PDF:', error);
+            throw error;
+        }
+    });
+
+    /**
+     * Obtiene la lista de impresoras disponibles en el sistema
+     */
+    ipcMain.handle('obtener-impresoras', async () => {
+        try {
+            const { BrowserWindow } = require('electron');
+            
+            // Crear ventana temporal para obtener las impresoras
+            const tempWindow = new BrowserWindow({
+                show: false,
+                title: 'Gestor de Expedientes SIT',
+                webPreferences: {
+                    nodeIntegration: false
+                }
+            });
+
+            const printers = await tempWindow.webContents.getPrintersAsync();
+            tempWindow.close();
+
+            console.log('🖨️ Impresoras detectadas:', printers.length);
+            return printers.map(printer => ({
+                name: printer.name,
+                displayName: printer.displayName,
+                description: printer.description,
+                status: printer.status,
+                isDefault: printer.isDefault,
+                options: printer.options
+            }));
+
+        } catch (error) {
+            console.error('❌ Error al obtener impresoras:', error);
+            return [];
+        }
+    });
+
+    console.log('✅ PDF Handlers registrados (10 canales IPC)');
 }
 
 module.exports = registerPdfHandlers;

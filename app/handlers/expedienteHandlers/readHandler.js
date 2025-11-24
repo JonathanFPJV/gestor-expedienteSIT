@@ -172,6 +172,105 @@ function registerReadHandlers(expedienteService, db) {
     });
 
     /**
+     * 🔍 Buscar expedientes con paginación (optimizado para búsqueda rápida)
+     * Busca en múltiples campos y devuelve resultados paginados
+     * 
+     * @param {Object} options - Opciones de búsqueda
+     * @param {string} options.searchTerm - Término de búsqueda
+     * @param {number} options.page - Página actual (default: 1)
+     * @param {number} options.limit - Registros por página (default: 10)
+     */
+    ipcMain.handle('buscar-expedientes', (event, options = {}) => {
+        try {
+            const {
+                searchTerm = '',
+                page = 1,
+                limit = 10
+            } = options;
+
+            console.log(`📥 Búsqueda rápida: "${searchTerm}" (página ${page}, límite ${limit})`);
+
+            if (!searchTerm || searchTerm.trim() === '') {
+                // Sin término, devolver todos paginados
+                const allExpedientes = db.expedientes.find({});
+                const total = allExpedientes.length;
+                const startIndex = (page - 1) * limit;
+                const endIndex = startIndex + limit;
+                const expedientesPagina = allExpedientes.slice(startIndex, endIndex);
+                
+                const expedientesConTarjetas = expedientesPagina.map(exp => 
+                    mapExpedienteCompleto(exp, db)
+                );
+                
+                return {
+                    success: true,
+                    expedientes: expedientesConTarjetas,
+                    total: total,
+                    page: page,
+                    limit: limit,
+                    totalPages: Math.ceil(total / limit)
+                };
+            }
+
+            // Búsqueda en múltiples campos
+            const term = searchTerm.toUpperCase().trim();
+            
+            const expedientesFiltrados = db.expedientes.find({})
+                .filter(exp => {
+                    // Buscar en campos del expediente
+                    const matchExpediente = 
+                        (exp.numeroExpediente && exp.numeroExpediente.toUpperCase().includes(term)) ||
+                        (exp.anioExpediente && exp.anioExpediente.toString().includes(term)) ||
+                        (exp.numeroResolucion && exp.numeroResolucion.toUpperCase().includes(term)) ||
+                        (exp.nombreEmpresa && exp.nombreEmpresa.toUpperCase().includes(term)) ||
+                        (exp.unidadNegocio && exp.unidadNegocio.toUpperCase().includes(term)) ||
+                        (exp.numeroFichero && exp.numeroFichero.toUpperCase().includes(term)) ||
+                        (exp.observaciones && exp.observaciones.toUpperCase().includes(term));
+                    
+                    if (matchExpediente) return true;
+                    
+                    // Buscar en tarjetas asociadas
+                    const tarjetas = db.tarjetas.find({ resolucionId: exp._id });
+                    const matchTarjetas = tarjetas.some(t => 
+                        (t.placa && t.placa.toUpperCase().includes(term)) ||
+                        (t.numeroTarjeta && t.numeroTarjeta.toUpperCase().includes(term))
+                    );
+                    
+                    return matchTarjetas;
+                });
+
+            const total = expedientesFiltrados.length;
+            const startIndex = (page - 1) * limit;
+            const endIndex = startIndex + limit;
+            const expedientesPagina = expedientesFiltrados.slice(startIndex, endIndex);
+            
+            // Mapear con tarjetas asociadas
+            const expedientesConTarjetas = expedientesPagina.map(exp => 
+                mapExpedienteCompleto(exp, db)
+            );
+            
+            console.log(`✅ Búsqueda completada: ${total} resultados (mostrando ${expedientesConTarjetas.length})`);
+            
+            return {
+                success: true,
+                expedientes: expedientesConTarjetas,
+                total: total,
+                page: page,
+                limit: limit,
+                totalPages: Math.ceil(total / limit)
+            };
+        } catch (error) {
+            console.error('❌ Error en búsqueda rápida:', error);
+            return {
+                success: false,
+                message: error.message || 'Error al buscar expedientes',
+                expedientes: [],
+                total: 0
+            };
+        }
+    });
+
+    /**
      * Obtener información detallada para confirmación de eliminación
      * Incluye: expediente, tarjetas asociadas, resumen de archivos
      */

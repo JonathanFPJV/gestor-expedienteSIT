@@ -5,3 +5,10 @@ docs/
 scripts/
 dist/
 .azure
+
+# Datos de la aplicación portable (NO borrar)
+data/
+data-backup/
+*.db
+*.db-shm
+*.db-wal

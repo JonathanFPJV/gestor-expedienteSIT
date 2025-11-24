@@ -257,6 +257,7 @@ class TarjetaService {
             const dataToUpdate = {
                 placa: normalizePlaca(updateData.placa) || tarjetaExistente.placa,
                 numeroTarjeta: updateData.numeroTarjeta !== undefined ? updateData.numeroTarjeta : tarjetaExistente.numeroTarjeta,
+                estado: updateData.estado !== undefined ? updateData.estado : tarjetaExistente.estado,
                 resolucionId: updateData.expedienteId !== undefined ? updateData.expedienteId : 
                              (updateData.resolucionId !== undefined ? updateData.resolucionId : tarjetaExistente.resolucionId),
                 actaEntregaId: updateData.actaEntregaId !== undefined ? updateData.actaEntregaId : tarjetaExistente.actaEntregaId,
@@ -504,6 +505,80 @@ class TarjetaService {
     buildTarjetaFileName(tarjetaData) {
         const { buildTarjetaFileName } = require('./utils');
         return buildTarjetaFileName(tarjetaData);
+    }
+
+    /**
+     * Obtener tarjetas por estado
+     * @param {string} estado - Estado de la tarjeta ('ACTIVA' o 'CANCELADA')
+     * @returns {Object} Lista de tarjetas con el estado especificado
+     */
+    getTarjetasByEstado(estado) {
+        try {
+            const tarjetas = this.tarjetaManager.getTarjetasByEstado(estado);
+            
+            console.log(`🎫 Tarjetas con estado ${estado}: ${tarjetas.length}`);
+            
+            return {
+                success: true,
+                tarjetas: tarjetas,
+                count: tarjetas.length,
+                estado: estado
+            };
+
+        } catch (error) {
+            console.error('❌ Error al obtener tarjetas por estado:', error);
+            return {
+                success: false,
+                message: error.message || 'Error al obtener tarjetas por estado',
+                tarjetas: []
+            };
+        }
+    }
+
+    /**
+     * Cambiar estado de una tarjeta
+     * @param {string} tarjetaId - ID de la tarjeta
+     * @param {string} nuevoEstado - Nuevo estado ('ACTIVA' o 'CANCELADA')
+     * @returns {Object} Resultado de la actualización
+     */
+    cambiarEstadoTarjeta(tarjetaId, nuevoEstado) {
+        try {
+            if (!tarjetaId) {
+                throw new Error('ID de tarjeta no proporcionado');
+            }
+
+            const tarjetaActualizada = this.tarjetaManager.cambiarEstado(tarjetaId, nuevoEstado);
+
+            console.log(`✅ Estado de tarjeta ${tarjetaId} cambiado a ${nuevoEstado}`);
+            
+            return {
+                success: true,
+                message: `Tarjeta ${nuevoEstado.toLowerCase()} exitosamente`,
+                tarjeta: tarjetaActualizada
+            };
+
+        } catch (error) {
+            console.error('❌ Error al cambiar estado de tarjeta:', error);
+            return formatErrorResponse(error);
+        }
+    }
+
+    /**
+     * Cancelar una tarjeta
+     * @param {string} tarjetaId - ID de la tarjeta
+     * @returns {Object} Resultado de la cancelación
+     */
+    cancelarTarjeta(tarjetaId) {
+        return this.cambiarEstadoTarjeta(tarjetaId, 'CANCELADA');
+    }
+
+    /**
+     * Activar una tarjeta
+     * @param {string} tarjetaId - ID de la tarjeta
+     * @returns {Object} Resultado de la activación
+     */
+    activarTarjeta(tarjetaId) {
+        return this.cambiarEstadoTarjeta(tarjetaId, 'ACTIVA');
     }
 }
 

@@ -1,0 +1,324 @@
+/* Estilos para el Visor de PDF Simple */
+.simple-pdf-viewer {
+    border: 2px solid #E6E9F2;
+    border-radius: 8px;
+    margin: 15px 0;
+    background: #FFFFFF;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Ajustes para visor dentro de columnas duales */
+.pdf-viewer-column .simple-pdf-viewer {
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.pdf-viewer-column .pdf-controls-bar {
+    border-radius: 0;
+    flex-shrink: 0;
+}
+
+.pdf-viewer-column .pdf-canvas-container {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 500px;
+    max-height: 800px;
+}
+
+.pdf-controls-bar {
+    background: #FAFBFC;
+    border-bottom: 2px solid #E6E9F2;
+    border-radius: 8px 8px 0 0;
+    padding: 12px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.pdf-title h4 {
+    margin: 0 0 5px 0;
+    color: #333333;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.pdf-pages-info {
+    font-size: 0.85rem;
+    color: #6C757D;
+    font-weight: 500;
+}
+
+.pdf-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.pdf-control-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 12px;
+    border: 2px solid #006699;
+    background: #006699;
+    color: #FFFFFF;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    min-height: 36px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.pdf-control-btn:hover {
+    background: #005580;
+    border-color: #005580;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.pdf-control-btn:active {
+    background: #004466;
+    border-color: #004466;
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.pdf-control-btn:disabled {
+    background: #cccccc;
+    border-color: #cccccc;
+    cursor: not-allowed;
+    transform: none;
+    opacity: 0.6;
+}
+
+/* Botón de impresión con estilo especial */
+.pdf-control-btn.print-pdf {
+    background: #28a745;
+    border-color: #28a745;
+}
+
+.pdf-control-btn.print-pdf:hover {
+    background: #218838;
+    border-color: #218838;
+}
+
+.pdf-control-btn.print-pdf:active {
+    background: #1e7e34;
+    border-color: #1e7e34;
+}
+
+.control-icon {
+    font-size: 1rem;
+}
+
+.control-text {
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.control-separator {
+    width: 1px;
+    height: 28px;
+    background: #E6E9F2;
+    margin: 0 6px;
+}
+
+.zoom-display {
+    font-size: 0.85rem;
+    color: #333333;
+    font-weight: 600;
+    min-width: 45px;
+    text-align: center;
+    background: #FFFFFF;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 2px solid #E6E9F2;
+}
+
+.pdf-viewer-container {
+    background: #f5f5f5;
+    border-radius: 0 0 8px 8px;
+}
+
+.pdf-loading-state,
+.pdf-error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: #666;
+    gap: 15px;
+}
+
+.loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #006699;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.pdf-error-state {
+    color: #dc3545;
+}
+
+.error-icon {
+    font-size: 2rem;
+}
+
+.retry-button {
+    padding: 8px 16px;
+    background: #006699;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.retry-button:hover {
+    background: #005580;
+}
+
+.pdf-scroll-container {
+    height: 75vh;
+    min-height: 600px;
+    max-height: 900px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: #f5f5f5;
+    border-radius: 0 0 8px 8px;
+    scroll-behavior: smooth;
+}
+
+.pdf-scroll-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.pdf-scroll-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.pdf-scroll-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.pdf-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+.pdf-pages-wrapper {
+    padding: 30px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 25px;
+    min-height: 100%;
+}
+
+.pdf-page-container {
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    overflow: hidden;
+    max-width: 100%;
+    transition: transform 0.2s ease;
+}
+
+.pdf-page-container:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.page-header {
+    background: #f8f9fa;
+    padding: 8px 15px;
+    border-bottom: 1px solid #eee;
+    text-align: center;
+}
+
+.page-number {
+    font-size: 0.8rem;
+    color: #666;
+    font-weight: 500;
+}
+
+.page-canvas-container {
+    padding: 20px;
+    text-align: center;
+    background: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.pdf-page-canvas {
+    display: block;
+    margin: 0 auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    max-width: 100%;
+    width: auto;
+    height: auto;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .pdf-controls-bar {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+    
+    .pdf-controls {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .pdf-scroll-container {
+        height: 60vh;
+        min-height: 400px;
+        max-height: 700px;
+    }
+    
+    .pdf-pages-wrapper {
+        padding: 20px 10px;
+    }
+    
+    .control-separator {
+        display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .pdf-control-btn .control-text {
+        display: none;
+    }
+    
+    .pdf-control-btn {
+        padding: 8px;
+        min-width: 36px;
+        justify-content: center;
+    }
+}

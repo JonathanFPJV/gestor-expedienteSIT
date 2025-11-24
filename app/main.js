@@ -1,5 +1,5 @@
 // app/main.js - Proceso Principal (Backend)
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, shell } = require('electron');
 const path = require('path');
 const { registerIpcHandlers } = require('./handlers/ipcHandlers');
 

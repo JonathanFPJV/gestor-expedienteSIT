@@ -20,6 +20,7 @@ const registerUpdateHandler = require('./updateHandler');
 const registerDeleteHandlers = require('./deleteHandler');
 const registerStatsHandler = require('./statsHandler');
 const registerPdfHandlers = require('./pdfHandler');
+const registerEstadoHandlers = require('./estadoHandler');
 
 /**
  * Clase para gestionar todos los handlers de tarjetas
@@ -44,6 +45,7 @@ class TarjetaHandlers {
         registerDeleteHandlers(ipcMain, this.tarjetaService);
         registerStatsHandler(ipcMain, this.tarjetaService);
         registerPdfHandlers(ipcMain, this.fileHandlers);
+        registerEstadoHandlers(ipcMain, this.tarjetaService);
 
         console.log('✅ Manejadores IPC de Tarjetas registrados exitosamente');
         console.log('   📂 Handlers organizados en módulos:');
@@ -53,7 +55,8 @@ class TarjetaHandlers {
         console.log('      - deleteHandler: 2 canales (eliminar)');
         console.log('      - statsHandler: 1 canal (estadísticas)');
         console.log('      - pdfHandler: 2 canales (PDFs)');
-        console.log('   📊 Total: 13 canales IPC activos');
+        console.log('      - estadoHandler: 6 canales (estado extensible)');
+        console.log('   📊 Total: 19 canales IPC activos');
     }
 
     /**
