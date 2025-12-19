@@ -108,9 +108,10 @@ function openPdf(fullPath) {
  * Elimina un archivo PDF del sistema de archivos
  * 
  * Características:
- * - Si no hay ruta, no hace nada (éxito silencioso)
- * - Si el archivo no existe, reporta éxito (idempotente)
+ * - Si no hay ruta, retorna éxito silencioso (nada que hacer)
+ * - Si el archivo no existe, retorna éxito (idempotente)
  * - Limpia carpeta vacía después de eliminar
+ * - Maneja errores de permisos y archivos bloqueados
  * 
  * @param {string} fullPath - Ruta completa del archivo
  * @param {string} dataDir - Directorio base de datos
@@ -122,29 +123,47 @@ function openPdf(fullPath) {
  */
 function deletePdf(fullPath, dataDir) {
     return new Promise((resolve, reject) => {
-        // Si no hay ruta, no hacer nada
-        if (!fullPath) {
-            console.warn('⚠️ No se proporcionó ruta para eliminar PDF');
+        // Si no hay ruta, no hacer nada (éxito silencioso)
+        if (!fullPath || fullPath.trim() === '') {
+            console.log('ℹ️ deletePdf: Ruta vacía, no hay nada que eliminar');
             return resolve({ success: true, message: 'Ruta no especificada' });
         }
         
-        // Si el archivo no existe, no hacer nada (idempotente)
+        console.log(`🔍 deletePdf: Verificando existencia de: ${fullPath}`);
+        
+        // Si el archivo no existe, retornar éxito (idempotente)
         if (!fs.existsSync(fullPath)) {
-            console.warn('⚠️ Archivo PDF no existe, omitiendo eliminación:', fullPath);
+            console.log(`ℹ️ deletePdf: Archivo no existe (ya eliminado o nunca existió): ${fullPath}`);
             return resolve({ success: true, message: 'Archivo no existía' });
         }
+        
+        console.log(`🗑️ deletePdf: Eliminando archivo: ${fullPath}`);
         
         // Eliminar archivo
         fs.unlink(fullPath, (err) => {
             if (err) {
-                console.error('❌ Error al eliminar el archivo:', err);
+                // Errores específicos
+                if (err.code === 'ENOENT') {
+                    console.log('ℹ️ deletePdf: Archivo ya no existe (carrera de condición)');
+                    return resolve({ success: true, message: 'Archivo ya eliminado' });
+                } else if (err.code === 'EBUSY' || err.code === 'EPERM') {
+                    console.error(`❌ deletePdf: Archivo bloqueado o sin permisos: ${fullPath}`);
+                    return reject(new Error(`Archivo bloqueado o sin permisos: ${err.message}`));
+                }
+                
+                console.error('❌ deletePdf: Error al eliminar el archivo:', err);
                 return reject(err);
             }
             
-            console.log('🗑️ Archivo PDF eliminado exitosamente:', fullPath);
+            console.log(`✅ deletePdf: Archivo eliminado exitosamente: ${fullPath}`);
             
             // Limpiar carpeta vacía
-            cleanupEmptyFolder(fullPath, dataDir);
+            try {
+                cleanupEmptyFolder(fullPath, dataDir);
+            } catch (cleanupErr) {
+                console.warn('⚠️ No se pudo limpiar carpeta vacía:', cleanupErr.message);
+                // No fallar por esto
+            }
             
             resolve({ success: true, path: fullPath });
         });

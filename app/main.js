@@ -3,6 +3,9 @@ const { app, BrowserWindow, shell } = require('electron');
 const path = require('path');
 const { registerIpcHandlers } = require('./handlers/ipcHandlers');
 
+// ⚡ CRÍTICO: Inicializar configuración de rutas ANTES de crear ventanas
+const pathConfig = require('./config/pathConfig');
+
 // Función para crear la ventana principal de la aplicación
 function createWindow() {
   const win = new BrowserWindow({
@@ -23,6 +26,10 @@ function createWindow() {
 
 // -- Escuchadores de eventos de la aplicación --
 app.whenReady().then(() => {
+    // ✅ Inicializar rutas y crear carpetas ANTES de crear ventanas
+    console.log('\n🚀 Inicializando aplicación en modo portable...');
+    pathConfig.initialize();
+    
     createWindow();
     // Pasa la instancia de 'app' al registrar los manejadores
     registerIpcHandlers(app);

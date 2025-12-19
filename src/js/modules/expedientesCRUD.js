@@ -17,6 +17,8 @@ export class ExpedientesCRUD {
         // 🔍 Debounce timer para búsqueda
         this.searchDebounceTimer = null;
         this.searchDebounceDelay = 500; // 500ms de espera después de dejar de escribir
+        this.searchInProgress = false; // 🆕 Flag para saber si hay una búsqueda activa
+        this.lastSearchTerm = ''; // 🆕 Último término buscado para evitar búsquedas duplicadas
         
         this.initializeElements();
         this.initializeEventListeners();
@@ -36,6 +38,10 @@ export class ExpedientesCRUD {
                     const vistaCrud = document.getElementById('vista-crud');
                     if (vistaCrud && vistaCrud.classList.contains('active')) {
                         console.log('🎯 Vista de expedientes activada - Recargando datos...');
+                        // ✅ Cancelar búsquedas pendientes
+                        this.cancelPendingSearch();
+                        // ✅ Restaurar estado de campos de búsqueda y filtros
+                        this.restoreSearchFieldsState();
                         // 🔄 SIEMPRE recargar cuando se active la vista para mostrar cambios
                         this.loadExpedientes();
                     }
@@ -50,6 +56,57 @@ export class ExpedientesCRUD {
             
             // ✅ NO cargar datos automáticamente - solo cuando usuario active la vista
         }
+    }
+
+    /**
+     * ✅ Cancelar búsqueda pendiente (debounce timer)
+     */
+    cancelPendingSearch() {
+        if (this.searchDebounceTimer) {
+            clearTimeout(this.searchDebounceTimer);
+            this.searchDebounceTimer = null;
+            console.log('🚫 Búsqueda pendiente cancelada');
+        }
+        // 🆕 Resetear estado de búsqueda
+        this.searchInProgress = false;
+        this.lastSearchTerm = '';
+    }
+
+    /**
+     * ✅ Restaurar estado de campos de búsqueda y filtros
+     * Se llama cuando se activa la vista para asegurar que los campos estén desbloqueados
+     */
+    restoreSearchFieldsState() {
+        // Restaurar campo de búsqueda
+        if (this.searchInput) {
+            this.searchInput.disabled = false;
+            this.searchInput.readOnly = false;
+            this.searchInput.style.opacity = '1';
+            this.searchInput.style.pointerEvents = 'auto';
+            this.searchInput.style.cursor = 'text';
+        }
+
+        // Restaurar filtros
+        if (this.filterAnio) {
+            this.filterAnio.disabled = false;
+            this.filterAnio.style.opacity = '1';
+            this.filterAnio.style.pointerEvents = 'auto';
+        }
+
+        if (this.filterUnidad) {
+            this.filterUnidad.disabled = false;
+            this.filterUnidad.style.opacity = '1';
+            this.filterUnidad.style.pointerEvents = 'auto';
+        }
+
+        // Restaurar botón de exportar
+        if (this.exportarExcelBtn) {
+            this.exportarExcelBtn.disabled = false;
+            this.exportarExcelBtn.innerHTML = '📊 Exportar Excel';
+            this.exportarExcelBtn.style.opacity = '1';
+        }
+
+        console.log('✅ Estado de campos de búsqueda restaurado');
     }
 
     initializeElements() {
@@ -76,6 +133,17 @@ export class ExpedientesCRUD {
         // Búsqueda rápida en tiempo real
         this.searchInput?.addEventListener('input', (e) => this.filterTableInRealTime(e.target.value));
         this.clearSearchBtn?.addEventListener('click', () => this.clearQuickSearch());
+        
+        // 🆕 Reactivar búsqueda cuando el usuario hace clic en el campo
+        this.searchInput?.addEventListener('focus', () => {
+            console.log('🎯 Campo de búsqueda enfocado - búsqueda reactivada');
+            this.searchInProgress = false;
+            // Si hay texto y es diferente al último resultado, buscar de nuevo
+            const currentTerm = this.searchInput.value.trim();
+            if (currentTerm && currentTerm !== this.lastSearchTerm) {
+                this.filterTableInRealTime(currentTerm);
+            }
+        });
 
         // Filtros
         this.filterAnio?.addEventListener('change', () => this.applyFilters());
@@ -537,6 +605,14 @@ export class ExpedientesCRUD {
         // Si no hay término, limpiar búsqueda
         if (!term) {
             this.clearQuickSearch();
+            this.searchInProgress = false;
+            this.lastSearchTerm = '';
+            return;
+        }
+        
+        // 🆕 Si ya hay una búsqueda completada con el mismo término, no buscar de nuevo
+        if (this.searchInProgress && term === this.lastSearchTerm) {
+            console.log('⏸️ Búsqueda ya completada para este término, esperando nuevo focus');
             return;
         }
         
@@ -565,7 +641,12 @@ export class ExpedientesCRUD {
                     this.renderTable();
                     this.updatePagination();
                     
+                    // 🆕 Marcar búsqueda como completada
+                    this.searchInProgress = true;
+                    this.lastSearchTerm = term;
+                    
                     console.log(`✅ Búsqueda completada: ${this.expedientes.length} resultados`);
+                    console.log('💤 Búsqueda pausada hasta próximo focus o cambio de texto');
                 } else {
                     console.error('❌ Error en búsqueda:', resultado.message);
                     this.showError('Error al buscar expedientes');
@@ -574,6 +655,7 @@ export class ExpedientesCRUD {
                 console.error('❌ Error al buscar:', error);
                 this.showError('Error de conexión al buscar');
             } finally {
+                // ✅ SIEMPRE restaurar indicador de búsqueda
                 this.hideSearchingIndicator();
             }
         }, this.searchDebounceDelay);
@@ -582,8 +664,9 @@ export class ExpedientesCRUD {
     // 💫 Mostrar indicador de búsqueda
     showSearchingIndicator() {
         if (this.searchInput) {
-            this.searchInput.style.opacity = '0.6';
-            this.searchInput.style.pointerEvents = 'none';
+            // Solo cambiar opacidad visual, NO bloquear el input
+            this.searchInput.style.opacity = '0.7';
+            // ❌ NO usar pointerEvents = 'none' - impide escribir mientras busca
         }
     }
     
@@ -591,7 +674,7 @@ export class ExpedientesCRUD {
     hideSearchingIndicator() {
         if (this.searchInput) {
             this.searchInput.style.opacity = '1';
-            this.searchInput.style.pointerEvents = 'auto';
+            // Restaurar estilo normal
         }
     }
     
@@ -603,6 +686,10 @@ export class ExpedientesCRUD {
         if (this.clearSearchBtn) {
             this.clearSearchBtn.style.display = 'none';
         }
+        
+        // 🆕 Resetear estado de búsqueda
+        this.searchInProgress = false;
+        this.lastSearchTerm = '';
         
         // Volver a aplicar filtros normales
         this.applyFilters();
@@ -789,28 +876,62 @@ ${expediente.observaciones || 'Sin observaciones'}`;
                         const tarjetaDiv = document.createElement('div');
                         tarjetaDiv.className = 'tarjeta-item';
                         tarjetaDiv.dataset.tarjetaIndex = index;
+                        tarjetaDiv.dataset.tarjetaId = tarjeta._id || ''; // Guardar ID de la tarjeta
+                        
+                        // Determinar si tiene PDF
+                        const tienePdf = tarjeta.pdfPath && tarjeta.pdfPath !== '';
+                        const pdfFileName = tienePdf ? tarjeta.pdfPath.split(/[\\/]/).pop() : 'Sin PDF';
+                        
                         tarjetaDiv.innerHTML = `
-                            <input type="text" 
-                                   class="placa-input"
-                                   placeholder="Placa del vehículo" 
-                                   value="${tarjeta.placa || ''}"
-                                   data-field="placa"
-                                   onchange="window.expedientesCRUD.updateTarjetaData(${index}, 'placa', this.value)">
-                            <input type="text" 
-                                   class="tarjeta-input"
-                                   placeholder="Número de tarjeta" 
-                                   value="${tarjeta.numero || tarjeta.numeroTarjeta || ''}"
-                                   data-field="numero"
-                                   onchange="window.expedientesCRUD.updateTarjetaData(${index}, 'numero', this.value)">
-                            <select class="estado-input"
-                                    data-field="estado"
-                                    onchange="window.expedientesCRUD.updateTarjetaData(${index}, 'estado', this.value)">
-                                <option value="ACTIVA">✅ ACTIVA</option>
-                            </select>
+                            <div>
+                                <div class="tarjeta-datos">
+                                    <input type="text" 
+                                           class="placa-input"
+                                           placeholder="Placa del vehículo" 
+                                           value="${tarjeta.placa || ''}"
+                                           data-field="placa"
+                                           onchange="window.expedientesCRUD.updateTarjetaData(${index}, 'placa', this.value)">
+                                    <input type="text" 
+                                           class="tarjeta-input"
+                                           placeholder="Número de tarjeta" 
+                                           value="${tarjeta.numero || tarjeta.numeroTarjeta || ''}"
+                                           data-field="numero"
+                                           onchange="window.expedientesCRUD.updateTarjetaData(${index}, 'numero', this.value)">
+                                    <select class="estado-input"
+                                            data-field="estado"
+                                            onchange="window.expedientesCRUD.updateTarjetaData(${index}, 'estado', this.value)">
+                                        <option value="ACTIVA">✅ ACTIVA</option>
+                                    </select>
+                                </div>
+                                <div class="tarjeta-pdf-section">
+                                    <input type="text" 
+                                           class="pdf-tarjeta-path" 
+                                           placeholder="PDF de tarjeta" 
+                                           value="${pdfFileName}"
+                                           readonly
+                                           data-pdf-path="${tarjeta.pdfPath || ''}"
+                                           data-pdf-changed="false">
+                                    <button type="button" 
+                                            class="btn-seleccionar-pdf-tarjeta" 
+                                            onclick="window.expedientesCRUD.seleccionarPdfTarjeta(${index})"
+                                            title="Seleccionar o cambiar PDF de la tarjeta">
+                                        📎 ${tienePdf ? 'Cambiar' : 'Agregar'}
+                                    </button>
+                                    ${tienePdf ? `
+                                    <button type="button" 
+                                            class="btn-ver-pdf-tarjeta" 
+                                            onclick="window.expedientesCRUD.verPdfTarjeta(${index})"
+                                            title="Ver PDF actual">
+                                        👁️ Ver
+                                    </button>
+                                    ` : ''}
+                                </div>
+                            </div>
                             <button type="button" 
                                     class="eliminar-tarjeta-btn" 
-                                    onclick="window.expedientesCRUD.removeTarjetaFromForm(${index})">
-                                🗑️ Eliminar
+                                    onclick="window.expedientesCRUD.removeTarjetaFromForm(${index})"
+                                    title="Eliminar esta tarjeta">
+                                🗑️
                             </button>
                         `;
                         tarjetasList.appendChild(tarjetaDiv);
@@ -1289,36 +1410,147 @@ ${expediente.observaciones || 'Sin observaciones'}`;
         alert(message); // Temporal
     }
     
-    // 📊 Exportar expedientes a Excel
-    async exportToExcel() {
+    // 📎 Seleccionar PDF para una tarjeta específica
+    async seleccionarPdfTarjeta(index) {
         try {
-            console.log('📊 Iniciando exportación a Excel...');
+            console.log(`📎 Seleccionando PDF para tarjeta ${index}`);
             
-            // Usar los datos filtrados si existen, sino usar todos
-            const dataToExport = this.filteredExpedientes.length > 0 
-                ? this.filteredExpedientes 
-                : this.expedientes;
+            // Invocar diálogo de selección de archivo
+            const filePath = await window.api.invoke('tarjeta:seleccionar-pdf');
             
-            if (!dataToExport || dataToExport.length === 0) {
-                this.showWarning('No hay datos para exportar');
+            if (filePath) {
+                console.log('📄 PDF seleccionado:', filePath);
+                
+                // Actualizar el input de la tarjeta
+                const tarjetaDiv = document.querySelector(`[data-tarjeta-index="${index}"]`);
+                if (tarjetaDiv) {
+                    const pdfInput = tarjetaDiv.querySelector('.pdf-tarjeta-path');
+                    if (pdfInput) {
+                        const fileName = filePath.split(/[\\/]/).pop();
+                        pdfInput.value = fileName;
+                        pdfInput.dataset.pdfPath = filePath;
+                        pdfInput.dataset.pdfChanged = 'true'; // Marcar como cambiado
+                    }
+                    
+                    // Actualizar datos de la tarjeta
+                    this.updateTarjetaData(index, 'newPdfPath', filePath);
+                    
+                    // Actualizar botón para mostrar "Cambiar PDF"
+                    const btnSeleccionar = tarjetaDiv.querySelector('.btn-seleccionar-pdf-tarjeta');
+                    if (btnSeleccionar) {
+                        btnSeleccionar.textContent = '📎 Cambiar PDF';
+                    }
+                    
+                    // Agregar botón "Ver" si no existe
+                    if (!tarjetaDiv.querySelector('.btn-ver-pdf-tarjeta')) {
+                        const btnVer = document.createElement('button');
+                        btnVer.type = 'button';
+                        btnVer.className = 'btn-ver-pdf-tarjeta';
+                        btnVer.onclick = () => this.verPdfTarjeta(index);
+                        btnVer.title = 'Ver PDF';
+                        btnVer.textContent = '👁️ Ver';
+                        
+                        const pdfSection = tarjetaDiv.querySelector('.tarjeta-pdf-section');
+                        if (pdfSection) {
+                            pdfSection.appendChild(btnVer);
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error al seleccionar PDF de tarjeta:', error);
+            this.showError('Error al seleccionar archivo PDF');
+        }
+    }
+    
+    // 👁️ Ver PDF de una tarjeta
+    async verPdfTarjeta(index) {
+        try {
+            const tarjetaDiv = document.querySelector(`[data-tarjeta-index="${index}"]`);
+            if (!tarjetaDiv) return;
+            
+            const pdfInput = tarjetaDiv.querySelector('.pdf-tarjeta-path');
+            if (!pdfInput) return;
+            
+            const pdfPath = pdfInput.dataset.pdfPath;
+            if (!pdfPath || pdfPath === '') {
+                this.showError('No hay PDF asociado a esta tarjeta');
                 return;
             }
             
-            // Llamar al handler IPC del backend para exportar
-            const result = await window.api.invoke('exportar-expedientes-excel', dataToExport);
+            console.log('👁️ Abriendo PDF de tarjeta:', pdfPath);
+            
+            // Invocar apertura de PDF
+            const result = await window.api.invoke('tarjeta:abrir-pdf', pdfPath);
+            
+            if (!result.success) {
+                this.showError('Error al abrir PDF: ' + result.message);
+            }
+        } catch (error) {
+            console.error('❌ Error al ver PDF de tarjeta:', error);
+            this.showError('Error al abrir el archivo PDF');
+        }
+    }
+    
+    // 📊 Exportar expedientes a Excel con filtros aplicados
+    async exportToExcel() {
+        const btnOriginalHTML = this.exportarExcelBtn.innerHTML;
+        
+        try {
+            console.log('📊 Iniciando exportación a Excel...');
+            
+            // Mostrar indicador de carga en el botón
+            this.exportarExcelBtn.innerHTML = '⏳ Generando Excel...';
+            this.exportarExcelBtn.disabled = true;
+            
+            // Recolectar los filtros actuales (exactamente los mismos que usa la búsqueda)
+            const searchValue = this.searchInput?.value.trim() || '';
+            const anioFilter = this.filterAnio?.value || '';
+            const unidadFilter = this.filterUnidad?.value || '';
+            
+            // Construir objeto de filtros (mapear a los campos de BD)
+            const filters = {
+                // El search-crud-input se usa para buscar en varios campos
+                // La búsqueda será por numeroExpediente o interesado
+                numeroExpediente: searchValue, // Backend buscará con LIKE
+                numeroResolucion: searchValue, // También buscar en resolución
+                interesado: searchValue, // También buscar en interesado
+                asunto: '', // No tenemos filtro específico de asunto
+                tipoTramite: unidadFilter || 'todos', // Filtro de unidad
+                estadoExpediente: 'todos', // No tenemos filtro de estado
+                fechaInicio: '', // No tenemos filtros de fecha aún
+                fechaFin: '',
+                placa: '', // No hay filtro de placa en vista expedientes
+                numeroTarjeta: '' // No hay filtro de tarjeta en vista expedientes
+            };
+            
+            console.log('🔍 Filtros aplicados:', filters);
+            console.log('   Búsqueda:', searchValue);
+            console.log('   Año:', anioFilter);
+            console.log('   Unidad:', unidadFilter);
+            
+            // Llamar al nuevo handler IPC que hace JOIN y retorna TODO
+            const result = await window.api.invoke('expediente:exportar-excel', filters);
             
             if (result.success) {
                 this.showSuccess(result.message);
                 console.log('✅ Exportación completada:', result.filePath);
+                console.log('📊 Registros exportados:', result.count);
             } else if (result.canceled) {
                 console.log('⚠️ Exportación cancelada por el usuario');
             } else {
-                this.showError(result.message);
+                this.showError(result.message || 'Error al exportar');
             }
             
         } catch (error) {
             console.error('❌ Error al exportar a Excel:', error);
             this.showError('Error al exportar datos a Excel: ' + error.message);
+        } finally {
+            // ✅ SIEMPRE restaurar botón (éxito, error, cancelación)
+            if (this.exportarExcelBtn) {
+                this.exportarExcelBtn.innerHTML = btnOriginalHTML;
+                this.exportarExcelBtn.disabled = false;
+            }
         }
     }
 }

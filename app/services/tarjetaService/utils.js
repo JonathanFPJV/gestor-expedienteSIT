@@ -26,7 +26,14 @@ function validateTarjetaData(tarjetaData) {
  * @returns {string|null} Placa normalizada
  */
 function normalizePlaca(placa) {
-    return placa ? placa.toUpperCase().trim() : null;
+    if (!placa || placa === null || placa === undefined || placa === '') {
+        return null;
+    }
+    if (typeof placa !== 'string') {
+        console.warn('⚠️ normalizePlaca recibió un valor no-string:', typeof placa, placa);
+        return null;
+    }
+    return placa.toUpperCase().trim();
 }
 
 /**

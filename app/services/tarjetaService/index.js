@@ -37,7 +37,7 @@ class TarjetaService {
      * @param {string} pdfFilePath - Ruta temporal del archivo PDF (opcional)
      * @returns {Object} Tarjeta creada con su ID
      */
-    createTarjeta(tarjetaData, pdfFilePath = null) {
+    async createTarjeta(tarjetaData, pdfFilePath = null) {
         try {
             // Validación de campos requeridos
             validateTarjetaData(tarjetaData);
@@ -71,7 +71,7 @@ class TarjetaService {
                     });
 
                     if (resolucion) {
-                        const pdfPath = this.pdfManager.savePdf(
+                        const pdfPath = await this.pdfManager.savePdf(
                             pdfFilePath,
                             nuevaTarjeta,
                             resolucion
@@ -235,14 +235,22 @@ class TarjetaService {
      * @param {string} pdfFilePath - Ruta temporal del nuevo archivo PDF (opcional)
      * @returns {Object} Resultado de la actualización
      */
-    updateTarjeta(tarjetaId, updateData, pdfFilePath = null) {
+    async updateTarjeta(tarjetaId, updateData, pdfFilePath = null) {
         try {
             if (!tarjetaId) {
                 throw new Error('ID de tarjeta no proporcionado');
             }
 
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('🔄 INICIANDO ACTUALIZACIÓN DE TARJETA');
+            console.log('   ID:', tarjetaId);
+            console.log('   Datos a actualizar:', JSON.stringify(updateData, null, 2));
+            console.log('   PDF nuevo:', pdfFilePath || 'NO HAY PDF NUEVO');
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
             // Verificar que la tarjeta existe
             const tarjetaExistente = this.tarjetaManager.getTarjetaById(tarjetaId);
+            console.log('📋 Tarjeta existente:',  JSON.stringify(tarjetaExistente, null, 2));
 
             // Si se está actualizando la placa, verificar que no exista otra con la misma
             if (updateData.placa && normalizePlaca(updateData.placa) !== tarjetaExistente.placa) {
@@ -263,41 +271,118 @@ class TarjetaService {
                 actaEntregaId: updateData.actaEntregaId !== undefined ? updateData.actaEntregaId : tarjetaExistente.actaEntregaId,
                 pdfPath: tarjetaExistente.pdfPath
             };
+            
+            // Limpiar y validar datos para SQLite
+            // SQLite solo acepta: numbers, strings, bigints, buffers, y null
+            const cleanDataForSQLite = (obj) => {
+                const cleaned = {};
+                for (const [key, value] of Object.entries(obj)) {
+                    // Convertir undefined y cadenas vacías a null
+                    if (value === undefined || value === '') {
+                        cleaned[key] = null;
+                    }
+                    // Mantener null como null
+                    else if (value === null) {
+                        cleaned[key] = null;
+                    }
+                    // Validar que sea un tipo aceptado por SQLite
+                    else if (
+                        typeof value === 'number' ||
+                        typeof value === 'string' ||
+                        typeof value === 'bigint' ||
+                        Buffer.isBuffer(value)
+                    ) {
+                        cleaned[key] = value;
+                    }
+                    // Si es otro tipo (objeto, array, etc), convertir a null
+                    else {
+                        console.warn(`⚠️ Valor inválido para SQLite en campo ${key}:`, typeof value, value);
+                        cleaned[key] = null;
+                    }
+                }
+                return cleaned;
+            };
+            
+            const cleanedDataToUpdate = cleanDataForSQLite(dataToUpdate);
+            
+            // Log para debugging
+            console.log('📋 Datos originales:', dataToUpdate);
+            console.log('🧹 Datos limpiados para SQLite:', cleanedDataToUpdate);
 
             // Manejar archivo PDF si se proporciona
-            if (pdfFilePath && dataToUpdate.resolucionId && this.fileHandlers) {
+            if (pdfFilePath && cleanedDataToUpdate.resolucionId && this.fileHandlers) {
                 try {
                     const resolucion = this.db.expedientes.findOne({ 
-                        _id: dataToUpdate.resolucionId 
+                        _id: cleanedDataToUpdate.resolucionId 
                     });
 
                     if (resolucion) {
-                        // Eliminar PDF anterior si existe
-                        if (tarjetaExistente.pdfPath) {
-                            this.pdfManager.deletePdf(tarjetaExistente.pdfPath);
+                        // PASO 1: Eliminar PDF anterior si existe (CRÍTICO - evita duplicados)
+                        if (tarjetaExistente.pdfPath && tarjetaExistente.pdfPath.trim() !== '') {
+                            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                            console.log('🗑️ ELIMINANDO PDF ANTERIOR');
+                            console.log('   Ruta antigua:', tarjetaExistente.pdfPath);
+                            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                            try {
+                                const deleteResult = await this.pdfManager.deletePdf(tarjetaExistente.pdfPath);
+                                if (deleteResult) {
+                                    console.log('✅ PDF anterior eliminado exitosamente');
+                                } else {
+                                    console.warn('⚠️ No se pudo confirmar la eliminación del PDF anterior');
+                                }
+                            } catch (deleteError) {
+                                console.error('❌ Error al eliminar PDF anterior:', deleteError);
+                                // Continuar de todos modos para no bloquear la actualización
+                            }
+                        } else {
+                            console.log('ℹ️ No hay PDF anterior para eliminar');
                         }
 
-                        // Guardar nuevo PDF
-                        const pdfPath = this.pdfManager.savePdf(
+                        // PASO 2: Guardar nuevo PDF (AWAIT es crucial aquí)
+                        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                        console.log('📎 GUARDANDO NUEVO PDF');
+                        console.log('   Ruta temporal:', pdfFilePath);
+                        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                        const pdfPath = await this.pdfManager.savePdf(
                             pdfFilePath,
-                            dataToUpdate,
+                            cleanedDataToUpdate,
                             resolucion
                         );
-                        dataToUpdate.pdfPath = pdfPath;
+                        
+                        if (pdfPath) {
+                            cleanedDataToUpdate.pdfPath = pdfPath;
+                            console.log('✅ Nuevo PDF guardado en:', pdfPath);
+                        } else {
+                            console.warn('⚠️ No se obtuvo ruta del PDF guardado');
+                        }
+                    } else {
+                        console.warn('⚠️ No se encontró la resolución asociada');
                     }
                 } catch (pdfError) {
-                    console.warn('⚠️ No se pudo actualizar el PDF:', pdfError);
+                    console.error('❌ Error al actualizar el PDF:', pdfError);
+                    // No lanzar error para no bloquear la actualización de datos
                 }
             }
 
             // Actualizar en la base de datos
-            const tarjetaActualizada = this.tarjetaManager.updateTarjeta(tarjetaId, dataToUpdate);
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('💾 ACTUALIZANDO EN BASE DE DATOS');
+            console.log('   Datos finales:', JSON.stringify(cleanedDataToUpdate, null, 2));
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            const tarjetaActualizada = this.tarjetaManager.updateTarjeta(tarjetaId, cleanedDataToUpdate);
 
-            console.log('✅ Tarjeta actualizada exitosamente:', tarjetaId);
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('✅ ACTUALIZACIÓN COMPLETADA EXITOSAMENTE');
+            console.log('   Tarjeta actualizada:', JSON.stringify(tarjetaActualizada, null, 2));
+            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             return formatSuccessResponse(tarjetaActualizada, 'Tarjeta actualizada exitosamente');
 
         } catch (error) {
-            console.error('❌ Error al actualizar tarjeta:', error);
+            console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.error('❌ ERROR EN ACTUALIZACIÓN DE TARJETA');
+            console.error('   Error:', error.message);
+            console.error('   Stack:', error.stack);
+            console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             return formatErrorResponse(error);
         }
     }
@@ -307,7 +392,7 @@ class TarjetaService {
      * @param {string} tarjetaId - ID de la tarjeta
      * @returns {Object} Resultado de la eliminación
      */
-    deleteTarjeta(tarjetaId) {
+    async deleteTarjeta(tarjetaId) {
         try {
             if (!tarjetaId) {
                 throw new Error('ID de tarjeta no proporcionado');
@@ -319,7 +404,7 @@ class TarjetaService {
             // Eliminar PDF asociado si existe
             if (tarjetaExistente.pdfPath && this.fileHandlers) {
                 try {
-                    this.pdfManager.deletePdf(tarjetaExistente.pdfPath);
+                    await this.pdfManager.deletePdf(tarjetaExistente.pdfPath);
                 } catch (deleteError) {
                     console.warn('⚠️ No se pudo eliminar el PDF:', deleteError);
                 }
@@ -350,7 +435,7 @@ class TarjetaService {
      * @param {string} resolucionId - ID de la resolución
      * @returns {Object} Resultado de la eliminación
      */
-    deleteTarjetasByExpediente(resolucionId) {
+    async deleteTarjetasByExpediente(resolucionId) {
         try {
             if (!resolucionId) {
                 throw new Error('ID de resolución no proporcionado');
@@ -361,15 +446,15 @@ class TarjetaService {
 
             // Eliminar PDFs asociados
             if (this.fileHandlers) {
-                tarjetas.forEach(tarjeta => {
+                for (const tarjeta of tarjetas) {
                     if (tarjeta.pdfPath) {
                         try {
-                            this.pdfManager.deletePdf(tarjeta.pdfPath);
+                            await this.pdfManager.deletePdf(tarjeta.pdfPath);
                         } catch (deleteError) {
                             console.warn('⚠️ No se pudo eliminar PDF:', deleteError);
                         }
                     }
-                });
+                }
             }
 
             // Eliminar las tarjetas

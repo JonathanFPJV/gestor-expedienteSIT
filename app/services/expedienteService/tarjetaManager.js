@@ -35,69 +35,116 @@ module.exports = function createTarjetaManager(db, fileHandlers) {
                 db.tarjetas.remove({ resolucionId });
             }
 
+            console.log(`📦 Iniciando guardado de ${tarjetas.length} tarjetas...`);
             const tarjetasGuardadas = [];
+            const errores = [];
             
-            for (const tarjeta of tarjetas) {
-                const tarjetaData = { ...tarjeta };
-                console.log('📥 Procesando tarjeta:', {
-                    placa: tarjetaData.placa,
-                    numeroTarjeta: tarjetaData.numeroTarjeta,
-                    pdfSourcePath: tarjetaData.pdfSourcePath ? 'SÍ TIENE' : '❌ NO TIENE'
-                });
+            // 🚀 Procesar en lotes de 10 para evitar sobrecarga
+            const BATCH_SIZE = 10;
+            for (let i = 0; i < tarjetas.length; i += BATCH_SIZE) {
+                const batch = tarjetas.slice(i, i + BATCH_SIZE);
+                const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+                const totalBatches = Math.ceil(tarjetas.length / BATCH_SIZE);
                 
-                delete tarjetaData.selectedPdfPath;
-
-                // Manejo de PDF de la tarjeta individual
-                if (tarjetaData.pdfSourcePath && fileHandlers) {
-                    console.log('💾 Guardando PDF de tarjeta:', tarjetaData.pdfSourcePath);
-                    const fileName = tarjetaData.pdfPath || buildTarjetaFileName(tarjetaData);
+                console.log(`\n📦 Procesando lote ${batchNumber}/${totalBatches} (${batch.length} tarjetas)...`);
+                
+                // Procesar lote en paralelo con Promise.allSettled (no falla si una tarjeta falla)
+                const batchPromises = batch.map(async (tarjeta, indexInBatch) => {
+                    const globalIndex = i + indexInBatch + 1;
+                    const tarjetaData = { ...tarjeta };
                     
                     try {
-                        const saveResult = await fileHandlers.savePdf(
-                            tarjetaData.pdfSourcePath,
-                            fileName,
-                            {
-                                resolutionNumber: expediente.numeroResolucion,
-                                expedienteNumero: expediente.numeroExpediente
-                            }
-                        );
-                        console.log('✅ PDF guardado en:', saveResult.path);
-                        tarjetaData.pdfPath = saveResult.path;
-                    } catch (error) {
-                        console.warn('⚠️ No se pudo guardar PDF de tarjeta:', error);
-                    }
-                    
-                    delete tarjetaData.pdfSourcePath;
-                } else {
-                    console.warn('⚠️ Tarjeta sin PDF:', tarjetaData.placa);
-                }
+                        console.log(`  [${globalIndex}/${tarjetas.length}] Procesando: ${tarjetaData.placa || 'sin-placa'}`);
+                        
+                        delete tarjetaData.selectedPdfPath;
 
-                // Preparar datos para TarjetasVehiculos
-                const tarjetaToInsert = {
-                    placa: tarjetaData.placa ? tarjetaData.placa.toUpperCase() : null,
-                    numeroTarjeta: tarjetaData.numeroTarjeta || tarjetaData.tarjeta || null,
-                    estado: tarjetaData.estado || 'ACTIVA',
-                    pdfPath: tarjetaData.pdfPath || null,
-                    resolucionId: resolucionId,
-                    actaEntregaId: actaEntregaId || tarjetaData.actaEntregaId || null
-                };
-                
-                console.log('💾 Insertando tarjeta en BD:', {
-                    placa: tarjetaToInsert.placa,
-                    numeroTarjeta: tarjetaToInsert.numeroTarjeta,
-                    estado: tarjetaToInsert.estado,
-                    pdfPath: tarjetaToInsert.pdfPath || '❌ NULL',
-                    resolucionId: tarjetaToInsert.resolucionId,
-                    actaEntregaId: tarjetaToInsert.actaEntregaId || '❌ NULL'
+                        // Manejo de PDF de la tarjeta individual
+                        if (tarjetaData.pdfSourcePath && fileHandlers) {
+                            // 🆕 PDF NUEVO: Usuario seleccionó un archivo del sistema
+                            const fileName = tarjetaData.pdfPath || buildTarjetaFileName(tarjetaData);
+                            
+                            try {
+                                const saveResult = await fileHandlers.savePdf(
+                                    tarjetaData.pdfSourcePath,
+                                    fileName,
+                                    {
+                                        resolutionNumber: expediente.numeroResolucion,
+                                        expedienteNumero: expediente.numeroExpediente
+                                    }
+                                );
+                                tarjetaData.pdfPath = saveResult.path;
+                                console.log(`  [${globalIndex}/${tarjetas.length}] ✅ PDF guardado (nuevo): ${tarjetaData.pdfPath}`);
+                            } catch (pdfError) {
+                                console.error(`  [${globalIndex}/${tarjetas.length}] ❌ Error guardando PDF:`, pdfError.message);
+                                errores.push({
+                                    tarjeta: tarjetaData.placa || 'sin-placa',
+                                    error: `Error guardando PDF: ${pdfError.message}`
+                                });
+                                // Continuar sin PDF
+                            }
+                            
+                            delete tarjetaData.pdfSourcePath;
+                        } else if (tarjetaData.pdfPath) {
+                            // 📎 PDF EXISTENTE: Mantener la referencia de BD (ruta relativa)
+                            console.log(`  [${globalIndex}/${tarjetas.length}] 📎 Manteniendo PDF existente: ${tarjetaData.pdfPath}`);
+                            // No hacemos nada, pdfPath ya tiene el valor correcto
+                        }
+
+                        // Preparar datos para TarjetasVehiculos
+                        const tarjetaToInsert = {
+                            placa: tarjetaData.placa ? tarjetaData.placa.toUpperCase() : null,
+                            numeroTarjeta: tarjetaData.numeroTarjeta || tarjetaData.tarjeta || null,
+                            estado: tarjetaData.estado || 'ACTIVA',
+                            pdfPath: tarjetaData.pdfPath || null,
+                            resolucionId: resolucionId,
+                            actaEntregaId: actaEntregaId || tarjetaData.actaEntregaId || null
+                        };
+
+                        // Insertar tarjeta en BD
+                        const savedTarjeta = db.tarjetas.insert(tarjetaToInsert);
+                        console.log(`  [${globalIndex}/${tarjetas.length}] ✅ Guardada en BD (ID: ${savedTarjeta._id})`);
+                        
+                        return { success: true, tarjeta: savedTarjeta };
+                        
+                    } catch (error) {
+                        console.error(`  [${globalIndex}/${tarjetas.length}] ❌ Error total:`, error.message);
+                        errores.push({
+                            tarjeta: tarjetaData.placa || 'sin-placa',
+                            error: error.message
+                        });
+                        return { success: false, error: error.message };
+                    }
                 });
 
-                // Insertar tarjeta
-                const savedTarjeta = db.tarjetas.insert(tarjetaToInsert);
-                console.log('✅ Tarjeta guardada con ID:', savedTarjeta._id, '| pdfPath:', savedTarjeta.pdfPath || '❌ NULL');
-                tarjetasGuardadas.push(savedTarjeta);
+                // Esperar que el lote complete
+                const batchResults = await Promise.allSettled(batchPromises);
+                
+                // Recolectar tarjetas exitosas
+                batchResults.forEach(result => {
+                    if (result.status === 'fulfilled' && result.value.success) {
+                        tarjetasGuardadas.push(result.value.tarjeta);
+                    }
+                });
+                
+                console.log(`✅ Lote ${batchNumber}/${totalBatches} completado (${tarjetasGuardadas.length} exitosas hasta ahora)`);
+                
+                // Pequeña pausa entre lotes para evitar saturar el I/O
+                if (i + BATCH_SIZE < tarjetas.length) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
             }
 
-            console.log(`✅ ${tarjetasGuardadas.length} tarjetas guardadas para resolución ${resolucionId}`);
+            // Resumen final
+            console.log(`\n${'='.repeat(60)}`);
+            console.log(`✅ GUARDADO COMPLETADO: ${tarjetasGuardadas.length}/${tarjetas.length} tarjetas`);
+            if (errores.length > 0) {
+                console.log(`⚠️ ${errores.length} errores encontrados:`);
+                errores.forEach((e, idx) => {
+                    console.log(`   ${idx + 1}. ${e.tarjeta}: ${e.error}`);
+                });
+            }
+            console.log(`${'='.repeat(60)}\n`);
+            
             return tarjetasGuardadas;
         },
 

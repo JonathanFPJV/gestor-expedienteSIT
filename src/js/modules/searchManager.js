@@ -99,25 +99,38 @@ export class SearchManager {
         const debouncedSearch = debounceSearch(async (searchTerm) => {
             console.log(`Búsqueda debounced ${type}:`, searchTerm);
             
+            // Si no hay término de búsqueda, limpiar resultados
+            if (!searchTerm || searchTerm.length === 0) {
+                this.clearResults(type);
+                this.hasResults.delete(type);
+                this.lastSearchTerms.delete(type);
+                return;
+            }
+            
             // Verificar si ya tenemos resultados para este término exacto
             if (this.shouldSkipSearch(type, searchTerm)) {
                 console.log(`Saltando búsqueda de ${type} - ya hay resultados para: "${searchTerm}"`);
                 return;
             }
             
+            // Solo buscar si hay al menos 2 caracteres
             if (searchTerm.length >= 2) {
                 await this.performSearch(type, searchTerm, section);
-            } else if (searchTerm.length === 0) {
-                this.clearResults(type);
-                this.hasResults.delete(type);
-                this.lastSearchTerms.delete(type);
             }
-        }, 500); // 500ms de delay
+        }, 3000); // 800ms de delay para evitar sobrecarga
 
         // Event listeners
         input.addEventListener('input', (e) => {
             const value = e.target.value.trim();
             console.log(`Input ${type} cambió:`, value);
+            
+            // Si el campo está vacío, limpiar inmediatamente
+            if (value.length === 0) {
+                this.clearResults(type);
+                this.hasResults.delete(type);
+                this.lastSearchTerms.delete(type);
+                return;
+            }
             
             // Si el usuario está borrando, permitir nueva búsqueda
             if (value.length < (this.lastSearchTerms.get(type) || '').length) {

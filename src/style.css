@@ -522,6 +522,33 @@ fieldset legend {
     align-items: center;
 }
 
+/* Grupo de exportación con ícono de ayuda */
+.export-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.export-help-icon {
+    font-size: 18px;
+    cursor: help;
+    opacity: 0.7;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(33, 115, 70, 0.1);
+}
+
+.export-help-icon:hover {
+    opacity: 1;
+    background: rgba(33, 115, 70, 0.2);
+    transform: scale(1.1);
+}
+
 .search-crud {
     display: flex;
     gap: var(--espacio-xs);
@@ -900,6 +927,14 @@ fieldset legend {
     box-shadow: 0 2px 4px rgba(33, 115, 70, 0.3);
 }
 
+.btn-export-excel:disabled {
+    background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
+    cursor: not-allowed;
+    opacity: 0.7;
+    transform: none;
+    box-shadow: none;
+}
+
 .btn-secondary {
     background-color: var(--color-texto-deshabilitado);
     color: var(--color-texto-blanco);
@@ -945,6 +980,64 @@ fieldset legend {
 
 .btn-danger:hover {
     background-color: var(--color-error-hover);
+}
+
+/* Botones de formulario */
+.form-buttons {
+    display: flex;
+    gap: var(--espacio-md);
+    justify-content: flex-end;
+    margin-top: var(--espacio-lg);
+    padding-top: var(--espacio-md);
+    border-top: 2px solid var(--borde-suave);
+}
+
+.btn-guardar {
+    background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+    color: white;
+    padding: var(--espacio-sm) var(--espacio-xl);
+    border: none;
+    border-radius: var(--radio-medio);
+    font-size: var(--tamano-md);
+    font-weight: var(--peso-medio);
+    cursor: pointer;
+    transition: all var(--transicion-rapida);
+    box-shadow: 0 4px 6px rgba(76, 175, 80, 0.3);
+}
+
+.btn-guardar:hover {
+    background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
+    box-shadow: 0 6px 12px rgba(76, 175, 80, 0.4);
+    transform: translateY(-2px);
+}
+
+.btn-guardar:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+}
+
+.btn-cancelar {
+    background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+    color: white;
+    padding: var(--espacio-sm) var(--espacio-xl);
+    border: none;
+    border-radius: var(--radio-medio);
+    font-size: var(--tamano-md);
+    font-weight: var(--peso-medio);
+    cursor: pointer;
+    transition: all var(--transicion-rapida);
+    box-shadow: 0 4px 6px rgba(244, 67, 54, 0.3);
+}
+
+.btn-cancelar:hover {
+    background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);
+    box-shadow: 0 6px 12px rgba(244, 67, 54, 0.4);
+    transform: translateY(-2px);
+}
+
+.btn-cancelar:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(244, 67, 54, 0.3);
 }
 
 /* Modal */
@@ -1151,35 +1244,194 @@ fieldset legend {
     margin-bottom: var(--espacio-lg);
 }
 
-/* Estilos para tarjetas */
+/* ========================================
+   ESTILOS PARA TARJETAS - Diseño Optimizado
+   ======================================== */
+
+/* Contenedor de lista de tarjetas con scroll */
+#tarjetas-list {
+    max-height: 500px;
+    overflow-y: auto;
+    padding: var(--espacio-xs);
+    margin-bottom: var(--espacio-md);
+}
+
+/* Scrollbar personalizada */
+#tarjetas-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+#tarjetas-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+#tarjetas-list::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+
+#tarjetas-list::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Tarjeta individual - Diseño compacto y profesional */
 .tarjeta-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--espacio-sm);
+    margin-bottom: var(--espacio-md);
+    padding: var(--espacio-md);
+    border: 2px solid var(--borde-suave);
+    border-left: 4px solid var(--color-primario);
+    border-radius: var(--radio-pequeno);
+    background: linear-gradient(to right, #ffffff 0%, #fafafa 100%);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.tarjeta-item:hover {
+    border-left-color: var(--color-acento);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transform: translateX(4px);
+}
+
+/* Columna izquierda: Datos + PDF */
+.tarjeta-item > div:first-child {
     display: flex;
+    flex-direction: column;
+    gap: var(--espacio-sm);
+}
+
+/* Primera fila: Datos de la tarjeta */
+.tarjeta-datos {
+    display: grid;
+    grid-template-columns: 2fr 2fr 1.5fr;
     gap: var(--espacio-sm);
     align-items: center;
-    margin-bottom: var(--espacio-sm);
-    padding: var(--espacio-sm);
-    border: 2px solid var(--borde-suave);
-    border-radius: var(--radio-pequeno);
-    background-color: var(--color-fondo-plataforma);
 }
 
-.tarjeta-item input,
-.tarjeta-item select {
-    flex: 1;
-    margin: 0;
-}
-
-.tarjeta-item .estado-input {
-    flex: 0 0 auto;
-    width: 180px;
-    padding: 8px 12px;
+.tarjeta-datos input,
+.tarjeta-datos select {
+    padding: 10px 12px;
     border: 2px solid #e0e0e0;
-    border-radius: 6px;
+    border-radius: var(--radio-pequeno);
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.tarjeta-datos input:focus,
+.tarjeta-datos select:focus {
+    outline: none;
+    border-color: var(--color-primario);
+    box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+}
+
+.tarjeta-datos .placa-input {
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--color-primario);
+}
+
+.tarjeta-datos .tarjeta-input {
+    color: var(--color-acento);
+    font-weight: 500;
+}
+
+/* Segunda fila: Sección de PDF - Diseño compacto */
+.tarjeta-pdf-section {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: var(--espacio-xs);
+    align-items: center;
+    padding: var(--espacio-xs) var(--espacio-sm);
+    background: #f8f9fa;
+    border-radius: var(--radio-pequeno);
+    border: 1px solid #e9ecef;
+}
+
+.tarjeta-pdf-section .pdf-tarjeta-path {
+    padding: 8px 12px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: var(--radio-pequeno);
+    color: #495057;
+    font-size: 0.85rem;
+    font-family: 'Courier New', monospace;
+}
+
+/* Botones de PDF - Diseño compacto */
+.tarjeta-pdf-section .btn-seleccionar-pdf-tarjeta,
+.tarjeta-pdf-section .btn-ver-pdf-tarjeta {
+    padding: 8px 14px;
+    border: none;
+    border-radius: var(--radio-pequeno);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.tarjeta-pdf-section .btn-seleccionar-pdf-tarjeta {
+    background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+    color: white;
+}
+
+.tarjeta-pdf-section .btn-seleccionar-pdf-tarjeta:hover {
+    background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
+    box-shadow: 0 3px 6px rgba(76, 175, 80, 0.3);
+    transform: translateY(-1px);
+}
+
+.tarjeta-pdf-section .btn-ver-pdf-tarjeta {
+    background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+    color: white;
+}
+
+.tarjeta-pdf-section .btn-ver-pdf-tarjeta:hover {
+    background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+    box-shadow: 0 3px 6px rgba(33, 150, 243, 0.3);
+    transform: translateY(-1px);
+}
+
+/* Columna derecha: Botón eliminar */
+.tarjeta-item .eliminar-tarjeta-btn {
+    align-self: flex-start;
+    padding: 8px 14px;
+    background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+    color: white;
+    border: none;
+    border-radius: var(--radio-pequeno);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.tarjeta-item .eliminar-tarjeta-btn:hover {
+    background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);
+    box-shadow: 0 3px 6px rgba(244, 67, 54, 0.3);
+    transform: translateY(-1px);
+}
+
+/* Selector de estado mejorado */
+.tarjeta-item .estado-input {
+    padding: 10px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: var(--radio-pequeno);
     background: white;
     font-size: 0.9rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 35px;
 }
 
 .tarjeta-item .estado-input:hover {
@@ -1193,12 +1445,31 @@ fieldset legend {
     box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
 }
 
-.tarjeta-item input {
-    flex: 1;
-    margin: 0;
+/* Responsive para tarjetas */
+@media (max-width: 768px) {
+    .tarjeta-datos {
+        grid-template-columns: 1fr;
+    }
+    
+    .tarjeta-pdf-section {
+        grid-template-columns: 1fr;
+    }
+    
+    .tarjeta-pdf-section .btn-seleccionar-pdf-tarjeta,
+    .tarjeta-pdf-section .btn-ver-pdf-tarjeta {
+        width: 100%;
+    }
+    
+    .tarjeta-item {
+        grid-template-columns: 1fr;
+    }
+    
+    .tarjeta-item .eliminar-tarjeta-btn {
+        width: 100%;
+    }
 }
 
-/* Estilos para tarjetas en modo edición */
+/* Estilos para tarjetas en modo edición (legacy) */
 .tarjeta-info {
     flex: 1;
     display: flex;

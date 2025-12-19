@@ -21,7 +21,7 @@
   "license": "ISC",
   "description": "Sistema de gestión y consulta de actas de resolución y tarjetas de vehículos.",
   "dependencies": {
-    "better-sqlite3": "^12.4.1",
+    "better-sqlite3": "^12.4.6",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^5.4.394",
     "tesseract.js": "^6.0.1",
@@ -29,7 +29,9 @@
   },
   "devDependencies": {
     "electron": "^38.0.0",
-    "electron-builder": "^24.13.3"
+    "electron-builder": "^24.13.3",
+    "electron-rebuild": "^3.2.9",
+    "jest": "^30.2.0"
   },
   "build": {
     "appId": "com.sitransporte.gestor",

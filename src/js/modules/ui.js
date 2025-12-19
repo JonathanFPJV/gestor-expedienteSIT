@@ -88,15 +88,46 @@ export const getTarjetaData = () => {
         const estadoSelect = item.querySelector('.estado-input');
         const estado = estadoSelect ? estadoSelect.value : 'ACTIVA';
         const pdfInput = item.querySelector('.pdf-tarjeta-path');
-        const selectedPdfPath = pdfInput ? pdfInput.value : '';
+        
+        // 📎 Obtener la ruta del PDF desde dataset
+        const pdfPath = pdfInput && pdfInput.dataset.pdfPath ? pdfInput.dataset.pdfPath : '';
+        
+        // 📎 Obtener el ID de la tarjeta si existe (para modo edición)
+        const tarjetaId = item.dataset.tarjetaId || null;
+        
+        // 🔍 Verificar si el PDF fue cambiado (tiene marca de cambio)
+        const pdfChanged = pdfInput && pdfInput.dataset.pdfChanged === 'true';
         
         if (placa) {
-            tarjetas.push({ 
+            const tarjetaData = { 
                 placa, 
                 numeroTarjeta: numeroTarjeta || null,
-                estado: estado || 'ACTIVA',
-                pdfSourcePath: selectedPdfPath || null
-            });
+                estado: estado || 'ACTIVA'
+            };
+            
+            // 🆕 Distinguir entre PDF nuevo y PDF existente
+            if (pdfPath) {
+                // Si el PDF fue cambiado O es una ruta absoluta (nuevo archivo)
+                if (pdfChanged || pdfPath.match(/^[A-Z]:\\/i) || pdfPath.startsWith('/')) {
+                    // Es un archivo nuevo del sistema → enviar como pdfSourcePath
+                    tarjetaData.pdfSourcePath = pdfPath;
+                    console.log(`   📄 Tarjeta ${placa}: PDF NUEVO → pdfSourcePath = ${pdfPath}`);
+                } else {
+                    // Es una ruta relativa de BD → mantener como pdfPath
+                    tarjetaData.pdfPath = pdfPath;
+                    console.log(`   📎 Tarjeta ${placa}: PDF EXISTENTE → pdfPath = ${pdfPath}`);
+                }
+            } else {
+                tarjetaData.pdfPath = null;
+                console.log(`   ⚠️ Tarjeta ${placa}: Sin PDF`);
+            }
+            
+            // Incluir ID si existe (modo edición)
+            if (tarjetaId) {
+                tarjetaData._id = parseInt(tarjetaId);
+            }
+            
+            tarjetas.push(tarjetaData);
         }
     });
     
@@ -107,14 +138,18 @@ export const addTarjetaInput = () => {
     const div = document.createElement('div');
     div.className = 'tarjeta-item';
     div.innerHTML = `
-        <input type="text" class="placa-input" placeholder="Placa" required>
-        <input type="text" class="tarjeta-input" placeholder="N° Tarjeta" required>
-        <select class="estado-input" title="Estado de la tarjeta">
-            <option value="ACTIVA">✅ ACTIVA</option>
-        </select>
-        <input type="text" class="pdf-tarjeta-path" placeholder="PDF de tarjeta" readonly>
-        <button type="button" class="seleccionar-pdf-tarjeta-btn">PDF</button>
-        <button type="button" class="eliminar-tarjeta-btn">X</button>
+        <div class="tarjeta-datos">
+            <input type="text" class="placa-input" placeholder="Placa" required>
+            <input type="text" class="tarjeta-input" placeholder="N° Tarjeta" required>
+            <select class="estado-input" title="Estado de la tarjeta">
+                <option value="ACTIVA">✅ ACTIVA</option>
+            </select>
+        </div>
+        <div class="tarjeta-pdf-section">
+            <input type="text" class="pdf-tarjeta-path" placeholder="PDF de tarjeta" readonly data-pdf-path="">
+            <button type="button" class="btn-seleccionar-pdf-tarjeta">📎 Agregar PDF</button>
+        </div>
+        <button type="button" class="eliminar-tarjeta-btn">🗑️ Eliminar</button>
     `;
     tarjetasList.appendChild(div);
     
@@ -124,11 +159,19 @@ export const addTarjetaInput = () => {
     div.querySelector('.eliminar-tarjeta-btn').addEventListener('click', () => {
         div.remove();
     });
-    div.querySelector('.seleccionar-pdf-tarjeta-btn').addEventListener('click', async () => {
+    div.querySelector('.btn-seleccionar-pdf-tarjeta').addEventListener('click', async () => {
         if (window.api && window.api.abrirDialogoPdf) {
             const pdfPath = await window.api.abrirDialogoPdf();
             if (pdfPath) {
-                div.querySelector('.pdf-tarjeta-path').value = pdfPath;
+                const pdfInput = div.querySelector('.pdf-tarjeta-path');
+                // Mostrar solo el nombre del archivo
+                const fileName = pdfPath.split(/[\\/]/).pop();
+                pdfInput.value = fileName;
+                // 📎 Guardar la ruta completa en dataset
+                pdfInput.dataset.pdfPath = pdfPath;
+                // 🔄 Marcar que el PDF fue cambiado (archivo NUEVO del sistema)
+                pdfInput.dataset.pdfChanged = 'true';
+                console.log('📎 PDF seleccionado para nueva tarjeta:', pdfPath);
             }
         }
     });

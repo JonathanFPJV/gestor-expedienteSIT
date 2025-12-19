@@ -305,7 +305,14 @@
                 <!-- Campo oculto para compatibilidad -->
                 <input type="hidden" id="expediente">
                 
-                <button type="submit" id="guardar-expediente-btn">Guardar Expediente</button>
+                <div class="form-buttons">
+                    <button type="button" id="cancelar-expediente-btn" class="btn-cancelar">
+                        ❌ Cancelar
+                    </button>
+                    <button type="submit" id="guardar-expediente-btn" class="btn-guardar">
+                        💾 Guardar Expediente
+                    </button>
+                </div>
             </form>
         </div>
     </div>
@@ -316,9 +323,15 @@
             <div class="crud-header">
                 <h2>📂 Gestión de Expedientes</h2>
                 <div class="crud-actions">
-                    <button id="exportar-excel-btn" class="btn-export-excel">
-                        📊 Exportar a Excel
-                    </button>
+                    <div class="export-group">
+                        <button id="exportar-excel-btn" class="btn-export-excel" 
+                                title="Exportar TODOS los expedientes que coincidan con los filtros aplicados">
+                            📊 Exportar Excel
+                        </button>
+                        <span class="export-help-icon" title="💡 TIP: La exportación respeta los filtros activos y exporta TODOS los datos (no solo la página actual). Si no hay filtros, exporta todo.">
+                            ℹ️
+                        </span>
+                    </div>
                     <button id="nuevo-expediente-btn" class="btn-primary">
                         ➕ Nuevo Expediente
                     </button>
@@ -581,11 +594,7 @@
         </div>
     </div>
     
-    <!-- Scripts de prueba y diagnóstico -->
-    <script src="../scripts/test-connection.js"></script>
-    <script src="../scripts/test-tarjetas.js"></script>
-    <script src="../scripts/test-delete.js"></script>
-    <script src="../scripts/diagnostico-db.js"></script>
+    <!-- Script de migración automática -->
     <script src="../scripts/auto-migrate-tarjetas.js"></script>
     
     <!-- Librerías para OCR: PDF.js + Tesseract.js + pdf-lib -->

@@ -1217,7 +1217,7 @@ class BatchOcrProcessor {
             this.totalPages = 0;
 
             // 5. Sugerir garbage collection (solo en entornos que lo soporten)
-            if (global.gc) {
+            if (typeof global !== 'undefined' && global.gc) {
                 console.log('   🗑️ Ejecutando garbage collection...');
                 global.gc();
             }

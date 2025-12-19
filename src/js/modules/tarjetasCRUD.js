@@ -886,13 +886,27 @@ class TarjetasCRUD {
 
             const estado = document.getElementById('modal-estado')?.value || 'ACTIVA';
 
-            const tarjetaData = {
-                placa: placa || null,
-                numeroTarjeta: numeroTarjeta || null,
-                estado,
-                expedienteId: expedienteId || null,
-                actaEntregaId: actaEntregaId || null
+            // Limpiar valores vacíos y convertir a null para SQLite
+            const cleanValue = (value) => {
+                if (value === undefined || value === null || value === '') {
+                    return null;
+                }
+                return value;
             };
+
+            const tarjetaData = {
+                placa: cleanValue(placa),
+                numeroTarjeta: cleanValue(numeroTarjeta),
+                estado: estado,
+                expedienteId: cleanValue(expedienteId),
+                actaEntregaId: cleanValue(actaEntregaId)
+            };
+            
+            console.log('📤 Enviando datos de tarjeta:', {
+                tarjetaId: this.currentTarjetaId,
+                tarjetaData,
+                pdfPath: this.selectedPdfPath || null
+            });
 
             let resultado;
             const tarjetaIdAnterior = this.currentTarjetaId;

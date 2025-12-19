@@ -66,7 +66,7 @@ class ExpedienteHandlers {
         registerUpdateHandlers(this.expedienteService);
         registerDeleteHandlers(this.expedienteService);
         registerStatsHandlers(this.db);
-        registerExportHandler(this.expedienteService, null); // null para tarjetaService por ahora
+        registerExportHandler(this.expedienteService, this.db);
 
         // Resumen final
         console.log('='.repeat(60));

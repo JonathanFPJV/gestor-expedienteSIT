@@ -200,14 +200,54 @@ class ExpedienteService {
         // Manejar tarjetas si se proporcionaron
         let tarjetasGuardadas = [];
         if (tarjetasProvided) {
-            // Eliminar tarjetas anteriores
-            this.tarjetaManager.deleteTarjetasByExpediente(expedienteActualizado._id);
+            // 💾 Hacer backup de las tarjetas antiguas con su actaEntregaId
+            const tarjetasAntiguas = this.tarjetaManager.getTarjetasByExpediente(expedienteActualizado._id);
+            const backupTarjetas = tarjetasAntiguas.map(t => ({ ...t })); // Deep copy
             
-            if (tarjetas.length > 0) {
-                tarjetasGuardadas = await this.tarjetaManager.saveTarjetasParaExpediente(
-                    expedienteActualizado,
-                    tarjetas
-                );
+            // 🔗 Obtener el actaEntregaId de las tarjetas antiguas (todas deberían tener el mismo)
+            const actaEntregaIdExistente = tarjetasAntiguas.length > 0 ? tarjetasAntiguas[0].actaEntregaId : null;
+            console.log(`💾 Backup: ${backupTarjetas.length} tarjetas (actaEntregaId: ${actaEntregaIdExistente || 'sin acta'})`);
+            
+            try {
+                // Paso 1: Eliminar tarjetas antiguas
+                console.log(`🗑️ Eliminando ${tarjetasAntiguas.length} tarjetas antiguas...`);
+                this.tarjetaManager.deleteTarjetasByExpediente(expedienteActualizado._id);
+                
+                // Paso 2: Guardar tarjetas nuevas PRESERVANDO el actaEntregaId existente
+                if (tarjetas.length > 0) {
+                    console.log(`💾 Guardando ${tarjetas.length} tarjetas nuevas con actaEntregaId: ${actaEntregaIdExistente || 'sin acta'}`);
+                    
+                    // 🔗 Asegurar que cada tarjeta nueva tenga el actaEntregaId del expediente
+                    const tarjetasConActaId = tarjetas.map(t => ({
+                        ...t,
+                        actaEntregaId: t.actaEntregaId || actaEntregaIdExistente // Preservar el actaEntregaId existente
+                    }));
+                    
+                    tarjetasGuardadas = await this.tarjetaManager.saveTarjetasParaExpediente(
+                        expedienteActualizado,
+                        tarjetasConActaId,
+                        actaEntregaIdExistente // Pasar el actaEntregaId como parámetro
+                    );
+                    console.log(`✅ ${tarjetasGuardadas.length} tarjetas guardadas exitosamente con vínculo al acta`);
+                }
+                
+            } catch (error) {
+                // 🔥 ERROR: Restaurar tarjetas del backup
+                console.error(`❌ Error al actualizar tarjetas: ${error.message}`);
+                console.log(`🔄 Restaurando ${backupTarjetas.length} tarjetas desde backup...`);
+                
+                try {
+                    // Restaurar cada tarjeta del backup CON su actaEntregaId original
+                    backupTarjetas.forEach(tarjetaBackup => {
+                        delete tarjetaBackup._id; // Permitir que SQLite genere nuevo ID
+                        this.tarjetaManager.db.tarjetas.insert(tarjetaBackup);
+                    });
+                    console.log(`✅ Tarjetas restauradas desde backup con actaEntregaId preservado`);
+                } catch (restoreError) {
+                    console.error(`❌ Error crítico al restaurar backup:`, restoreError);
+                }
+                
+                throw new Error(`Error al actualizar tarjetas: ${error.message}. Se restauraron las tarjetas anteriores.`);
             }
         }
 

@@ -94,10 +94,19 @@ module.exports = (db) => ({
      */
     update: (query, update, options = {}) => {
         try {
+            console.log('🔍 UPDATE Query:', query);
+            console.log('🔍 UPDATE Data:', update);
+            
             const { clause: whereClause, params: whereParams } = buildWhereClause(query);
             const { clause: setClause, params: setParams } = buildSetClause(update);
 
+            console.log('🔍 WHERE Clause:', whereClause, 'Params:', whereParams);
+            console.log('🔍 SET Clause:', setClause, 'Params:', setParams);
+
             const sql = `UPDATE TarjetasVehiculos SET ${setClause} ${whereClause}`;
+            console.log('🔍 SQL Final:', sql);
+            console.log('🔍 Todos los params:', [...setParams, ...whereParams]);
+            
             const stmt = db.prepare(sql);
             const info = stmt.run(...setParams, ...whereParams);
 

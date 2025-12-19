@@ -57,22 +57,31 @@ module.exports = function createPdfManager(fileHandlers) {
 
         /**
          * Eliminar PDF de tarjeta
-         * @param {string} pdfPath - Ruta del PDF a eliminar
-         * @returns {boolean} true si se eliminó
+         * @param {string} pdfPath - Ruta del PDF a eliminar (relativa o absoluta)
+         * @returns {Promise<boolean>} true si se eliminó correctamente
          */
         async deletePdf(pdfPath) {
-            if (!pdfPath) {
-                return false;
+            if (!pdfPath || pdfPath.trim() === '') {
+                console.log('ℹ️ No hay PDF para eliminar (ruta vacía)');
+                return true; // No es un error, simplemente no hay nada que eliminar
             }
 
             try {
+                console.log('🗑️ Intentando eliminar PDF de tarjeta:', pdfPath);
                 const result = await fileHandlers.deletePdf(pdfPath);
-                console.log('🗑️ PDF de tarjeta eliminado:', pdfPath);
-                return result.success;
+                
+                if (result && result.success) {
+                    console.log('✅ PDF de tarjeta eliminado exitosamente:', pdfPath);
+                    return true;
+                } else {
+                    console.warn('⚠️ La eliminación del PDF retornó resultado no exitoso:', result);
+                    return false;
+                }
 
             } catch (error) {
-                console.warn('⚠️ No se pudo eliminar el PDF:', error.message);
-                return false;
+                console.error('❌ Error al eliminar el PDF:', error.message);
+                console.error('   Ruta intentada:', pdfPath);
+                throw error; // Propagar el error para que el llamador pueda manejarlo
             }
         },
 

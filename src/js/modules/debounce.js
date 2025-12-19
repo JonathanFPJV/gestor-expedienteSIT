@@ -86,17 +86,18 @@ export function throttle(func, limit = 300) {
 export function debounceSearch(searchFunc, delay = 500) {
     let timeoutId;
     let currentPromise = null;
+    let lastTerm = null;
     
     return function(searchTerm, ...args) {
         // Limpiar timeout anterior
         clearTimeout(timeoutId);
         
         // Si hay búsqueda en progreso y es el mismo término, no hacer nada
-        if (currentPromise && this.lastTerm === searchTerm) {
+        if (currentPromise && lastTerm === searchTerm) {
             return;
         }
         
-        this.lastTerm = searchTerm;
+        lastTerm = searchTerm;
         
         timeoutId = setTimeout(async () => {
             if (searchTerm && searchTerm.trim()) {

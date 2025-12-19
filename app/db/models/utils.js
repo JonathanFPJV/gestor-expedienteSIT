@@ -18,15 +18,28 @@ function buildWhereClause(query) {
     const params = [];
 
     for (const [key, value] of Object.entries(query)) {
+        // Saltar valores undefined
+        if (value === undefined) {
+            continue;
+        }
+        
         if (key === '_id' || key === 'id') {
             conditions.push('_id = ?');
             params.push(value);
-        } else if (typeof value === 'object' && value.$ne !== undefined) {
+        } else if (typeof value === 'object' && value !== null && value.$ne !== undefined) {
             conditions.push(`${key} != ?`);
             params.push(value.$ne);
         } else {
-            conditions.push(`${key} = ?`);
-            params.push(value);
+            // Convertir valores vacíos a null
+            const cleanValue = value === '' ? null : value;
+            
+            // Manejar null con IS NULL
+            if (cleanValue === null) {
+                conditions.push(`${key} IS NULL`);
+            } else {
+                conditions.push(`${key} = ?`);
+                params.push(cleanValue);
+            }
         }
     }
 
@@ -50,8 +63,18 @@ function buildSetClause(update) {
 
     for (const [key, value] of Object.entries(updateData)) {
         if (key !== '_id') {
+            // Filtrar valores inválidos para SQLite
+            // SQLite solo acepta: numbers, strings, bigints, buffers, y null
+            if (value === undefined) {
+                // Saltar campos undefined
+                continue;
+            }
+            
+            // Convertir valores vacíos a null
+            const cleanValue = (value === '' || value === null) ? null : value;
+            
             setClauses.push(`${key} = ?`);
-            params.push(value);
+            params.push(cleanValue);
         }
     }
 
