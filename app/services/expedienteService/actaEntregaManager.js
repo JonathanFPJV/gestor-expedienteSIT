@@ -41,6 +41,27 @@ module.exports = function createActaEntregaManager(db) {
         },
 
         /**
+         * Actualizar acta de entrega
+         * @param {number} actaId - ID del acta
+         * @param {Object} actaData - Datos a actualizar
+         * @returns {Object} Acta actualizada
+         */
+        updateActaEntrega(actaId, actaData) {
+            const updateData = {};
+            
+            if (actaData.fechaEntrega !== undefined) updateData.fechaEntrega = actaData.fechaEntrega;
+            if (actaData.n_tarjetas_entregadas !== undefined) updateData.n_tarjetas_entregadas = actaData.n_tarjetas_entregadas;
+            if (actaData.pdfPathEntrega !== undefined) updateData.pdfPathEntrega = actaData.pdfPathEntrega;
+            if (actaData.observaciones !== undefined) updateData.observaciones = actaData.observaciones;
+
+            db.actasEntrega.update({ _id: actaId }, { $set: updateData });
+            const actaActualizada = db.actasEntrega.findOne({ _id: actaId });
+            
+            console.log('✅ Acta de Entrega actualizada:', actaId);
+            return actaActualizada;
+        },
+
+        /**
          * Eliminar acta de entrega
          * @param {number} actaId - ID del acta
          * @returns {number} Cantidad eliminada
