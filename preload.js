@@ -183,6 +183,113 @@ contextBridge.exposeInMainWorld('api', {
     }
   },
   
+  // **API del Dashboard - Estadísticas y Gráficos**
+  dashboard: {
+    // Obtener estadísticas generales con filtros opcionales
+    getStats: async (filtros = {}) => {
+      console.log('📊 Obteniendo estadísticas del dashboard:', filtros);
+      try {
+        const result = await ipcRenderer.invoke('dashboard:get-stats', filtros);
+        console.log('✅ Estadísticas obtenidas:', result);
+        return result;
+      } catch (error) {
+        console.error('❌ Error al obtener estadísticas:', error);
+        throw error;
+      }
+    },
+    
+    // Obtener datos de un gráfico específico
+    getChart: async (chartType, filtros = {}) => {
+      console.log('📈 Obteniendo gráfico:', chartType, filtros);
+      try {
+        const result = await ipcRenderer.invoke('dashboard:get-chart', chartType, filtros);
+        console.log('✅ Datos del gráfico obtenidos:', result);
+        return result;
+      } catch (error) {
+        console.error('❌ Error al obtener gráfico:', error);
+        throw error;
+      }
+    },
+    
+    // Obtener todos los gráficos de una vez
+    getAllCharts: async (filtros = {}) => {
+      console.log('📊 Obteniendo todos los gráficos:', filtros);
+      try {
+        const result = await ipcRenderer.invoke('dashboard:get-all-charts', filtros);
+        console.log('✅ Todos los gráficos obtenidos');
+        return result;
+      } catch (error) {
+        console.error('❌ Error al obtener todos los gráficos:', error);
+        throw error;
+      }
+    },
+    
+    // Obtener opciones de filtros disponibles
+    getFilters: async () => {
+      console.log('🔍 Obteniendo filtros disponibles');
+      try {
+        const result = await ipcRenderer.invoke('dashboard:get-filters');
+        console.log('✅ Filtros disponibles:', result);
+        return result;
+      } catch (error) {
+        console.error('❌ Error al obtener filtros:', error);
+        throw error;
+      }
+    },
+    
+    // Aplicar filtros y obtener datos completos
+    applyFilters: async (filtros) => {
+      console.log('🎯 Aplicando filtros:', filtros);
+      try {
+        const result = await ipcRenderer.invoke('dashboard:apply-filters', filtros);
+        console.log('✅ Filtros aplicados:', result);
+        return result;
+      } catch (error) {
+        console.error('❌ Error al aplicar filtros:', error);
+        throw error;
+      }
+    },
+    
+    // Limpiar caché del dashboard
+    clearCache: async () => {
+      console.log('🗑️ Limpiando caché del dashboard');
+      try {
+        const result = await ipcRenderer.invoke('dashboard:clear-cache');
+        console.log('✅ Caché limpiado');
+        return result;
+      } catch (error) {
+        console.error('❌ Error al limpiar caché:', error);
+        throw error;
+      }
+    },
+    
+    // Exportar datos del dashboard
+    export: async (formato = 'json', filtros = {}) => {
+      console.log('📤 Exportando dashboard:', formato, filtros);
+      try {
+        const result = await ipcRenderer.invoke('dashboard:export', formato, filtros);
+        console.log('✅ Datos exportados');
+        return result;
+      } catch (error) {
+        console.error('❌ Error al exportar:', error);
+        throw error;
+      }
+    },
+    
+    // Obtener todo el dashboard de una vez (stats + charts + filters)
+    getFull: async (filtros = {}) => {
+      console.log('🎪 Obteniendo dashboard completo:', filtros);
+      try {
+        const result = await ipcRenderer.invoke('dashboard:get-full', filtros);
+        console.log('✅ Dashboard completo obtenido');
+        return result;
+      } catch (error) {
+        console.error('❌ Error al obtener dashboard completo:', error);
+        throw error;
+      }
+    }
+  },
+
   // Método para escuchar eventos del proceso principal
   on: (canal, callback) => {
     console.log(`🎯 Registrando listener para canal: ${canal}`);

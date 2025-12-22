@@ -30,6 +30,7 @@ const ActaEntregaHandlers = require('../actaEntregaHandlers');
 const registerWindowHandlers = require('./windowHandlers');
 const registerPdfHandlers = require('./pdfHandlers');
 const registerDeletionHandlers = require('./deletionHandlers');
+const { registerDashboardHandlers } = require('../dashboardHandlers');
 
 // Extraer la instancia real de la base de datos Y las APIs
 const db = database.db;  // Para servicios que usan SQLite3 directamente
@@ -86,6 +87,9 @@ function registerIpcHandlers(appInstance) {
     registerPdfHandlers(fileHandlers);
     registerDeletionHandlers(deletionService);
     
+    // 📊 Registrar handlers del Dashboard
+    registerDashboardHandlers();
+    
     // Handler para abrir carpeta con el explorador del sistema
     ipcMain.handle('shell-open-path', async (event, path) => {
         console.log('📂 Abriendo ruta en explorador:', path);
@@ -115,7 +119,8 @@ function registerIpcHandlers(appInstance) {
     console.log('   📄 Actas de Entrega: 10+ canales');
     console.log('   🪟 Ventanas: 1 canal');
     console.log('   📋 PDFs: 4 canales');
-    console.log('   📈 Total estimado: 35+ canales IPC');
+    console.log('   � Dashboard: 8 canales');
+    console.log('   📈 Total estimado: 43+ canales IPC');
     console.log('='.repeat(60));
 }
 
