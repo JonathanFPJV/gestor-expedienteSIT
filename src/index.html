@@ -5,6 +5,7 @@
     <title>Gestor de Expedientes SIT</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/dashboard.css">
 </head>
 <body>
     <!-- Navegación Principal -->
@@ -24,6 +25,9 @@
             
             <!-- Menú de Navegación -->
             <div class="nav-menu">
+                <button id="nav-dashboard" class="nav-btn">
+                    📊 Dashboard
+                </button>
                 <button id="nav-busqueda" class="nav-btn active">
                     🔍 Búsqueda
                 </button>
@@ -42,6 +46,220 @@
     
     <!-- Overlay para menú mobile -->
     <div class="nav-overlay"></div>
+
+    <!-- Sección del Dashboard -->
+    <div id="vista-dashboard" class="vista-container">
+        <div class="dashboard-container">
+            <!-- Header del Dashboard -->
+            <div class="dashboard-header">
+                <div class="dashboard-title">
+                    <span class="icon">📊</span>
+                    <h2>Dashboard - Panel de Control</h2>
+                </div>
+                <div class="dashboard-actions">
+                    <div class="realtime-indicator">
+                        <span class="realtime-dot"></span>
+                        <span>Última actualización: <span id="last-update-time">--:--</span></span>
+                    </div>
+                    <button id="btn-refresh-dashboard" class="dashboard-btn primary">
+                        🔄 Actualizar
+                    </button>
+                    <button id="btn-export-dashboard" class="dashboard-btn outline">
+                        📥 Exportar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Panel de Filtros del Dashboard -->
+            <div class="filters-panel">
+                <div class="filters-header" id="toggle-dashboard-filters">
+                    <h3>🔍 Filtros <span id="active-dashboard-filters-count"></span></h3>
+                    <span class="filters-toggle">▼</span>
+                </div>
+                <div class="filters-content">
+                    <div class="filter-group">
+                        <label for="dashboard-filter-anio">Año</label>
+                        <select id="dashboard-filter-anio">
+                            <option value="">Todos los años</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="dashboard-filter-unidad">Unidad de Negocio</label>
+                        <select id="dashboard-filter-unidad">
+                            <option value="">Todas las unidades</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="dashboard-filter-estado">Estado de Tarjeta</label>
+                        <select id="dashboard-filter-estado">
+                            <option value="">Todos los estados</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="dashboard-filter-fecha-desde">Desde</label>
+                        <input type="date" id="dashboard-filter-fecha-desde">
+                    </div>
+                    <div class="filter-group">
+                        <label for="dashboard-filter-fecha-hasta">Hasta</label>
+                        <input type="date" id="dashboard-filter-fecha-hasta">
+                    </div>
+                    <div class="filter-group">
+                        <label for="dashboard-filter-rango">Rango Predefinido</label>
+                        <select id="dashboard-filter-rango">
+                            <option value="">Personalizado</option>
+                        </select>
+                    </div>
+                    <div class="filter-actions">
+                        <button id="btn-apply-dashboard-filters" class="dashboard-btn primary">Aplicar</button>
+                        <button id="btn-clear-dashboard-filters" class="dashboard-btn outline">Limpiar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tarjetas de Estadísticas -->
+            <div class="stats-grid">
+                <div class="stat-card orange">
+                    <div class="stat-card-header">
+                        <span class="stat-card-title">Total Tarjetas</span>
+                        <div class="stat-card-icon">🎫</div>
+                    </div>
+                    <div class="stat-card-value" id="stat-total-tarjetas">0</div>
+                    <div class="stat-card-trend neutral">
+                        <span>Registradas en el sistema</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card green">
+                    <div class="stat-card-header">
+                        <span class="stat-card-title">Tarjetas Activas</span>
+                        <div class="stat-card-icon">✅</div>
+                    </div>
+                    <div class="stat-card-value" id="stat-tarjetas-activas">0</div>
+                    <div class="stat-card-trend up">
+                        <span>En circulación</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card blue">
+                    <div class="stat-card-header">
+                        <span class="stat-card-title">Total Expedientes</span>
+                        <div class="stat-card-icon">📂</div>
+                    </div>
+                    <div class="stat-card-value" id="stat-total-expedientes">0</div>
+                    <div class="stat-card-trend neutral">
+                        <span>Procesados</span>
+                    </div>
+                </div>
+                
+                
+                <div class="stat-card blue">
+                    <div class="stat-card-header">
+                        <span class="stat-card-title">Expedientes del Mes</span>
+                        <div class="stat-card-icon">📅</div>
+                    </div>
+                    <div class="stat-card-value" id="stat-expedientes-mes">0</div>
+                    <div class="stat-card-trend neutral">
+                        <span>Este mes</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card orange">
+                    <div class="stat-card-header">
+                        <span class="stat-card-title">Tarjetas Canceladas</span>
+                        <div class="stat-card-icon">❌</div>
+                    </div>
+                    <div class="stat-card-value" id="stat-tarjetas-canceladas">0</div>
+                    <div class="stat-card-trend down">
+                        <span>Dadas de baja</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grid de Gráficos -->
+            <div class="charts-grid">
+                <!-- Tarjetas por Estado -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <span class="chart-title">🎫 Tarjetas por Estado</span>
+                    </div>
+                    <div class="chart-body">
+                        <div class="chart-loading">
+                            <div class="spinner"></div>
+                            <span>Cargando...</span>
+                        </div>
+                        <div class="chart-canvas-container">
+                            <canvas id="chart-tarjetas-estado"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Expedientes por Mes -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <span class="chart-title">📅 Expedientes por Mes</span>
+                    </div>
+                    <div class="chart-body">
+                        <div class="chart-loading">
+                            <div class="spinner"></div>
+                            <span>Cargando...</span>
+                        </div>
+                        <div class="chart-canvas-container">
+                            <canvas id="chart-expedientes-mes"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tarjetas por Unidad de Negocio -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <span class="chart-title">🏢 Tarjetas por Unidad de Negocio</span>
+                    </div>
+                    <div class="chart-body">
+                        <div class="chart-loading">
+                            <div class="spinner"></div>
+                            <span>Cargando...</span>
+                        </div>
+                        <div class="chart-canvas-container">
+                            <canvas id="chart-tarjetas-unidad"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Entregas -->
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <span class="chart-title">📋 Estado de Entregas</span>
+                    </div>
+                    <div class="chart-body">
+                        <div class="chart-loading">
+                            <div class="spinner"></div>
+                            <span>Cargando...</span>
+                        </div>
+                        <div class="chart-canvas-container">
+                            <canvas id="chart-entregas"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                
+                <!-- Expedientes por Año -->
+                <div class="chart-card full-width">
+                    <div class="chart-header">
+                        <span class="chart-title">📊 Expedientes por Año</span>
+                    </div>
+                    <div class="chart-body">
+                        <div class="chart-loading">
+                            <div class="spinner"></div>
+                            <span>Cargando...</span>
+                        </div>
+                        <div class="chart-canvas-container">
+                            <canvas id="chart-expedientes-anio"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Sección de Búsqueda (Vista por defecto) -->
     <div id="vista-busqueda" class="vista-container active">
@@ -596,6 +814,9 @@
     
     <!-- Script de migración automática -->
     <script src="../scripts/auto-migrate-tarjetas.js"></script>
+    
+    <!-- Chart.js para gráficos del Dashboard -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     
     <!-- Librerías para OCR: PDF.js + Tesseract.js + pdf-lib -->
     <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>

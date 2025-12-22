@@ -33,6 +33,7 @@ class NavigationManager {
      */
     setupNavButtons() {
         const navMapping = {
+            'nav-dashboard': 'vista-dashboard',
             'nav-busqueda': 'vista-busqueda',
             'nav-crud': 'vista-crud',
             'nav-tarjetas': 'vista-tarjetas-crud',
@@ -47,6 +48,9 @@ class NavigationManager {
                 if (viewId) {
                     this.showView(viewId);
                     this.setActiveButton(button);
+                    
+                    // Ejecutar callback de cambio de vista
+                    this.onViewChange(viewId);
                     
                     // Cerrar menú mobile si está abierto
                     this.closeMobileMenu();
@@ -240,6 +244,7 @@ class NavigationManager {
      */
     getButtonIdFromView(viewId) {
         const mapping = {
+            'vista-dashboard': 'nav-dashboard',
             'vista-busqueda': 'nav-busqueda',
             'vista-registro': 'nav-crud', // El formulario se accede desde el botón interno de gestión
             'vista-crud': 'nav-crud',
@@ -247,6 +252,16 @@ class NavigationManager {
             'vista-actas-crud': 'nav-actas'
         };
         return mapping[viewId];
+    }
+
+    /**
+     * Callback cuando cambia la vista - para inicializar el dashboard
+     */
+    onViewChange(viewId) {
+        if (viewId === 'vista-dashboard' && window.dashboardManager) {
+            console.log('📊 Navegando al Dashboard, actualizando datos...');
+            window.dashboardManager.refreshDashboard();
+        }
     }
 }
 

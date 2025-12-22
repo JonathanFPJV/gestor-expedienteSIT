@@ -19,6 +19,7 @@ import { formAutofill } from './modules/formAutofill.js';
 import batchOcrProcessor from './modules/batchOcrProcessor.js';
 import batchOcrUI from './modules/batchOcrUI.js';
 import actaOcrProcessor from './modules/actaOcrProcessor.js';
+import { dashboardManager } from './modules/dashboard/index.js';
 
 // Inicializar visualizador de PDFs
 const simplePdfViewer = new SimplePDFViewer();
@@ -42,6 +43,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Inicializar auto-completado de formulario
     formAutofill.initializeFormElements();
     
+    // Inicializar Dashboard
+    initializeDashboard();
+    
     // Hacer disponibles globalmente
     window.navigationManager = navigationManager;
     window.expedientesCRUD = expedientesCRUD;
@@ -57,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.dataService = dataService;
     window.ui = ui;
     window.simplePdfViewer = simplePdfViewer; // ✅ Visualizador de PDFs
+    window.dashboardManager = dashboardManager; // 📊 Dashboard Manager
     
     // Hacer disponibles las funciones de búsqueda para searchManager
     window.performTarjetasSearch = performTarjetasSearch;
@@ -972,4 +977,102 @@ function refreshActiveSearches() {
             performExpedientesSearch(true, expedientesInput.value.trim()); // Forzar refresh
         }, 500);
     }
+}
+
+// ===== DASHBOARD INITIALIZATION =====
+function initializeDashboard() {
+    console.log('📊 Configurando Dashboard...');
+    
+    // Inicializar el Dashboard Manager
+    dashboardManager.initialize();
+    
+    // Botón de actualizar
+    const refreshBtn = document.getElementById('btn-refresh-dashboard');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+            dashboardManager.refreshDashboard();
+        });
+    }
+    
+    // Botón de exportar
+    const exportBtn = document.getElementById('btn-export-dashboard');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => {
+            dashboardManager.exportDashboard('json');
+        });
+    }
+    
+    // Toggle de filtros del dashboard
+    const toggleFilters = document.getElementById('toggle-dashboard-filters');
+    if (toggleFilters) {
+        toggleFilters.addEventListener('click', () => {
+            dashboardManager.toggleFiltersPanel();
+        });
+    }
+    
+    // Botón aplicar filtros del dashboard
+    const applyFiltersBtn = document.getElementById('btn-apply-dashboard-filters');
+    if (applyFiltersBtn) {
+        applyFiltersBtn.addEventListener('click', () => {
+            dashboardManager.applyFilters();
+        });
+    }
+    
+    // Botón limpiar filtros del dashboard
+    const clearFiltersBtn = document.getElementById('btn-clear-dashboard-filters');
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', () => {
+            dashboardManager.clearFilters();
+        });
+    }
+    
+    // Cambio en rango predefinido del dashboard
+    const rangoSelect = document.getElementById('dashboard-filter-rango');
+    if (rangoSelect) {
+        rangoSelect.addEventListener('change', (e) => {
+            if (e.target.value) {
+                // Aplicar rango predefinido automáticamente
+                const fechaDesde = document.getElementById('dashboard-filter-fecha-desde');
+                const fechaHasta = document.getElementById('dashboard-filter-fecha-hasta');
+                
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = now.getMonth();
+                
+                switch (e.target.value) {
+                    case 'este-mes':
+                        if (fechaDesde) fechaDesde.value = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+                        if (fechaHasta) fechaHasta.value = now.toISOString().split('T')[0];
+                        break;
+                    case 'mes-anterior':
+                        const prevMonth = month === 0 ? 11 : month - 1;
+                        const prevYear = month === 0 ? year - 1 : year;
+                        const lastDay = new Date(prevYear, prevMonth + 1, 0).getDate();
+                        if (fechaDesde) fechaDesde.value = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-01`;
+                        if (fechaHasta) fechaHasta.value = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-${lastDay}`;
+                        break;
+                    case 'este-anio':
+                        if (fechaDesde) fechaDesde.value = `${year}-01-01`;
+                        if (fechaHasta) fechaHasta.value = now.toISOString().split('T')[0];
+                        break;
+                    case 'anio-anterior':
+                        if (fechaDesde) fechaDesde.value = `${year - 1}-01-01`;
+                        if (fechaHasta) fechaHasta.value = `${year - 1}-12-31`;
+                        break;
+                    case 'ultimos-30-dias':
+                        const hace30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                        if (fechaDesde) fechaDesde.value = hace30.toISOString().split('T')[0];
+                        if (fechaHasta) fechaHasta.value = now.toISOString().split('T')[0];
+                        break;
+                    case 'ultimos-90-dias':
+                        const hace90 = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+                        if (fechaDesde) fechaDesde.value = hace90.toISOString().split('T')[0];
+                        if (fechaHasta) fechaHasta.value = now.toISOString().split('T')[0];
+                        break;
+                }
+            }
+        });
+    }
+    
+    console.log('✅ Dashboard configurado');
 }

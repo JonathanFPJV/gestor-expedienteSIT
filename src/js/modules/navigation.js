@@ -3,6 +3,7 @@ export class NavigationManager {
     constructor() {
         this.currentView = 'busqueda';
         this.views = {
+            'dashboard': document.getElementById('vista-dashboard'),
             'busqueda': document.getElementById('vista-busqueda'),
             'registro': document.getElementById('vista-registro'),
             'crud': document.getElementById('vista-crud'),
@@ -10,6 +11,7 @@ export class NavigationManager {
             'actas-crud': document.getElementById('vista-actas-crud')
         };
         this.navButtons = {
+            'dashboard': document.getElementById('nav-dashboard'),
             'busqueda': document.getElementById('nav-busqueda'),
             'crud': document.getElementById('nav-crud'),
             'tarjetas-crud': document.getElementById('nav-tarjetas'),
@@ -52,7 +54,9 @@ export class NavigationManager {
 
         // Mostrar vista seleccionada
         this.views[viewName].classList.add('active');
-        this.navButtons[viewName].classList.add('active');
+        if (this.navButtons[viewName]) {
+            this.navButtons[viewName].classList.add('active');
+        }
 
         // Actualizar vista actual
         this.currentView = viewName;
@@ -63,6 +67,12 @@ export class NavigationManager {
 
     onViewChange(viewName) {
         switch(viewName) {
+            case 'dashboard':
+                // Inicializar/actualizar dashboard
+                if (window.dashboardManager) {
+                    window.dashboardManager.refreshDashboard();
+                }
+                break;
             case 'crud':
                 // Cargar expedientes cuando se accede al CRUD
                 if (window.expedientesCRUD) {
