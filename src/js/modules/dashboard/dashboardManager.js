@@ -24,6 +24,21 @@ export class DashboardManager {
             gray: '#6C757D'
         };
         
+        // Colores específicos para unidades de negocio (según imagen corporativa)
+        this.unidadNegocioColors = {
+            'C - 1': '#7CB342',      // Verde lima
+            'C - 2': '#BDBDBD',      // Gris claro
+            'C - 3': '#FFEB3B',      // Amarillo
+            'C - 4': '#FF9800',      // Naranja
+            'C - 5': '#F44336',      // Rojo
+            'C - 6': '#A1887F',      // Gris/beige
+            'C - 7': '#795548',      // Marrón
+            'C - 8': '#26A69A',      // Verde agua/turquesa
+            'C - 9': '#1A237E',      // Azul oscuro/navy
+            'C - 10': '#E91E63',     // Magenta/rosa
+            'C - 11': '#2E7D32'      // Verde oscuro
+        };
+        
         // Paleta de colores para gráficos
         this.chartPalette = [
             this.sitColors.orange,
@@ -324,10 +339,25 @@ export class DashboardManager {
         // Los datasets ya vienen preparados del backend
         const datasets = chartData.datasets || [];
         
-        // Si no hay colores, aplicar paleta SIT
+        // Detectar si es un gráfico de unidades de negocio
+        const isUnidadNegocioChart = canvasId === 'chart-tarjetas-unidad' || 
+                                     (chartData.labels && chartData.labels.some(label => 
+                                        label && typeof label === 'string' && label.startsWith('C - ')
+                                     ));
+        
+        // Si no hay colores, aplicar paleta SIT o colores de unidades de negocio
         datasets.forEach((ds, index) => {
             if (!ds.backgroundColor) {
-                if (type === 'line') {
+                if (isUnidadNegocioChart && chartData.labels) {
+                    // Aplicar colores específicos de unidades de negocio
+                    ds.backgroundColor = chartData.labels.map(label => 
+                        this.unidadNegocioColors[label] || this.chartPalette[index % this.chartPalette.length]
+                    );
+                    ds.borderColor = chartData.labels.map(label => 
+                        this.unidadNegocioColors[label] || this.chartPalette[index % this.chartPalette.length]
+                    );
+                    ds.borderWidth = 1;
+                } else if (type === 'line') {
                     ds.backgroundColor = this.chartPalette[index % this.chartPalette.length];
                     ds.borderColor = this.chartPalette[index % this.chartPalette.length];
                 } else if (type === 'doughnut' || type === 'pie') {
