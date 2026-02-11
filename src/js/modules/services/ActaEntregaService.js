@@ -14,13 +14,13 @@ export class ActaEntregaService {
      */
     async loadActaEntregaInfo(actaEntregaId, onLoad) {
         try {
-            console.log('📄 [ActaEntregaService] Cargando acta de entrega:', actaEntregaId);
+            console.log('[ActaEntregaService] Cargando acta de entrega:', actaEntregaId);
 
             const actaResponse = await window.api.invoke('acta-entrega:obtener-por-id', actaEntregaId);
 
             if (actaResponse && actaResponse.success && actaResponse.acta) {
                 const acta = actaResponse.acta;
-                console.log('✅ Acta de entrega obtenida:', acta);
+                console.log('Acta de entrega obtenida:', acta);
 
                 if (onLoad) {
                     onLoad(acta);
@@ -31,14 +31,14 @@ export class ActaEntregaService {
                     acta
                 };
             } else {
-                console.warn('⚠️ No se pudo obtener el acta de entrega');
+                console.warn('No se pudo obtener el acta de entrega');
                 return {
                     success: false,
                     error: 'No se pudo obtener el acta'
                 };
             }
         } catch (error) {
-            console.error('❌ Error al cargar acta de entrega:', error);
+            console.error('Error al cargar acta de entrega:', error);
             return {
                 success: false,
                 error: error.message
@@ -99,7 +99,7 @@ export class ActaEntregaService {
                 seleccionarPdfActaBtn.style.cursor = 'not-allowed';
             }
 
-            console.log('✅ Acta de entrega mostrada como SOLO LECTURA');
+            console.log('Acta de entrega mostrada como solo lectura');
         }, 100);
     }
 

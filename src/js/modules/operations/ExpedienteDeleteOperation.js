@@ -17,7 +17,7 @@ export class ExpedienteDeleteOperation {
      */
     async confirmDelete(expedienteId, onConfirm, onCancel) {
         try {
-            console.log('🗑️ [DeleteOperation] Solicitando confirmación para expediente:', expedienteId);
+            console.log('[DeleteOperation] Solicitando confirmación para expediente:', expedienteId);
 
             // Obtener información del expediente
             const infoResult = await expedienteService.getDeleteInfo(expedienteId);
@@ -36,19 +36,19 @@ export class ExpedienteDeleteOperation {
                 const pdfExists = expedienteInfo.pdfPath && expedienteInfo.pdfPath !== '';
 
                 let mensaje = `¿Estás seguro de que deseas eliminar este expediente?\n\n`;
-                mensaje += `📄 Expediente: ${expedienteInfo.numeroExpediente}-${expedienteInfo.anioExpediente || ''}\n`;
-                mensaje += `🏢 Empresa: ${expedienteInfo.nombreEmpresa || 'Sin nombre'}\n`;
-                mensaje += `📋 Resolución: ${expedienteInfo.numeroResolucion || 'Sin resolución'}\n\n`;
+                mensaje += `Expediente: ${expedienteInfo.numeroExpediente}-${expedienteInfo.anioExpediente || ''}\n`;
+                mensaje += `Empresa: ${expedienteInfo.nombreEmpresa || 'Sin nombre'}\n`;
+                mensaje += `Resolución: ${expedienteInfo.numeroResolucion || 'Sin resolución'}\n\n`;
 
                 if (tarjetasCount > 0) {
-                    mensaje += `⚠️ Se eliminarán ${tarjetasCount} tarjeta(s) asociada(s)\n`;
+                    mensaje += `Se eliminarán ${tarjetasCount} tarjeta(s) asociada(s)\n`;
                 }
 
                 if (pdfExists) {
-                    mensaje += `⚠️ También se eliminará el PDF asociado\n`;
+                    mensaje += `También se eliminará el PDF asociado\n`;
                 }
 
-                mensaje += `\n❌ Esta acción NO se puede deshacer`;
+                mensaje += `\nEsta acción NO se puede deshacer`;
 
                 const confirmado = confirm(mensaje);
 

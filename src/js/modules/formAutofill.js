@@ -24,7 +24,7 @@ export class FormAutofill {
             unidadNegocio: document.getElementById('unidadNegocio')
         };
 
-        console.log('✅ FormAutofill: Elementos del formulario inicializados');
+        console.log('FormAutofill: Elementos del formulario inicializados');
     }
 
     /**
@@ -34,13 +34,13 @@ export class FormAutofill {
      */
     autofillForm(data) {
         if (!data) {
-            console.warn('⚠️ No hay datos para auto-completar');
+            console.warn('No hay datos para auto-completar');
             return { filled: 0, total: 0 };
         }
 
-        console.log('📝 ==========================================');
-        console.log('📝 INICIANDO AUTO-COMPLETADO DEL FORMULARIO');
-        console.log('📝 ==========================================');
+        console.log('==========================================');
+        console.log('INICIANDO AUTO-COMPLETADO DEL FORMULARIO');
+        console.log('==========================================');
 
         let filledCount = 0;
         const totalFields = Object.keys(this.formElements).length;
@@ -86,9 +86,9 @@ export class FormAutofill {
             filledCount++;
         }
 
-        console.log('✅ ==========================================');
-        console.log(`✅ AUTO-COMPLETADO FINALIZADO: ${filledCount}/${totalFields} campos`);
-        console.log('✅ ==========================================');
+        console.log('==========================================');
+        console.log(`AUTO-COMPLETADO FINALIZADO: ${filledCount}/${totalFields} campos`);
+        console.log('==========================================');
 
         return { filled: filledCount, total: totalFields };
     }
@@ -103,21 +103,21 @@ export class FormAutofill {
         const element = this.formElements[fieldId];
 
         if (!element) {
-            console.warn(`   ⚠️ Campo no encontrado: ${fieldId}`);
+            console.warn(`Campo no encontrado: ${fieldId}`);
             return;
         }
 
         element.value = value;
-        
+
         // Añadir clase visual para campos auto-completados
         element.classList.add('autofilled');
-        
+
         // Remover clase después de animación
         setTimeout(() => {
             element.classList.remove('autofilled');
         }, 2000);
 
-        console.log(`   ✅ ${label}: "${value}"`);
+        console.log(`   ${label}: "${value}"`);
     }
 
     /**
@@ -131,7 +131,7 @@ export class FormAutofill {
             }
         });
 
-        console.log('🗑️ Formulario limpiado');
+        console.log('Formulario limpiado');
     }
 
     /**
@@ -140,7 +140,7 @@ export class FormAutofill {
      */
     highlightAutofilledFields(duration = 2000) {
         const autofilledElements = document.querySelectorAll('.autofilled');
-        
+
         autofilledElements.forEach(element => {
             element.style.transition = 'background-color 0.3s ease';
         });

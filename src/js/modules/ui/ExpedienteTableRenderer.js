@@ -26,7 +26,7 @@ export class ExpedienteTableRenderer {
      */
     renderTable(expedientes, options = {}) {
         if (!this.tbody) {
-            console.warn('⚠️ No hay tbody disponible para renderizar');
+            console.warn('No hay tbody disponible para renderizar');
             return;
         }
 
@@ -85,13 +85,13 @@ export class ExpedienteTableRenderer {
             <td>
                 <div class="action-btns">
                     <button class="btn-action btn-view" onclick="expedientesCRUD.viewExpediente(${expediente._id})" title="Ver detalles">
-                        👁️
+                        Ver
                     </button>
                     <button class="btn-action btn-edit" onclick="expedientesCRUD.editExpediente(${expediente._id})" title="Editar">
-                        ✏️
+                        Editar
                     </button>
                     <button class="btn-action btn-delete" onclick="expedientesCRUD.confirmDelete(${expediente._id})" title="Eliminar">
-                        🗑️
+                        Eliminar
                     </button>
                 </div>
             </td>
@@ -141,7 +141,7 @@ export class ExpedienteTableRenderer {
         this.tbody.innerHTML = `
             <tr>
                 <td colspan="8" style="text-align: center; padding: 40px; color: #d32f2f;">
-                    ❌ ${errorMessage}
+                    ${errorMessage}
                 </td>
             </tr>
         `;

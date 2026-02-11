@@ -34,7 +34,7 @@ export class TarjetaFormService {
             }
             return false;
         } catch (error) {
-            console.error('❌ Error al actualizar tarjeta:', error);
+            console.error('Error al actualizar tarjeta:', error);
             return false;
         }
     }
@@ -65,7 +65,7 @@ export class TarjetaFormService {
 
             return true;
         } catch (error) {
-            console.error('❌ Error al eliminar tarjeta:', error);
+            console.error('Error al eliminar tarjeta:', error);
             return false;
         }
     }
@@ -104,7 +104,7 @@ export class TarjetaFormService {
                     <select class="estado-input"
                             data-field="estado"
                             onchange="window.expedientesCRUD.updateTarjetaData(${idx}, 'estado', this.value)">
-                        <option value="ACTIVA">✅ ACTIVA</option>
+                        <option value="ACTIVA">ACTIVA</option>
                     </select>
                 </div>
                 <div class="tarjeta-pdf-section">
@@ -117,19 +117,19 @@ export class TarjetaFormService {
                     <button type="button" 
                             class="btn-seleccionar-pdf-tarjeta"
                             onclick="window.expedientesCRUD.seleccionarPdfTarjeta(${idx})">
-                        📎 PDF
+                        PDF
                     </button>
                     <button type="button" 
                             class="ver-pdf-tarjeta-btn"
                             style="${tarjeta.pdfPath ? '' : 'display:none'}"
                             onclick="window.expedientesCRUD.verPdfTarjeta(${idx})">
-                        👁️ Ver
+                        Ver
                     </button>
                 </div>
                 <button type="button" 
                         class="eliminar-tarjeta-btn" 
                         onclick="window.expedientesCRUD.removeTarjetaFromForm(${idx})">
-                    🗑️
+                    Eliminar
                 </button>
             `;
             tarjetasList.appendChild(tarjetaDiv);
@@ -160,7 +160,7 @@ export class TarjetaFormService {
                 resultado.estados.forEach(estado => {
                     const option = document.createElement('option');
                     option.value = estado.valor;
-                    option.textContent = `${estado.icono} ${estado.valor}`;
+                    option.textContent = estado.valor;
 
                     if (estado.valor === estadoSeleccionado) {
                         option.selected = true;
@@ -170,9 +170,9 @@ export class TarjetaFormService {
                 });
             }
         } catch (error) {
-            console.error('❌ Error al cargar estados:', error);
+            console.error('Error al cargar estados:', error);
             // Mantener valor por defecto si hay error
-            selectElement.innerHTML = '<option value="ACTIVA">✅ ACTIVA</option>';
+            selectElement.innerHTML = '<option value="ACTIVA">ACTIVA</option>';
         }
     }
 
@@ -207,7 +207,7 @@ export class TarjetaFormService {
 
             return { success: false };
         } catch (error) {
-            console.error('❌ Error al seleccionar PDF:', error);
+            console.error('Error al seleccionar PDF:', error);
             return {
                 success: false,
                 error: error.message || 'Error al seleccionar archivo PDF'
@@ -250,7 +250,7 @@ export class TarjetaFormService {
                 };
             }
         } catch (error) {
-            console.error('❌ Error al extraer OCR de tarjeta:', error);
+            console.error('Error al extraer OCR de tarjeta:', error);
             return {
                 success: false,
                 error: error.message || 'Error al extraer texto del PDF'
@@ -267,7 +267,7 @@ export class TarjetaFormService {
         const pdfPath = this.selectedPdfPaths.get(index);
 
         if (!pdfPath) {
-            console.warn('⚠️ No hay PDF seleccionado para esta tarjeta');
+            console.warn('No hay PDF seleccionado para esta tarjeta');
             return;
         }
 
@@ -275,7 +275,7 @@ export class TarjetaFormService {
             await window.api.invoke('abrir-pdf-externo', pdfPath);
             console.log(`PDF abierto: ${pdfPath}`);
         } catch (error) {
-            console.error('❌ Error al abrir PDF:', error);
+            console.error('Error al abrir PDF:', error);
         }
     }
 

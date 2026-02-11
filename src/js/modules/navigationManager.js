@@ -13,7 +13,7 @@ class NavigationManager {
         this.navToggle = null;
         this.navMenu = null;
         this.navOverlay = null;
-        
+
         this.init();
     }
 
@@ -21,11 +21,11 @@ class NavigationManager {
         this.setupNavButtons();
         this.setupMobileMenu();
         this.setupViewTransitions();
-        
+
         // Activar vista por defecto
         this.showView('vista-busqueda');
-        
-        console.log('✅ NavigationManager inicializado');
+
+        console.log('NavigationManager inicializado');
     }
 
     /**
@@ -44,14 +44,14 @@ class NavigationManager {
             button.addEventListener('click', (e) => {
                 e.preventDefault();
                 const viewId = navMapping[button.id];
-                
+
                 if (viewId) {
                     this.showView(viewId);
                     this.setActiveButton(button);
-                    
+
                     // Ejecutar callback de cambio de vista
                     this.onViewChange(viewId);
-                    
+
                     // Cerrar menú mobile si está abierto
                     this.closeMobileMenu();
                 }
@@ -110,9 +110,9 @@ class NavigationManager {
      * Crear botón hamburguesa
      */
     createMobileMenuButton() {
-        const navContainer = document.querySelector('.nav-container') || 
-                           document.querySelector('.main-nav');
-        
+        const navContainer = document.querySelector('.nav-container') ||
+            document.querySelector('.main-nav');
+
         if (!navContainer) return;
 
         const toggleButton = document.createElement('button');
@@ -205,7 +205,7 @@ class NavigationManager {
                 behavior: 'smooth'
             });
 
-            console.log(`📍 Vista activa: ${viewId}`);
+            console.log(`Vista activa: ${viewId}`);
         }
     }
 
@@ -232,7 +232,7 @@ class NavigationManager {
     navigateTo(viewId) {
         const buttonId = this.getButtonIdFromView(viewId);
         const button = document.getElementById(buttonId);
-        
+
         if (button) {
             this.showView(viewId);
             this.setActiveButton(button);
@@ -259,7 +259,7 @@ class NavigationManager {
      */
     onViewChange(viewId) {
         if (viewId === 'vista-dashboard' && window.dashboardManager) {
-            console.log('📊 Navegando al Dashboard, actualizando datos...');
+            console.log('Navegando al Dashboard, actualizando datos...');
             window.dashboardManager.refreshDashboard();
         }
     }

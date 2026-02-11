@@ -16,10 +16,10 @@ export class SimplePDFViewer {
 
     async loadPDF(pdfPath) {
         if (this.isLoading) return false;
-        
+
         try {
             this.isLoading = true;
-            
+
             // Obtener los datos del PDF desde el backend
             const pdfData = await window.api.invoke('obtener-pdf-data', pdfPath);
             if (!pdfData) {
@@ -30,7 +30,7 @@ export class SimplePDFViewer {
             const uint8Array = new Uint8Array(pdfData);
             this.currentPdf = await pdfjsLib.getDocument({ data: uint8Array }).promise;
             this.renderedPages.clear();
-            
+
             return true;
         } catch (error) {
             console.error('Error al cargar el PDF:', error);
@@ -48,17 +48,17 @@ export class SimplePDFViewer {
         try {
             const page = await this.currentPdf.getPage(pageNumber);
             const currentScale = scale !== null ? scale : this.scale;
-            
+
             // Obtener la rotación original del PDF y combinarla con la rotación del usuario
             const pageRotation = page.rotate || 0;
             const userRotation = rotation !== null ? rotation : this.rotation;
             const totalRotation = (pageRotation + userRotation) % 360;
-            
-            const viewport = page.getViewport({ 
-                scale: currentScale, 
-                rotation: totalRotation 
+
+            const viewport = page.getViewport({
+                scale: currentScale,
+                rotation: totalRotation
             });
-            
+
             const context = canvas.getContext('2d');
             canvas.height = viewport.height;
             canvas.width = viewport.width;
@@ -87,7 +87,7 @@ export class SimplePDFViewer {
         }
 
         const viewerId = `simple-pdf-viewer-${Date.now()}`;
-        
+
         // Crear estructura del visor simplificado con altura fija
         const viewerHTML = `
             <div class="simple-pdf-viewer" id="${viewerId}">
@@ -98,21 +98,20 @@ export class SimplePDFViewer {
                     </div>
                     <div class="pdf-controls">
                         <button class="pdf-control-btn toggle-viewer" title="Mostrar/Ocultar PDF">
-                            <span class="control-icon">👁️</span>
-                            <span class="control-text">Ocultar</span>
+                            <span class="control-text">Ver/Ocultar</span>
                         </button>
                         
                         <div class="control-separator"></div>
                         
                         <button class="pdf-control-btn zoom-out" title="Reducir zoom">
-                            <span class="control-icon">🔍➖</span>
+                            <span class="control-text">-</span>
                         </button>
                         <span class="zoom-display">100%</span>
                         <button class="pdf-control-btn zoom-in" title="Aumentar zoom">
-                            <span class="control-icon">🔍➕</span>
+                            <span class="control-text">+</span>
                         </button>
                         <button class="pdf-control-btn fit-width" title="Ajustar al ancho">
-                            <span class="control-icon">↔️</span>
+                            <span class="control-text">Ancho</span>
                         </button>
                         
                         <div class="control-separator"></div>
@@ -127,14 +126,13 @@ export class SimplePDFViewer {
                         <div class="control-separator"></div>
                         
                         <button class="pdf-control-btn print-pdf" title="Imprimir PDF (Clic derecho: Ver impresoras)">
-                            <span class="control-icon">🖨️</span>
                             <span class="control-text">Imprimir</span>
                         </button>
                         <button class="pdf-control-btn download-pdf" title="Descargar PDF">
-                            <span class="control-icon">💾</span>
+                            <span class="control-text">Guardar</span>
                         </button>
                         <button class="pdf-control-btn open-external" title="Abrir externo">
-                            <span class="control-icon">🔗</span>
+                            <span class="control-text">Abrir</span>
                         </button>
                     </div>
                 </div>
@@ -146,7 +144,6 @@ export class SimplePDFViewer {
                     </div>
                     
                     <div class="pdf-error-state" style="display: none;">
-                        <span class="error-icon">⚠️</span>
                         <span class="error-message">Error al cargar el PDF</span>
                         <button class="retry-button">Reintentar</button>
                     </div>
@@ -161,21 +158,21 @@ export class SimplePDFViewer {
         `;
 
         container.insertAdjacentHTML('beforeend', viewerHTML);
-        
+
         const viewer = container.querySelector(`#${viewerId}`);
-        
+
         // Agregar estilos
         this.addSimpleStyles();
-        
+
         // Cargar y mostrar el PDF
         this.loadAndDisplay(pdfPath, viewer);
-        
+
         // Configurar controles
         this.setupSimpleControls(viewer, pdfPath);
-        
+
         // Inicializar zoom display
         this.initializeZoomDisplay(viewer);
-        
+
         return viewer;
     }
 
@@ -185,45 +182,45 @@ export class SimplePDFViewer {
         const scrollContainer = viewer.querySelector('.pdf-scroll-container');
         const pagesWrapper = viewer.querySelector('.pdf-pages-wrapper');
         const pagesInfo = viewer.querySelector('.pdf-pages-info');
-        
+
         const MAX_RETRIES = 2; // Intentar hasta 3 veces (0, 1, 2)
-        
+
         // Mostrar loading
         loadingDiv.style.display = 'flex';
         errorDiv.style.display = 'none';
         scrollContainer.style.display = 'none';
-        
+
         // Pequeño delay antes de cargar para evitar problemas de timing
         if (retryCount === 0) {
             await new Promise(resolve => setTimeout(resolve, 300));
         }
-        
+
         const success = await this.loadPDF(pdfPath);
         loadingDiv.style.display = 'none';
-        
+
         if (success) {
             const totalPages = this.currentPdf.numPages;
             pagesInfo.textContent = `${totalPages} página${totalPages > 1 ? 's' : ''}`;
-            
+
             // Limpiar contenedor
             pagesWrapper.innerHTML = '';
             this.pageElements = [];
-            
+
             // Crear todas las páginas
             await this.renderAllPages(pagesWrapper, totalPages);
-            
+
             scrollContainer.style.display = 'block';
         } else {
             // Si falla y no hemos alcanzado el máximo de reintentos, reintentar automáticamente
             if (retryCount < MAX_RETRIES) {
-                console.log(`⚠️ Reintentando cargar PDF (intento ${retryCount + 2}/${MAX_RETRIES + 1})...`);
+                console.log(`Reintentando cargar PDF (intento ${retryCount + 2}/${MAX_RETRIES + 1})...`);
                 const retryDelay = 500 * (retryCount + 1); // Delay creciente: 500ms, 1000ms
                 await new Promise(resolve => setTimeout(resolve, retryDelay));
                 return this.loadAndDisplay(pdfPath, viewer, retryCount + 1);
             }
-            
+
             // Si ya agotamos los reintentos, mostrar error
-            console.error('❌ No se pudo cargar el PDF después de', MAX_RETRIES + 1, 'intentos');
+            console.error('No se pudo cargar el PDF después de', MAX_RETRIES + 1, 'intentos');
             errorDiv.style.display = 'flex';
         }
     }
@@ -241,14 +238,14 @@ export class SimplePDFViewer {
                     <canvas class="pdf-page-canvas" data-page="${pageNum}"></canvas>
                 </div>
             `;
-            
+
             container.appendChild(pageContainer);
             this.pageElements.push(pageContainer);
-            
+
             // Renderizar la página
             const canvas = pageContainer.querySelector('.pdf-page-canvas');
             await this.renderPage(pageNum, canvas);
-            
+
             // Pequeña pausa para no bloquear la UI
             if (pageNum % 3 === 0) {
                 await new Promise(resolve => setTimeout(resolve, 50));
@@ -260,7 +257,7 @@ export class SimplePDFViewer {
         // Toggle de visibilidad
         const toggleBtn = viewer.querySelector('.toggle-viewer');
         const viewerContainer = viewer.querySelector('.pdf-viewer-container');
-        
+
         toggleBtn.addEventListener('click', () => {
             const controlText = toggleBtn.querySelector('.control-text');
             if (viewerContainer.style.display === 'none') {
@@ -316,8 +313,8 @@ export class SimplePDFViewer {
 
         printBtn.addEventListener('click', async () => {
             try {
-                console.log('🖨️ Iniciando impresión del PDF:', pdfPath);
-                
+                console.log('Iniciando impresión del PDF:', pdfPath);
+
                 // Mostrar mensaje de carga
                 const originalText = printBtn.querySelector('.control-text');
                 const originalContent = originalText ? originalText.textContent : '';
@@ -328,7 +325,7 @@ export class SimplePDFViewer {
 
                 // Llamar a la función de impresión
                 const result = await window.api.imprimirPdf(pdfPath);
-                
+
                 // Restaurar botón
                 printBtn.disabled = false;
                 if (originalText) {
@@ -336,21 +333,21 @@ export class SimplePDFViewer {
                 }
 
                 if (result && result.success) {
-                    console.log('✅ PDF enviado a impresión');
-                    console.log(`📊 Impresoras disponibles: ${result.printers}`);
-                    
+                    console.log('PDF enviado a impresión');
+                    console.log(`Impresoras disponibles: ${result.printers}`);
+
                     // Mostrar confirmación visual temporal
                     if (originalText) {
-                        originalText.textContent = '✓ Enviado';
+                        originalText.textContent = 'Enviado';
                         setTimeout(() => {
                             originalText.textContent = originalContent;
                         }, 2000);
                     }
                 } else {
-                    console.warn('⚠️ Impresión cancelada o fallida');
+                    console.warn('Impresión cancelada o fallida');
                 }
             } catch (error) {
-                console.error('❌ Error al imprimir PDF:', error);
+                console.error('Error al imprimir PDF:', error);
                 printBtn.disabled = false;
                 const originalText = printBtn.querySelector('.control-text');
                 if (originalText) {
@@ -396,8 +393,8 @@ export class SimplePDFViewer {
         const handleKeyPress = async (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
                 e.preventDefault();
-                console.log('🖨️ Atajo Ctrl+P detectado - Iniciando impresión...');
-                
+                console.log('Atajo Ctrl+P detectado - Iniciando impresión...');
+
                 // Simular click en el botón de impresión
                 printBtn.click();
             }
@@ -417,7 +414,7 @@ export class SimplePDFViewer {
             const canvas = canvases[i];
             const pageNum = parseInt(canvas.dataset.page);
             await this.renderPage(pageNum, canvas);
-            
+
             // Pausa pequeña para no bloquear
             if (i % 2 === 0) {
                 await new Promise(resolve => setTimeout(resolve, 25));
@@ -428,7 +425,7 @@ export class SimplePDFViewer {
     async fitToContainerWidth(viewer) {
         const scrollContainer = viewer.querySelector('.pdf-scroll-container');
         const containerWidth = scrollContainer.clientWidth - 40; // Margen
-        
+
         // Calcular escala basada en el ancho típico de página A4 (aproximado)
         this.scale = Math.min(containerWidth / 595, 2.0); // 595 puntos = ancho A4
         await this.refreshAllPages(viewer);
@@ -461,12 +458,12 @@ export class SimplePDFViewer {
         try {
             if (window.api && window.api.obtenerImpresoras) {
                 const printers = await window.api.obtenerImpresoras();
-                console.log('🖨️ Impresoras disponibles:', printers);
+                console.log('Impresoras disponibles:', printers);
                 return printers;
             }
             return [];
         } catch (error) {
-            console.error('❌ Error al obtener impresoras:', error);
+            console.error('Error al obtener impresoras:', error);
             return [];
         }
     }
@@ -476,7 +473,7 @@ export class SimplePDFViewer {
      */
     async showPrintersInfo() {
         const printers = await this.getAvailablePrinters();
-        
+
         if (printers.length === 0) {
             alert('No se detectaron impresoras en el sistema.');
             return;
@@ -484,7 +481,7 @@ export class SimplePDFViewer {
 
         const defaultPrinter = printers.find(p => p.isDefault);
         let message = `Se detectaron ${printers.length} impresora(s):\n\n`;
-        
+
         printers.forEach((printer, index) => {
             message += `${index + 1}. ${printer.displayName || printer.name}`;
             if (printer.isDefault) {

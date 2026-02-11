@@ -37,9 +37,9 @@ class OcrExtractor {
         } = options;
 
         try {
-            console.log('🔍 Iniciando extracción OCR...');
-            console.log('📄 Archivo:', pdfPath);
-            console.log('⚙️ Opciones:', { cleanText, parseData, pageNumber });
+            console.log('[ocrExtractor] Iniciando extracción OCR...');
+            console.log('Archivo:', pdfPath);
+            console.log('Opciones:', { cleanText, parseData, pageNumber });
 
             // Validar que no haya otro proceso en ejecución
             if (this.isProcessing) {
@@ -58,12 +58,12 @@ class OcrExtractor {
             }
 
             // Extraer texto usando ocrProcessor
-            console.log('📖 Extrayendo texto de la página', pageNumber);
+            console.log('Extrayendo texto de la página', pageNumber);
             const rawText = await ocrProcessor.extractTextFromFirstPage(pdfPath);
 
             // Verificar si se canceló durante la extracción
             if (this.shouldCancel) {
-                console.log('⚠️ Extracción OCR cancelada por el usuario');
+                console.log('Extracción OCR cancelada por el usuario');
                 this.isProcessing = false;
                 return {
                     success: false,
@@ -75,15 +75,15 @@ class OcrExtractor {
                 throw new Error('No se pudo extraer texto del PDF');
             }
 
-            console.log('✅ Texto extraído exitosamente');
-            console.log('📏 Longitud del texto:', rawText.length, 'caracteres');
+            console.log('Texto extraído exitosamente');
+            console.log('Longitud del texto:', rawText.length, 'caracteres');
 
             // Parsear datos estructurados si está habilitado
             let extractedData = null;
             if (parseData) {
-                console.log('📊 Parseando datos estructurados...');
+                console.log('Parseando datos estructurados...');
                 extractedData = ocrParser.parseExpedienteData(rawText);
-                console.log('✅ Datos parseados:', extractedData);
+                console.log('Datos parseados:', extractedData);
             }
 
             this.isProcessing = false;
@@ -95,7 +95,7 @@ class OcrExtractor {
             };
 
         } catch (error) {
-            console.error('❌ Error en extracción OCR:', error);
+            console.error('Error en extracción OCR:', error);
             this.isProcessing = false;
 
             return {
@@ -188,7 +188,7 @@ class OcrExtractor {
             };
 
         } catch (error) {
-            console.error('❌ Error en extracción OCR con progreso:', error);
+            console.error('Error en extracción OCR con progreso:', error);
             this.isProcessing = false;
             this.currentProgressCallback = null;
 
@@ -207,7 +207,7 @@ class OcrExtractor {
      * Cancela el proceso de extracción en curso
      */
     cancelExtraction() {
-        console.log('🛑 Solicitando cancelación de OCR...');
+        console.log('Solicitando cancelación de OCR...');
         this.shouldCancel = true;
 
         if (this.currentProgressCallback) {

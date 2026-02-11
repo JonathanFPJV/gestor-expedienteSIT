@@ -42,7 +42,6 @@ export class ExpedienteSearchService {
 
         // Si ya hay una búsqueda completada con el mismo término, no buscar de nuevo
         if (this.searchInProgress && term === this.lastSearchTerm) {
-            console.log('⏸️ Búsqueda ya completada para este término');
             return;
         }
 
@@ -54,7 +53,7 @@ export class ExpedienteSearchService {
         // Esperar a que el usuario termine de escribir (debounce)
         this.searchDebounceTimer = setTimeout(async () => {
             try {
-                console.log(`🔍 [SearchService] Buscando en backend: "${term}"`);
+                console.log(`[SearchService] Buscando en backend: "${term}"`);
 
                 // Llamar al backend con el término de búsqueda
                 const resultado = await window.api.invoke('buscar-expedientes', {
@@ -71,7 +70,7 @@ export class ExpedienteSearchService {
                     this.searchInProgress = true;
                     this.lastSearchTerm = term;
 
-                    console.log(`✅ Búsqueda completada: ${expedientes.length} resultados`);
+                    console.log(`Búsqueda completada: ${expedientes.length} resultados`);
 
                     if (onSearchComplete) {
                         onSearchComplete({
@@ -82,7 +81,7 @@ export class ExpedienteSearchService {
                         });
                     }
                 } else {
-                    console.error('❌ Error en búsqueda:', resultado.message);
+                    console.error('Error en búsqueda:', resultado.message);
                     if (onSearchComplete) {
                         onSearchComplete({
                             success: false,
@@ -91,7 +90,7 @@ export class ExpedienteSearchService {
                     }
                 }
             } catch (error) {
-                console.error('❌ Error al buscar:', error);
+                console.error('Error al buscar:', error);
                 if (onSearchComplete) {
                     onSearchComplete({
                         success: false,

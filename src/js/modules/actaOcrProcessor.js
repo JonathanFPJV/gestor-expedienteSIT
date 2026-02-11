@@ -26,32 +26,28 @@ class ActaOcrProcessor {
      */
     async procesarActaPdf(pdfPath) {
         try {
-            console.log('\n📄 ==========================================');
-            console.log('📄 PROCESANDO ACTA DE ENTREGA CON OCR');
-            console.log('📄 ==========================================\n');
-            console.log(`📁 Archivo: ${pdfPath}`);
+            console.log('Procesando Acta de Entrega con OCR');
+            console.log(`Archivo: ${pdfPath}`);
 
             // Leer y cargar el PDF
             const pdfData = await window.api.readPdfFile(pdfPath);
             const loadingTask = this.pdfjsLib.getDocument({ data: pdfData });
             this.currentPdf = await loadingTask.promise;
 
-            console.log(`📊 PDF cargado: ${this.currentPdf.numPages} página(s)`);
+            console.log(`PDF cargado: ${this.currentPdf.numPages} página(s)`);
 
             // Procesar la primera página (las actas suelen ser de 1 página)
             const pageNum = 1;
             const canvas = await this.renderPageToImage(pageNum);
             const text = await this.performOCR(canvas);
-            
-            console.log('\n📝 TEXTO EXTRAÍDO (Preliminar):');
-            console.log('─────────────────────────────────────────');
+
+            console.log('Texto extraído (preliminar):');
             console.log(text);
-            console.log('─────────────────────────────────────────\n');
 
             // Extraer datos estructurados
             const extractedData = this.extractActaData(text);
 
-            console.log('✅ Datos extraídos del Acta:');
+            console.log('Datos extraídos del Acta:');
             console.log(JSON.stringify(extractedData, null, 2));
 
             this.extractedData = extractedData;
@@ -63,7 +59,7 @@ class ActaOcrProcessor {
             };
 
         } catch (error) {
-            console.error('❌ Error procesando Acta de Entrega:', error);
+            console.error('Error procesando Acta de Entrega:', error);
             return {
                 success: false,
                 error: error.message
@@ -77,10 +73,10 @@ class ActaOcrProcessor {
      * @returns {Promise<HTMLCanvasElement>} Canvas con la página renderizada
      */
     async renderPageToImage(pageNum) {
-        console.log(`🖼️ Renderizando página ${pageNum}...`);
+        console.log(`Renderizando página ${pageNum}...`);
 
         const page = await this.currentPdf.getPage(pageNum);
-        
+
         // Escala alta para mejor calidad de OCR
         const scale = 3.0;
         const viewport = page.getViewport({ scale, intent: 'print' });
@@ -102,21 +98,21 @@ class ActaOcrProcessor {
         // Aplicar mejoras de contraste
         const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
         const data = imageData.data;
-        
+
         // Aumentar contraste para mejor OCR
         const contrast = 1.3;
         const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
-        
+
         for (let i = 0; i < data.length; i += 4) {
             data[i] = Math.min(255, Math.max(0, factor * (data[i] - 128) + 128));       // R
             data[i + 1] = Math.min(255, Math.max(0, factor * (data[i + 1] - 128) + 128)); // G
             data[i + 2] = Math.min(255, Math.max(0, factor * (data[i + 2] - 128) + 128)); // B
         }
-        
+
         context.putImageData(imageData, 0, 0);
 
-        console.log(`   ✅ Página renderizada: ${canvas.width}x${canvas.height}px`);
-        
+        console.log(`Página renderizada: ${canvas.width}x${canvas.height}px`);
+
         return canvas;
     }
 
@@ -126,18 +122,18 @@ class ActaOcrProcessor {
      * @returns {Promise<string>} Texto extraído
      */
     async performOCR(canvas) {
-        console.log('🔍 Ejecutando OCR...');
+        console.log('Ejecutando OCR...');
 
         const result = await this.Tesseract.recognize(canvas, 'spa', {
             logger: (m) => {
                 if (m.status === 'recognizing text') {
-                    console.log(`   📊 Progreso OCR: ${Math.round(m.progress * 100)}%`);
+                    console.log(`Progreso OCR: ${Math.round(m.progress * 100)}%`);
                 }
             }
         });
 
-        console.log('✅ OCR completado');
-        
+        console.log('OCR completado');
+
         return result.data.text;
     }
 
@@ -147,7 +143,7 @@ class ActaOcrProcessor {
      * @returns {Object} Datos estructurados
      */
     extractActaData(text) {
-        console.log('\n🔍 Extrayendo datos del Acta...');
+        console.log('Extrayendo datos del Acta...');
 
         const data = {
             fechaEntrega: null,
@@ -161,18 +157,18 @@ class ActaOcrProcessor {
 
         // 1. Extraer Fecha de Entrega
         data.fechaEntrega = this.extractFechaEntrega(lines, text);
-        
+
         // 2. Extraer Número de Expediente
         data.numeroExpediente = this.extractNumeroExpediente(lines, text);
-        
+
         // 3. Extraer Número de Tarjetas
         data.numeroTarjetas = this.extractNumeroTarjetas(lines, text);
-        
+
         // 4. Extraer Observaciones (texto largo al final)
         data.observaciones = this.extractObservaciones(lines, text);
 
-        console.log('✅ Extracción de datos completada');
-        
+        console.log('Extracción de datos completada');
+
         return data;
     }
 
@@ -183,7 +179,7 @@ class ActaOcrProcessor {
      * @returns {string|null} Fecha en formato YYYY-MM-DD
      */
     extractFechaEntrega(lines, fullText) {
-        console.log('   🔍 Buscando fecha de entrega...');
+        console.log('Buscando fecha de entrega...');
 
         // Buscar patrones de fecha: dd.mm.yyyy, dd/mm/yyyy, dd-mm-yyyy
         const fechaPatterns = [
@@ -197,12 +193,12 @@ class ActaOcrProcessor {
             if (match) {
                 const [_, dia, mes, anio] = match;
                 const fecha = `${anio}-${mes}-${dia}`;
-                console.log(`      ✅ Fecha encontrada: ${fecha} (${match[0]})`);
+                console.log(`Fecha encontrada: ${fecha} (${match[0]})`);
                 return fecha;
             }
         }
 
-        console.log('      ⚠️ Fecha no encontrada');
+        console.log('Fecha no encontrada');
         return null;
     }
 
@@ -213,7 +209,7 @@ class ActaOcrProcessor {
      * @returns {string|null} Número de expediente
      */
     extractNumeroExpediente(lines, fullText) {
-        console.log('   🔍 Buscando número de expediente...');
+        console.log('Buscando número de expediente...');
 
         // Buscar patrones: "Expediente N° 50035-2025" o "50035-2025"
         const expPatterns = [
@@ -226,12 +222,12 @@ class ActaOcrProcessor {
             const match = fullText.match(pattern);
             if (match) {
                 const expediente = match[1];
-                console.log(`      ✅ Expediente encontrado: ${expediente}`);
+                console.log(`Expediente encontrado: ${expediente}`);
                 return expediente;
             }
         }
 
-        console.log('      ⚠️ Expediente no encontrado');
+        console.log('Expediente no encontrado');
         return null;
     }
 
@@ -242,7 +238,7 @@ class ActaOcrProcessor {
      * @returns {number} Número de tarjetas
      */
     extractNumeroTarjetas(lines, fullText) {
-        console.log('   🔍 Buscando número de tarjetas...');
+        console.log('Buscando número de tarjetas...');
 
         // Buscar: "09 Tarjetas de Acreditación" o variantes
         const patterns = [
@@ -254,12 +250,12 @@ class ActaOcrProcessor {
             const match = fullText.match(pattern);
             if (match) {
                 const numero = parseInt(match[1]);
-                console.log(`      ✅ Número de tarjetas: ${numero}`);
+                console.log(`Número de tarjetas: ${numero}`);
                 return numero;
             }
         }
 
-        console.log('      ⚠️ Número de tarjetas no encontrado');
+        console.log('Número de tarjetas no encontrado');
         return 0;
     }
 
@@ -270,7 +266,7 @@ class ActaOcrProcessor {
      * @returns {string|null} Observaciones
      */
     extractObservaciones(lines, fullText) {
-        console.log('   🔍 Buscando observaciones...');
+        console.log('Buscando observaciones...');
 
         // Buscar texto después de "conformidad" o al final del documento
         const observacionesPatterns = [
@@ -282,7 +278,7 @@ class ActaOcrProcessor {
             const match = fullText.match(pattern);
             if (match) {
                 const obs = match[0].trim();
-                console.log(`      ✅ Observaciones encontradas (${obs.length} caracteres)`);
+                console.log(`Observaciones encontradas (${obs.length} caracteres)`);
                 return obs;
             }
         }
@@ -291,12 +287,12 @@ class ActaOcrProcessor {
         if (lines.length > 10) {
             const ultimasLineas = lines.slice(-5).join(' ');
             if (ultimasLineas.length > 50) {
-                console.log(`      ✅ Observaciones (últimas líneas): ${ultimasLineas.substring(0, 50)}...`);
+                console.log(`Observaciones (últimas líneas): ${ultimasLineas.substring(0, 50)}...`);
                 return ultimasLineas;
             }
         }
 
-        console.log('      ⚠️ Observaciones no encontradas');
+        console.log('Observaciones no encontradas');
         return null;
     }
 
@@ -314,7 +310,7 @@ class ActaOcrProcessor {
     clear() {
         this.currentPdf = null;
         this.extractedData = null;
-        console.log('🔄 Datos del procesador limpiados');
+        console.log('Datos del procesador limpiados');
     }
 }
 

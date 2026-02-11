@@ -18,8 +18,8 @@ class TarjetasCRUD {
         this.itemsPerPage = 10;
         this.totalPages = 1;
         this.searchTerm = '';
-        this.searchDebounceTimer = null; // 🔍 Timer para debounce de búsqueda
-        this.searchDebounceDelay = 500; // 🔍 Delay de 500ms para búsqueda
+        this.searchDebounceTimer = null; // Timer para debounce de búsqueda
+        this.searchDebounceDelay = 500; // Delay de 500ms para búsqueda
         this.currentTarjetaId = null;
         this.selectedPdfPath = null; // Para almacenar la ruta del PDF seleccionado
         this.isInitialized = false; // Para controlar la carga inicial de datos
@@ -32,7 +32,7 @@ class TarjetasCRUD {
      * Inicializar el módulo de gestión de tarjetas
      */
     init() {
-        console.log('🎫 Inicializando módulo de gestión de tarjetas...');
+        console.log('ActasEntregaCRUD: Inicializando módulo de gestión de tarjetas...');
 
         // Cachear referencias al DOM
         this.cacheElements();
@@ -46,7 +46,7 @@ class TarjetasCRUD {
         // Configurar observer para detectar cuando la vista se activa
         this.setupViewActivationListener();
 
-        console.log('✅ Módulo de tarjetas inicializado');
+        console.log('Módulo de tarjetas inicializado');
     }
 
     /**
@@ -56,7 +56,7 @@ class TarjetasCRUD {
         const vistaTarjetas = document.getElementById('vista-tarjetas-crud');
 
         if (!vistaTarjetas) {
-            console.warn('⚠️ No se encontró el elemento vista-tarjetas-crud');
+            console.warn('No se encontró el elemento vista-tarjetas-crud');
             return;
         }
 
@@ -67,8 +67,8 @@ class TarjetasCRUD {
                     const vistaTarjetas = document.getElementById('vista-tarjetas-crud');
 
                     if (vistaTarjetas && vistaTarjetas.classList.contains('active')) {
-                        console.log('🎯 Vista de tarjetas activada - Recargando datos...');
-                        // 🔄 SIEMPRE recargar cuando se active la vista para mostrar cambios
+                        console.log('Vista de tarjetas activada - Recargando datos...');
+                        // SIEMPRE recargar cuando se active la vista para mostrar cambios
                         this.cargarTarjetas();
                     }
                 }
@@ -83,7 +83,7 @@ class TarjetasCRUD {
 
         // Si la vista ya está activa al cargar, cargar datos inmediatamente
         if (vistaTarjetas.classList.contains('active')) {
-            console.log('🎯 Vista de tarjetas ya activa - Cargando datos...');
+            console.log('Vista de tarjetas ya activa - Cargando datos...');
             this.cargarTarjetas();
         }
     }
@@ -207,12 +207,12 @@ class TarjetasCRUD {
                 this.currentPage = 1;
                 this.renderTarjetas();
 
-                console.log(`✅ ${resultado.count} tarjetas cargadas`);
+                console.log(`${resultado.count} tarjetas cargadas`);
             } else {
                 this.mostrarError(resultado.message);
             }
         } catch (error) {
-            console.error('❌ Error al cargar tarjetas:', error);
+            console.error('Error al cargar tarjetas:', error);
             this.mostrarError('Error al cargar tarjetas');
         } finally {
             loadingManager.hide('cargar-tarjetas');
@@ -242,12 +242,12 @@ class TarjetasCRUD {
                 this.currentPage = 1;
                 this.renderTarjetas();
 
-                console.log(`🔍 Búsqueda "${searchTerm}": ${resultado.count} resultados`);
+                console.log(`Búsqueda "${searchTerm}": ${resultado.count} resultados`);
             } else {
                 this.mostrarError(resultado.message);
             }
         } catch (error) {
-            console.error('❌ Error en búsqueda:', error);
+            console.error('Error en búsqueda:', error);
             this.mostrarError('Error al buscar tarjetas');
         } finally {
             loadingManager.hide('buscar-tarjetas');
@@ -270,7 +270,7 @@ class TarjetasCRUD {
         this.renderTarjetas();
     }
 
-    // 🔍 Filtrar tabla en tiempo real con debounce y búsqueda en backend
+    // Filtrar tabla en tiempo real con debounce y búsqueda en backend
     filterTableInRealTime(searchTerm) {
         const term = searchTerm.trim();
 
@@ -296,7 +296,7 @@ class TarjetasCRUD {
         // Configurar nuevo timer con debounce
         this.searchDebounceTimer = setTimeout(async () => {
             try {
-                console.log(`🔍 Buscando tarjetas en backend: "${term}"`);
+                console.log(`Buscando tarjetas en backend: "${term}"`);
 
                 // Llamar al backend con búsqueda y paginación
                 const resultado = await window.api.invoke('buscar-tarjetas', {
@@ -315,15 +315,15 @@ class TarjetasCRUD {
                     // Renderizar tabla con resultados
                     this.renderTarjetas();
 
-                    console.log(`✅ Búsqueda completada: ${resultado.total} resultados encontrados`);
+                    console.log(`Búsqueda completada: ${resultado.total} resultados encontrados`);
                 } else {
-                    console.error('❌ Error en búsqueda:', resultado.error);
+                    console.error('Error en búsqueda:', resultado.error);
                     this.tarjetas = [];
                     this.filteredTarjetas = [];
                     this.renderTarjetas();
                 }
             } catch (error) {
-                console.error('❌ Error al buscar tarjetas:', error);
+                console.error('Error al buscar tarjetas:', error);
                 this.tarjetas = [];
                 this.filteredTarjetas = [];
                 this.renderTarjetas();
@@ -333,7 +333,7 @@ class TarjetasCRUD {
         }, this.searchDebounceDelay);
     }
 
-    // 🔄 Mostrar indicador de búsqueda
+    // Mostrar indicador de búsqueda
     showSearchingIndicator() {
         const tbody = this.elements.tablaTarjetasBody;
         if (tbody) {
@@ -341,7 +341,7 @@ class TarjetasCRUD {
         }
     }
 
-    // 🔄 Ocultar indicador de búsqueda
+    // Ocultar indicador de búsqueda
     hideSearchingIndicator() {
         const tbody = this.elements.tablaTarjetasBody;
         if (tbody) {
@@ -349,7 +349,7 @@ class TarjetasCRUD {
         }
     }
 
-    // 🧹 Limpiar búsqueda rápida
+    // Limpiar búsqueda rápida
     clearQuickSearch() {
         if (this.elements.searchCrudInput) {
             this.elements.searchCrudInput.value = '';
@@ -413,7 +413,7 @@ class TarjetasCRUD {
                 </span>`;
             }
         } catch (error) {
-            console.warn('⚠️ Error al obtener info de estado:', error);
+            console.warn('Error al obtener info de estado:', error);
         }
 
         // Fallback si falla la obtención de info
@@ -429,19 +429,19 @@ class TarjetasCRUD {
         const tr = document.createElement('tr');
 
         // Determinar el estado del acta de entrega
-        let actaEntregaHtml = '❌ No';
+        let actaEntregaHtml = 'No';
         if (tarjeta.actaEntregaId) {
-            actaEntregaHtml = `<span style="color: #28a745; font-weight: bold;" title="Acta ID: ${tarjeta.actaEntregaId}">✅ Sí (#${tarjeta.actaEntregaId})</span>`;
+            actaEntregaHtml = `<span style="color: #28a745; font-weight: bold;" title="Acta ID: ${tarjeta.actaEntregaId}">Sí (#${tarjeta.actaEntregaId})</span>`;
         }
 
         // Determinar el estado del expediente
-        let expedienteHtml = '❌ No';
+        let expedienteHtml = 'No';
         if (tarjeta.resolucionId || tarjeta.expedienteId) {
-            expedienteHtml = '✅ Sí';
+            expedienteHtml = 'Sí';
         }
 
         // Crear badge de estado (temporal, se actualizará después)
-        const estadoBadge = '<span class="loading-badge">⏳ Cargando...</span>';
+        const estadoBadge = '<span class="loading-badge">Cargando...</span>';
 
         tr.innerHTML = `
             <td>${tarjeta.placa || '-'}</td>
@@ -450,12 +450,12 @@ class TarjetasCRUD {
             <td>${actaEntregaHtml}</td>
             <td data-estado-cell="${tarjeta._id}">${estadoBadge}</td>
             <td>
-                ${tarjeta.pdfPath ? '<button class="btn-action" data-id="' + tarjeta._id + '" data-pdf="' + tarjeta.pdfPath + '" title="Ver PDF Tarjeta">📄</button>' : ''}
+                ${tarjeta.pdfPath ? '<button class="btn-action" data-id="' + tarjeta._id + '" data-pdf="' + tarjeta.pdfPath + '" title="Ver PDF Tarjeta">PDF</button>' : ''}
                 <button class="btn-action btn-edit" data-id="${tarjeta._id}" title="Editar">
-                    ✏️
+                    Editar
                 </button>
                 <button class="btn-action btn-delete" data-id="${tarjeta._id}" title="Eliminar">
-                    🗑️
+                    Eliminar
                 </button>
             </td>
         `;
@@ -578,8 +578,8 @@ class TarjetasCRUD {
                 <label for="modal-pdf-path">Documento PDF de la Tarjeta:</label>
                 <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
                     <input type="text" id="modal-pdf-path" placeholder="Ningún archivo seleccionado" readonly style="flex: 1; min-width: 200px;">
-                    <button type="button" id="seleccionar-pdf-tarjeta-btn" class="btn-secondary">📎 Seleccionar PDF</button>
-                    <button type="button" id="extraer-ocr-tarjeta-btn" class="btn-secondary" style="display: none;">🔍 Extraer OCR</button>
+                    <button type="button" id="seleccionar-pdf-tarjeta-btn" class="btn-secondary">Seleccionar PDF</button>
+                    <button type="button" id="extraer-ocr-tarjeta-btn" class="btn-secondary" style="display: none;">Extraer OCR</button>
                 </div>
                 <small style="color: #666; margin-top: 0.25rem; display: block;">
                     El PDF se guardará en la carpeta del expediente seleccionado
@@ -701,10 +701,10 @@ class TarjetasCRUD {
                         <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
                             <input type="text" id="modal-pdf-path" value="${tarjeta.pdfPath ? 'PDF guardado: ' + tarjeta.pdfPath.split(/[\\/]/).pop() : ''}" placeholder="Ningún archivo seleccionado" readonly style="flex: 1; min-width: 200px;">
                             <button type="button" id="seleccionar-pdf-tarjeta-btn" class="btn-secondary">
-                                ${tarjeta.pdfPath ? '📎 Reemplazar PDF' : '📎 Seleccionar PDF'}
+                                ${tarjeta.pdfPath ? 'Reemplazar PDF' : 'Seleccionar PDF'}
                             </button>
-                            <button type="button" id="extraer-ocr-tarjeta-btn" class="btn-secondary" style="display: ${tarjeta.pdfPath ? 'block' : 'none'};">🔍 Extraer OCR</button>
-                            ${tarjeta.pdfPath ? '<button type="button" id="abrir-pdf-tarjeta-btn" class="btn-secondary">📄 Abrir</button>' : ''}
+                            <button type="button" id="extraer-ocr-tarjeta-btn" class="btn-secondary" style="display: ${tarjeta.pdfPath ? 'block' : 'none'};">Extraer OCR</button>
+                            ${tarjeta.pdfPath ? '<button type="button" id="abrir-pdf-tarjeta-btn" class="btn-secondary">Abrir</button>' : ''}
                         </div>
                         <small style="color: #666; margin-top: 0.25rem; display: block;">
                             ${tarjeta.pdfPath ? 'Puedes reemplazar el PDF existente. El anterior será eliminado.' : 'El PDF se guardará en la carpeta del expediente seleccionado'}
@@ -780,7 +780,7 @@ class TarjetasCRUD {
                 this.mostrarError(resultado.message);
             }
         } catch (error) {
-            console.error('❌ Error al cargar tarjeta:', error);
+            console.error('Error al cargar tarjeta:', error);
             this.mostrarError('Error al cargar tarjeta');
         } finally {
             loadingManager.hide('editar-tarjeta');
@@ -813,7 +813,7 @@ class TarjetasCRUD {
                 }
             }
         } catch (error) {
-            console.error('❌ Error al cargar expedientes:', error);
+            console.error('Error al cargar expedientes:', error);
         }
     }
 
@@ -843,7 +843,7 @@ class TarjetasCRUD {
                 }
             }
         } catch (error) {
-            console.error('❌ Error al cargar estados:', error);
+            console.error('Error al cargar estados:', error);
             // Mantener valor por defecto si hay error
         }
     }
@@ -875,7 +875,7 @@ class TarjetasCRUD {
                 }
             }
         } catch (error) {
-            console.error('❌ Error al cargar actas de entrega:', error);
+            console.error('Error al cargar actas de entrega:', error);
         }
     }
 
@@ -932,7 +932,7 @@ class TarjetasCRUD {
                 actaEntregaId: cleanValue(actaEntregaId)
             };
 
-            console.log('📤 Enviando datos de tarjeta:', {
+            console.log('Enviando datos de tarjeta:', {
                 tarjetaId: this.currentTarjetaId,
                 tarjetaData,
                 pdfPath: this.selectedPdfPath || null
@@ -968,7 +968,7 @@ class TarjetasCRUD {
                 this.mostrarError(resultado.message);
             }
         } catch (error) {
-            console.error('❌ Error al guardar tarjeta:', error);
+            console.error('Error al guardar tarjeta:', error);
             this.mostrarError('Error al guardar tarjeta');
             loadingManager.hide(operacion);
         }
@@ -994,9 +994,9 @@ class TarjetasCRUD {
             // Re-renderizar solo la página actual
             this.renderTarjetas();
 
-            console.log('✅ Tarjeta actualizada en la tabla');
+            console.log('Tarjeta actualizada en la tabla');
         } catch (error) {
-            console.error('❌ Error al actualizar tarjeta en tabla:', error);
+            console.error('Error al actualizar tarjeta en tabla:', error);
         }
     }
 
@@ -1015,9 +1015,9 @@ class TarjetasCRUD {
             // Re-renderizar
             this.renderTarjetas();
 
-            console.log('✅ Tarjeta agregada a la tabla');
+            console.log('Tarjeta agregada a la tabla');
         } catch (error) {
-            console.error('❌ Error al agregar tarjeta a tabla:', error);
+            console.error('Error al agregar tarjeta a tabla:', error);
         }
     }
 
@@ -1063,7 +1063,7 @@ class TarjetasCRUD {
                 this.mostrarError(resultado.message);
             }
         } catch (error) {
-            console.error('❌ Error al eliminar tarjeta:', error);
+            console.error('Error al eliminar tarjeta:', error);
             this.mostrarError('Error al eliminar tarjeta');
             loadingManager.hide('eliminar-tarjeta');
         }
@@ -1123,7 +1123,7 @@ class TarjetasCRUD {
      * Mostrar mensaje de error
      */
     mostrarError(mensaje) {
-        console.error('❌', mensaje);
+        console.error('Error:', mensaje);
         alert('Error: ' + mensaje);
     }
 
@@ -1131,7 +1131,7 @@ class TarjetasCRUD {
      * Mostrar mensaje de éxito
      */
     mostrarExito(mensaje) {
-        console.log('✅', mensaje);
+        console.log('Éxito:', mensaje);
         // Aquí podrías implementar un toast o notificación más elegante
     }
 
@@ -1149,13 +1149,13 @@ class TarjetasCRUD {
                     const fileName = pdfSelector.getFileName(result.filePath);
                     pdfPathInput.value = `Seleccionado: ${fileName}`;
                 }
-                console.log('📄 PDF seleccionado:', result.filePath);
+                console.log('PDF seleccionado:', result.filePath);
                 this.mostrarExito('PDF seleccionado. Ahora puedes extraer el texto OCR si lo necesitas.');
             } else if (result.error && result.error !== 'Selección cancelada') {
                 this.mostrarError(result.error);
             }
         } catch (error) {
-            console.error('❌ Error al seleccionar PDF:', error);
+            console.error('Error al seleccionar PDF:', error);
             this.mostrarError('Error al seleccionar archivo PDF');
         }
     }
@@ -1170,19 +1170,19 @@ class TarjetasCRUD {
                 return;
             }
 
-            console.log('🔍 Extrayendo OCR del PDF:', this.selectedPdfPath);
+            console.log('Extrayendo OCR del PDF:', this.selectedPdfPath);
 
             // Extraer con callback de progreso
             const result = await ocrExtractor.extractWithProgress(
                 this.selectedPdfPath,
                 (percent, message) => {
-                    console.log(`📈 Progreso OCR: ${percent}% - ${message}`);
+                    console.log(`Progreso OCR: ${percent}% - ${message}`);
                     // Aquí podríamos actualizar un indicador visual en el modal si existiera
                 }
             );
 
             if (result.success && result.extractedData) {
-                console.log('✅ OCR completado:', result.extractedData);
+                console.log('OCR completado:', result.extractedData);
 
                 // Auto-completar campos del modal con datos extraídos
                 const placaInput = document.getElementById('modal-placa');
@@ -1201,7 +1201,7 @@ class TarjetasCRUD {
             }
 
         } catch (error) {
-            console.error('❌ Error al extraer OCR:', error);
+            console.error('Error al extraer OCR:', error);
             this.mostrarError('Error al procesar OCR: ' + error.message);
         }
     }
@@ -1222,7 +1222,7 @@ class TarjetasCRUD {
                 this.mostrarError(resultado.message || 'No se pudo abrir el PDF');
             }
         } catch (error) {
-            console.error('❌ Error al abrir PDF:', error);
+            console.error('Error al abrir PDF:', error);
             this.mostrarError('Error al abrir archivo PDF');
         }
     }

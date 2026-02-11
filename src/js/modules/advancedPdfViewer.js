@@ -18,10 +18,10 @@ export class AdvancedPDFViewer {
 
     async loadPDF(pdfPath) {
         if (this.isLoading) return false;
-        
+
         try {
             this.isLoading = true;
-            
+
             // Obtener los datos del PDF desde el backend
             const pdfData = await window.api.invoke('obtener-pdf-data', pdfPath);
             if (!pdfData) {
@@ -33,7 +33,7 @@ export class AdvancedPDFViewer {
             this.currentPdf = await pdfjsLib.getDocument({ data: uint8Array }).promise;
             this.currentPage = 1;
             this.renderedPages.clear();
-            
+
             return true;
         } catch (error) {
             console.error('Error al cargar el PDF:', error);
@@ -53,12 +53,12 @@ export class AdvancedPDFViewer {
             const page = await this.currentPdf.getPage(pageNumber);
             const currentScale = scale !== null ? scale : this.scale;
             const currentRotation = rotation !== null ? rotation : this.rotation;
-            
-            const viewport = page.getViewport({ 
-                scale: currentScale, 
-                rotation: currentRotation 
+
+            const viewport = page.getViewport({
+                scale: currentScale,
+                rotation: currentRotation
             });
-            
+
             const context = canvas.getContext('2d');
             canvas.height = viewport.height;
             canvas.width = viewport.width;
@@ -72,13 +72,13 @@ export class AdvancedPDFViewer {
             };
 
             await page.render(renderContext).promise;
-            
+
             // Guardar en cache
             this.renderedPages.set(`${pageNumber}-${currentScale}-${currentRotation}`, {
                 canvas: canvas.cloneNode(),
                 timestamp: Date.now()
             });
-            
+
             return true;
         } catch (error) {
             console.error('Error al renderizar la página:', error);
@@ -92,7 +92,7 @@ export class AdvancedPDFViewer {
         try {
             const page = await this.currentPdf.getPage(pageNumber);
             const viewport = page.getViewport({ scale: 0.2 }); // Escala pequeña para miniaturas
-            
+
             const context = canvas.getContext('2d');
             canvas.height = viewport.height;
             canvas.width = viewport.width;
@@ -120,7 +120,7 @@ export class AdvancedPDFViewer {
         }
 
         const viewerId = `pdf-viewer-${Date.now()}`;
-        
+
         // Crear estructura del visor avanzado
         const viewerHTML = `
             <div class="advanced-pdf-viewer" id="${viewerId}">
@@ -135,34 +135,32 @@ export class AdvancedPDFViewer {
                     <div class="pdf-toolbar">
                         <div class="toolbar-group">
                             <button class="pdf-btn toggle-viewer" title="Mostrar/Ocultar PDF">
-                                <span class="btn-icon">👁️</span>
-                                <span class="btn-text">Ocultar</span>
+                                <span class="btn-text">Ver/Ocultar</span>
                             </button>
                             <button class="pdf-btn toggle-thumbnails" title="Panel de miniaturas">
-                                <span class="btn-icon">🗂️</span>
                                 <span class="btn-text">Miniaturas</span>
                             </button>
                         </div>
                         
                         <div class="toolbar-group navigation-group">
                             <button class="pdf-btn first-page" title="Primera página">
-                                <span class="btn-icon">⏮️</span>
+                                <span class="btn-text">|&lt;</span>
                             </button>
                             <button class="pdf-btn prev-page" title="Página anterior">
-                                <span class="btn-icon">◀️</span>
+                                <span class="btn-text">&lt;</span>
                             </button>
                             <input type="number" class="page-input" min="1" value="1" title="Ir a página">
                             <button class="pdf-btn next-page" title="Página siguiente">
-                                <span class="btn-icon">▶️</span>
+                                <span class="btn-text">&gt;</span>
                             </button>
                             <button class="pdf-btn last-page" title="Última página">
-                                <span class="btn-icon">⏭️</span>
+                                <span class="btn-text">&gt;|</span>
                             </button>
                         </div>
 
                         <div class="toolbar-group zoom-group">
                             <button class="pdf-btn zoom-out" title="Reducir zoom">
-                                <span class="btn-icon">➖</span>
+                                <span class="btn-text">-</span>
                             </button>
                             <select class="zoom-select">
                                 <option value="0.5">50%</option>
@@ -175,7 +173,7 @@ export class AdvancedPDFViewer {
                                 <option value="fit-page">Ajustar página</option>
                             </select>
                             <button class="pdf-btn zoom-in" title="Aumentar zoom">
-                                <span class="btn-icon">➕</span>
+                                <span class="btn-text">+</span>
                             </button>
                         </div>
 
@@ -198,13 +196,13 @@ export class AdvancedPDFViewer {
 
                         <div class="toolbar-group actions-group">
                             <button class="pdf-btn download-pdf" title="Descargar PDF">
-                                <span class="btn-icon">💾</span>
+                                <span class="btn-text">Guardar</span>
                             </button>
                             <button class="pdf-btn print-pdf" title="Imprimir PDF">
-                                <span class="btn-icon">🖨️</span>
+                                <span class="btn-text">Imprimir</span>
                             </button>
                             <button class="pdf-btn open-external" title="Abrir en aplicación externa">
-                                <span class="btn-icon">🔗</span>
+                                <span class="btn-text">Abrir</span>
                             </button>
                         </div>
                     </div>
@@ -225,7 +223,6 @@ export class AdvancedPDFViewer {
                         </div>
                         
                         <div class="pdf-error" style="display: none;">
-                            <span class="error-icon">⚠️</span>
                             <span class="error-message">Error al cargar el PDF</span>
                             <button class="retry-btn">Reintentar</button>
                         </div>
@@ -239,18 +236,18 @@ export class AdvancedPDFViewer {
         `;
 
         container.insertAdjacentHTML('beforeend', viewerHTML);
-        
+
         const viewer = container.querySelector(`#${viewerId}`);
-        
+
         // Inicializar estilos
         this.addStyles();
-        
+
         // Cargar y mostrar el PDF
         this.loadAndDisplay(pdfPath, viewer);
-        
+
         // Configurar controles
         this.setupAdvancedControls(viewer, pdfPath);
-        
+
         return viewer;
     }
 
@@ -258,27 +255,27 @@ export class AdvancedPDFViewer {
         const loadingDiv = viewer.querySelector('.pdf-loading');
         const errorDiv = viewer.querySelector('.pdf-error');
         const viewport = viewer.querySelector('.pdf-viewport');
-        
+
         // Mostrar loading
         loadingDiv.style.display = 'flex';
         errorDiv.style.display = 'none';
         viewport.innerHTML = '';
-        
+
         const success = await this.loadPDF(pdfPath);
         loadingDiv.style.display = 'none';
-        
+
         if (success) {
             // Actualizar información de páginas
             const totalPages = this.currentPdf.numPages;
             viewer.querySelector('.total-pages').textContent = totalPages;
             viewer.querySelector('.page-input').max = totalPages;
-            
+
             // Generar todas las páginas según el modo de vista
             await this.renderAllPages(viewer);
-            
+
             // Generar miniaturas
             await this.generateThumbnails(viewer);
-            
+
             this.updatePageInfo(viewer);
         } else {
             errorDiv.style.display = 'flex';
@@ -288,9 +285,9 @@ export class AdvancedPDFViewer {
     async renderAllPages(viewer) {
         const viewport = viewer.querySelector('.pdf-viewport');
         viewport.innerHTML = '';
-        
+
         const totalPages = this.currentPdf.numPages;
-        
+
         if (this.viewMode === 'single') {
             // Solo renderizar la página actual
             await this.renderSinglePage(viewer, this.currentPage);
@@ -310,39 +307,39 @@ export class AdvancedPDFViewer {
     async renderSinglePage(viewer, pageNumber) {
         const viewport = viewer.querySelector('.pdf-viewport');
         viewport.innerHTML = '';
-        
+
         const pageContainer = document.createElement('div');
         pageContainer.className = 'pdf-page-container single-page';
         pageContainer.innerHTML = `
             <div class="page-number">Página ${pageNumber}</div>
             <canvas class="pdf-page-canvas" data-page="${pageNumber}"></canvas>
         `;
-        
+
         viewport.appendChild(pageContainer);
-        
+
         const canvas = pageContainer.querySelector('.pdf-page-canvas');
         await this.renderPage(pageNumber, canvas);
     }
 
     async renderPageInViewport(viewer, pageNumber) {
         const viewport = viewer.querySelector('.pdf-viewport');
-        
+
         const pageContainer = document.createElement('div');
         pageContainer.className = 'pdf-page-container continuous-page';
         pageContainer.innerHTML = `
             <div class="page-number">Página ${pageNumber}</div>
             <canvas class="pdf-page-canvas" data-page="${pageNumber}"></canvas>
         `;
-        
+
         viewport.appendChild(pageContainer);
-        
+
         const canvas = pageContainer.querySelector('.pdf-page-canvas');
         await this.renderPage(pageNumber, canvas);
     }
 
     async renderPageInGrid(viewer, pageNumber) {
         const viewport = viewer.querySelector('.pdf-viewport');
-        
+
         // Crear contenedor de grilla si no existe
         let gridContainer = viewport.querySelector('.pdf-grid-container');
         if (!gridContainer) {
@@ -350,16 +347,16 @@ export class AdvancedPDFViewer {
             gridContainer.className = 'pdf-grid-container';
             viewport.appendChild(gridContainer);
         }
-        
+
         const pageContainer = document.createElement('div');
         pageContainer.className = 'pdf-page-container grid-page';
         pageContainer.innerHTML = `
             <div class="page-number">Página ${pageNumber}</div>
             <canvas class="pdf-page-canvas" data-page="${pageNumber}"></canvas>
         `;
-        
+
         gridContainer.appendChild(pageContainer);
-        
+
         const canvas = pageContainer.querySelector('.pdf-page-canvas');
         await this.renderPage(pageNumber, canvas, 0.8); // Escala reducida para grilla
     }
@@ -367,29 +364,29 @@ export class AdvancedPDFViewer {
     async generateThumbnails(viewer) {
         const thumbnailsContainer = viewer.querySelector('.thumbnails-container');
         thumbnailsContainer.innerHTML = '';
-        
+
         const totalPages = this.currentPdf.numPages;
-        
+
         for (let i = 1; i <= totalPages; i++) {
             const thumbnailDiv = document.createElement('div');
             thumbnailDiv.className = 'thumbnail-item';
             if (i === this.currentPage) {
                 thumbnailDiv.classList.add('active');
             }
-            
+
             thumbnailDiv.innerHTML = `
                 <canvas class="thumbnail-canvas" data-page="${i}"></canvas>
                 <div class="thumbnail-number">${i}</div>
             `;
-            
+
             thumbnailDiv.addEventListener('click', async () => {
                 this.currentPage = i;
                 await this.goToPage(viewer, i);
                 this.updateThumbnailSelection(viewer);
             });
-            
+
             thumbnailsContainer.appendChild(thumbnailDiv);
-            
+
             const canvas = thumbnailDiv.querySelector('.thumbnail-canvas');
             await this.renderThumbnail(i, canvas);
         }
@@ -397,9 +394,9 @@ export class AdvancedPDFViewer {
 
     async goToPage(viewer, pageNumber) {
         if (pageNumber < 1 || pageNumber > this.currentPdf.numPages) return;
-        
+
         this.currentPage = pageNumber;
-        
+
         if (this.viewMode === 'single') {
             await this.renderSinglePage(viewer, pageNumber);
         } else {
@@ -409,7 +406,7 @@ export class AdvancedPDFViewer {
                 pageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         }
-        
+
         this.updatePageInfo(viewer);
         this.updateThumbnailSelection(viewer);
     }
@@ -427,19 +424,19 @@ export class AdvancedPDFViewer {
     setupAdvancedControls(viewer, pdfPath) {
         // Controles de navegación
         this.setupNavigationControls(viewer);
-        
+
         // Controles de zoom
         this.setupZoomControls(viewer);
-        
+
         // Controles de rotación
         this.setupRotationControls(viewer);
-        
+
         // Controles de vista
         this.setupViewControls(viewer);
-        
+
         // Controles de acción
         this.setupActionControls(viewer, pdfPath);
-        
+
         // Toggle de visibilidad
         this.setupToggleControls(viewer);
     }
@@ -452,7 +449,7 @@ export class AdvancedPDFViewer {
         const pageInput = viewer.querySelector('.page-input');
 
         firstBtn.addEventListener('click', () => this.goToPage(viewer, 1));
-        
+
         prevBtn.addEventListener('click', () => {
             if (this.currentPage > 1) {
                 this.goToPage(viewer, this.currentPage - 1);
@@ -545,7 +542,7 @@ export class AdvancedPDFViewer {
         viewModeSelect.addEventListener('change', async (e) => {
             this.viewMode = e.target.value;
             await this.renderAllPages(viewer);
-            
+
             // Mostrar/ocultar panel de miniaturas según el modo
             const sidebar = viewer.querySelector('.pdf-sidebar');
             if (this.viewMode === 'single') {
@@ -641,7 +638,7 @@ export class AdvancedPDFViewer {
 
     addStyles() {
         if (document.getElementById('advanced-pdf-styles')) return;
-        
+
         const style = document.createElement('style');
         style.id = 'advanced-pdf-styles';
         style.textContent = `

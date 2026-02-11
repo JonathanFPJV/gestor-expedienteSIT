@@ -20,7 +20,7 @@ class PdfSelector {
      */
     async selectPdf() {
         try {
-            console.log('📎 Abriendo diálogo de selección de PDF...');
+            console.log('[pdfSelector] Abriendo diálogo de selección de PDF...');
 
             // Invocar el handler IPC para abrir diálogo de archivo
             const filePath = await window.api.invoke('tarjeta:seleccionar-pdf');
@@ -35,7 +35,7 @@ class PdfSelector {
                 }
 
                 this.lastSelectedPath = filePath;
-                console.log('✅ PDF seleccionado:', filePath);
+                console.log('PDF seleccionado:', filePath);
 
                 return {
                     success: true,
@@ -43,14 +43,14 @@ class PdfSelector {
                 };
             } else {
                 // Usuario canceló la selección
-                console.log('⚠️ Selección de PDF cancelada por el usuario');
+                console.log('Selección de PDF cancelada por el usuario');
                 return {
                     success: false,
                     error: 'Selección cancelada'
                 };
             }
         } catch (error) {
-            console.error('❌ Error al seleccionar PDF:', error);
+            console.error('Error al seleccionar PDF:', error);
             return {
                 success: false,
                 error: error.message || 'Error al seleccionar archivo PDF'
@@ -65,7 +65,7 @@ class PdfSelector {
      */
     async selectMultiplePdfs() {
         try {
-            console.log('📎 Abriendo diálogo de selección múltiple de PDFs...');
+            console.log('[pdfSelector] Abriendo diálogo de selección múltiple de PDFs...');
 
             const filePaths = await window.api.invoke('tarjeta:seleccionar-pdfs-multiples');
 
@@ -80,21 +80,21 @@ class PdfSelector {
                     };
                 }
 
-                console.log(`✅ ${filePaths.length} PDFs seleccionados`);
+                console.log(`${filePaths.length} PDFs seleccionados`);
 
                 return {
                     success: true,
                     filePaths: filePaths
                 };
             } else {
-                console.log('⚠️ Selección múltiple cancelada por el usuario');
+                console.log('Selección múltiple cancelada por el usuario');
                 return {
                     success: false,
                     error: 'Selección cancelada'
                 };
             }
         } catch (error) {
-            console.error('❌ Error al seleccionar PDFs múltiples:', error);
+            console.error('Error al seleccionar PDFs múltiples:', error);
             return {
                 success: false,
                 error: error.message || 'Error al seleccionar archivos PDF'

@@ -16,13 +16,11 @@ export class OCRParser {
      */
     parseExpedienteData(text) {
         if (!text || text.trim().length === 0) {
-            console.warn('⚠️ Texto vacío para parsear');
+            console.warn('Texto vacío para parsear');
             return null;
         }
 
-        console.log('🔍 ==========================================');
-        console.log('🔍 INICIANDO PARSEO DE DATOS DEL EXPEDIENTE');
-        console.log('🔍 ==========================================');
+        console.log('[ocrParser] Iniciando parseo de datos del expediente');
 
         const data = {
             numeroExpediente: this.extractNumeroExpediente(text),
@@ -38,14 +36,7 @@ export class OCRParser {
         // N° de Fichero es el mismo que Unidad de Negocio
         data.numeroFichero = data.unidadNegocio;
 
-        console.log('📊 DATOS EXTRAÍDOS:');
-        console.log('-------------------------------------------');
-        Object.entries(data).forEach(([key, value]) => {
-            const icon = value ? '✅' : '❌';
-            console.log(`${icon} ${key}: ${value || 'NO DETECTADO'}`);
-        });
-        console.log('-------------------------------------------');
-        console.log('🔍 ==========================================');
+        console.log('Datos extraídos:', data);
 
         this.parsedData = data;
         return data;
@@ -65,23 +56,21 @@ export class OCRParser {
 
         for (const pattern of patterns) {
             const matches = [...text.matchAll(pattern)];
-            
+
             if (matches.length > 0) {
                 const primerExpediente = matches[0][1];
-                
+
                 if (matches.length > 1) {
-                    console.log(`   ⚠️ Se encontraron ${matches.length} números de expediente`);
-                    console.log(`   📋 Expedientes detectados:`, matches.map(m => m[1]));
-                    console.log(`   🎯 Usando el PRIMERO: "${matches[0][0]}" → ${primerExpediente}`);
+                    console.log(`Se encontraron ${matches.length} números de expediente. Usando el primero: ${primerExpediente}`);
                 } else {
-                    console.log(`   🎯 Expediente encontrado: "${matches[0][0]}" → ${primerExpediente}`);
+                    console.log(`Expediente encontrado: ${primerExpediente}`);
                 }
-                
+
                 return primerExpediente;
             }
         }
 
-        console.warn('   ⚠️ No se detectó número de expediente');
+        console.warn('No se detectó número de expediente');
         return null;
     }
 
@@ -100,14 +89,14 @@ export class OCRParser {
         for (const pattern of patterns) {
             const match = text.match(pattern);
             if (match) {
-                console.log(`   🎯 Año encontrado: "${match[0]}" → ${match[1]}`);
+                console.log(`Año encontrado: ${match[1]}`);
                 return match[1];
             }
         }
 
         // Por defecto usar año actual
         const currentYear = new Date().getFullYear().toString();
-        console.log(`   ℹ️ Usando año actual por defecto: ${currentYear}`);
+        console.log(`Usando año actual por defecto: ${currentYear}`);
         return currentYear;
     }
 
@@ -128,18 +117,16 @@ export class OCRParser {
 
         for (const pattern of patterns) {
             const matches = [...text.matchAll(pattern)];
-            
+
             if (matches.length > 0) {
                 const primeraResolucion = matches[0][1];
-                
+
                 if (matches.length > 1) {
-                    console.log(`   ⚠️ Se encontraron ${matches.length} números de resolución`);
-                    console.log(`   📋 Resoluciones detectadas:`, matches.map(m => m[1]));
-                    console.log(`   🎯 Usando la PRIMERA: "${matches[0][0]}" → ${primeraResolucion}`);
+                    console.log(`Se encontraron ${matches.length} números de resolución. Usando la primera: ${primeraResolucion}`);
                 } else {
-                    console.log(`   🎯 Resolución encontrada: "${matches[0][0]}" → ${primeraResolucion}`);
+                    console.log(`Resolución encontrada: ${primeraResolucion}`);
                 }
-                
+
                 return primeraResolucion;
             }
         }
@@ -150,17 +137,17 @@ export class OCRParser {
             if (/RESOLUCIÓN\s+GERENCIAL/i.test(line)) {
                 // Extraer todos los dígitos de esa línea
                 const digitsOnly = line.replace(/[^\d]/g, '');
-                
+
                 // Tomar los primeros 3-4 dígitos (número de resolución típico)
                 if (digitsOnly.length >= 3) {
                     const resolution = digitsOnly.substring(0, Math.min(4, digitsOnly.length));
-                    console.log(`   🎯 Resolución extraída de línea (fallback): "${line.trim()}" → ${resolution}`);
+                    console.log(`Resolución extraída de línea (fallback): ${resolution}`);
                     return resolution;
                 }
             }
         }
 
-        console.warn('   ⚠️ No se detectó número de resolución');
+        console.warn('No se detectó número de resolución');
         return null;
     }
 
@@ -187,7 +174,7 @@ export class OCRParser {
 
             if (mes) {
                 const fecha = `${anio}-${mes}-${dia}`;
-                console.log(`   🎯 Fecha encontrada: "${match[0]}" → ${fecha}`);
+                console.log(`Fecha encontrada: ${fecha}`);
                 return fecha;
             }
         }
@@ -204,12 +191,12 @@ export class OCRParser {
 
             if (mes) {
                 const fecha = `${anio}-${mes}-${dia}`;
-                console.log(`   🎯 Fecha (presentación) encontrada: "${match2[0]}" → ${fecha}`);
+                console.log(`Fecha (presentación) encontrada: ${fecha}`);
                 return fecha;
             }
         }
 
-        console.warn('   ⚠️ No se detectó fecha');
+        console.warn('No se detectó fecha');
         return null;
     }
 
@@ -227,23 +214,21 @@ export class OCRParser {
         for (const pattern of patterns) {
             // Usar matchAll para obtener todas las coincidencias
             const matches = [...text.matchAll(pattern)];
-            
+
             if (matches.length > 0) {
                 const primerInforme = matches[0][1];
-                
+
                 if (matches.length > 1) {
-                    console.log(`   ⚠️ Se encontraron ${matches.length} informes técnicos`);
-                    console.log(`   📋 Informes detectados:`, matches.map(m => m[1]));
-                    console.log(`   🎯 Usando el PRIMERO: "${matches[0][0]}" → ${primerInforme}`);
+                    console.log(`Se encontraron ${matches.length} informes técnicos. Usando el primero: ${primerInforme}`);
                 } else {
-                    console.log(`   🎯 Informe Técnico encontrado: "${matches[0][0]}" → ${primerInforme}`);
+                    console.log(`Informe técnico encontrado: ${primerInforme}`);
                 }
-                
+
                 return primerInforme;
             }
         }
 
-        console.warn('   ⚠️ No se detectó informe técnico');
+        console.warn('No se detectó informe técnico');
         return null;
     }
 
@@ -262,23 +247,21 @@ export class OCRParser {
 
         for (const pattern of patterns) {
             const matches = [...text.matchAll(pattern)];
-            
+
             if (matches.length > 0) {
                 const primeraEmpresa = matches[0][1].trim();
-                
+
                 if (matches.length > 1) {
-                    console.log(`   ⚠️ Se encontraron ${matches.length} nombres de empresa`);
-                    console.log(`   📋 Empresas detectadas:`, matches.map(m => m[1].trim()));
-                    console.log(`   🎯 Usando la PRIMERA: "${matches[0][0]}" → ${primeraEmpresa}`);
+                    console.log(`Se encontraron ${matches.length} nombres de empresa. Usando la primera: ${primeraEmpresa}`);
                 } else {
-                    console.log(`   🎯 Empresa encontrada: "${matches[0][0]}" → ${primeraEmpresa}`);
+                    console.log(`Empresa encontrada: ${primeraEmpresa}`);
                 }
-                
+
                 return primeraEmpresa;
             }
         }
 
-        console.warn('   ⚠️ No se detectó nombre de empresa');
+        console.warn('No se detectó nombre de empresa');
         return null;
     }
 
@@ -297,23 +280,21 @@ export class OCRParser {
 
         for (const pattern of patterns) {
             const matches = [...text.matchAll(pattern)];
-            
+
             if (matches.length > 0) {
                 const primeraUnidad = `C${matches[0][1]}`;
-                
+
                 if (matches.length > 1) {
-                    console.log(`   ⚠️ Se encontraron ${matches.length} unidades de negocio`);
-                    console.log(`   📋 Unidades detectadas:`, matches.map(m => `C${m[1]}`));
-                    console.log(`   🎯 Usando la PRIMERA: "${matches[0][0]}" → ${primeraUnidad}`);
+                    console.log(`Se encontraron ${matches.length} unidades de negocio. Usando la primera: ${primeraUnidad}`);
                 } else {
-                    console.log(`   🎯 Unidad de Negocio encontrada: "${matches[0][0]}" → ${primeraUnidad}`);
+                    console.log(`Unidad de negocio encontrada: ${primeraUnidad}`);
                 }
-                
+
                 return primeraUnidad;
             }
         }
 
-        console.warn('   ⚠️ No se detectó unidad de negocio');
+        console.warn('No se detectó unidad de negocio');
         return null;
     }
 
@@ -330,7 +311,7 @@ export class OCRParser {
      */
     clearParsedData() {
         this.parsedData = null;
-        console.log('🗑️ Datos parseados limpiados');
+        console.log('Datos parseados limpiados');
     }
 }
 

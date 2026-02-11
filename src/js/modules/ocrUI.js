@@ -18,11 +18,11 @@ export class OCRUI {
         this.statusContainer = document.getElementById('ocr-status');
         this.messageElement = document.getElementById('ocr-message');
         this.spinner = document.getElementById('ocr-spinner');
-        
+
         if (!this.statusContainer || !this.messageElement || !this.spinner) {
-            console.warn('⚠️ Elementos de OCR UI no encontrados en el DOM');
+            console.warn('Elementos de OCR UI no encontrados en el DOM');
         } else {
-            console.log('✅ OCR UI inicializado correctamente');
+            console.log('OCR UI inicializado correctamente');
         }
     }
 
@@ -32,12 +32,12 @@ export class OCRUI {
      */
     showProcessing(message = 'Procesando documento con OCR...') {
         if (!this.statusContainer) return;
-        
+
         this.statusContainer.style.display = 'flex';
         this.messageElement.textContent = message;
         this.spinner.style.display = 'block';
-        
-        console.log('📊 OCR UI: Mostrando indicador -', message);
+
+        console.log('OCR UI: Mostrando indicador -', message);
     }
 
     /**
@@ -47,7 +47,7 @@ export class OCRUI {
     updateMessage(message) {
         if (this.messageElement) {
             this.messageElement.textContent = message;
-            console.log('📊 OCR UI: Mensaje actualizado -', message);
+            console.log('OCR UI: Mensaje actualizado -', message);
         }
     }
 
@@ -56,15 +56,15 @@ export class OCRUI {
      * @param {string} message - Mensaje de éxito
      * @param {number} duration - Duración en ms (default: 3000)
      */
-    showSuccess(message = '✅ Texto extraído exitosamente', duration = 3000) {
+    showSuccess(message = 'Texto extraído exitosamente', duration = 3000) {
         if (!this.statusContainer) return;
-        
+
         this.spinner.style.display = 'none';
         this.statusContainer.classList.add('success');
         this.messageElement.textContent = message;
-        
-        console.log('✅ OCR UI: Éxito -', message);
-        
+
+        console.log('OCR UI: Éxito -', message);
+
         // Ocultar después de la duración
         setTimeout(() => {
             this.hide();
@@ -76,15 +76,15 @@ export class OCRUI {
      * @param {string} message - Mensaje de error
      * @param {number} duration - Duración en ms (default: 5000)
      */
-    showError(message = '❌ Error al procesar el documento', duration = 5000) {
+    showError(message = 'Error al procesar el documento', duration = 5000) {
         if (!this.statusContainer) return;
-        
+
         this.spinner.style.display = 'none';
         this.statusContainer.classList.add('error');
         this.messageElement.textContent = message;
-        
-        console.error('❌ OCR UI: Error -', message);
-        
+
+        console.error('OCR UI: Error -', message);
+
         // Ocultar después de la duración
         setTimeout(() => {
             this.hide();
@@ -96,12 +96,12 @@ export class OCRUI {
      */
     hide() {
         if (!this.statusContainer) return;
-        
+
         this.statusContainer.style.display = 'none';
         this.statusContainer.classList.remove('success', 'error');
         this.spinner.style.display = 'none';
-        
-        console.log('👁️ OCR UI: Indicador ocultado');
+
+        console.log('OCR UI: Indicador ocultado');
     }
 
     /**
@@ -110,7 +110,7 @@ export class OCRUI {
      */
     showProgress(progress) {
         if (!this.messageElement) return;
-        
+
         const message = `Procesando documento... ${progress}%`;
         this.updateMessage(message);
     }

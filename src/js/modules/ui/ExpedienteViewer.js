@@ -10,7 +10,7 @@ export class ExpedienteViewer {
     showExpedienteDetails(expediente) {
         if (!expediente) return;
 
-        console.log('👁️ Visualizando expediente:', expediente.numeroExpediente);
+        console.log('Visualizando expediente:', expediente.numeroExpediente);
 
         const tarjetasCount = expediente.tarjetasAsociadas ? expediente.tarjetasAsociadas.length : 0;
         const tienePdf = expediente.pdfPath ? 'Sí' : 'No';
