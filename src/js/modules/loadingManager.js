@@ -8,7 +8,7 @@ class LoadingManager {
         this.loadingStates = new Map();
         this.overlayElement = null;
         this.loadingElement = null;
-        
+
         this.setupEventListeners();
         this.createLoadingElements();
     }
@@ -24,27 +24,30 @@ class LoadingManager {
     }
 
     createLoadingElements() {
-        // Crear overlay de carga
+        // Crear overlay de carga global (spinner central)
         this.overlayElement = document.createElement('div');
         this.overlayElement.id = 'loading-overlay';
         this.overlayElement.className = 'loading-overlay hidden';
-        
+
         this.loadingElement = document.createElement('div');
         this.loadingElement.className = 'loading-spinner';
         this.loadingElement.innerHTML = `
             <div class="spinner"></div>
             <div class="loading-text">Cargando...</div>
         `;
-        
+
         this.overlayElement.appendChild(this.loadingElement);
         document.body.appendChild(this.overlayElement);
 
-        // Agregar estilos
         this.addStyles();
     }
 
     addStyles() {
+        // Evitar duplicar estilos si ya existen
+        if (document.getElementById('loading-manager-styles')) return;
+
         const style = document.createElement('style');
+        style.id = 'loading-manager-styles';
         style.textContent = `
             .loading-overlay {
                 position: fixed;
@@ -99,35 +102,11 @@ class LoadingManager {
                 font-weight: 500;
             }
 
-            /* Estilos para indicadores de carga locales */
-            .btn-loading {
-                position: relative;
-                pointer-events: none;
-            }
-
-            .btn-loading::after {
-                content: '';
-                position: absolute;
-                width: 16px;
-                height: 16px;
-                top: 50%;
-                left: 50%;
-                margin-left: -8px;
-                margin-top: -8px;
-                border: 2px solid transparent;
-                border-top: 2px solid #fff;
-                border-radius: 50%;
-                animation: spin 1s linear infinite;
-            }
-
-            .btn-loading .btn-text {
-                opacity: 0;
-            }
-
+            /* Spinner pequeño para inputs de búsqueda */
             .search-loading {
                 position: relative;
             }
-
+            
             .search-loading::after {
                 content: '';
                 position: absolute;
@@ -141,17 +120,23 @@ class LoadingManager {
                 border-radius: 50%;
                 animation: spin 1s linear infinite;
             }
+            
+            /* Clase para botón deshabilitado visualmente durante carga */
+            .btn-loading-state {
+                cursor: not-allowed !important;
+                opacity: 0.8;
+            }
         `;
         document.head.appendChild(style);
     }
 
     show(operation = 'default', text = 'Cargando...') {
         this.loadingStates.set(operation, true);
-        
+
         if (this.loadingElement) {
             this.loadingElement.querySelector('.loading-text').textContent = text;
         }
-        
+
         if (this.overlayElement) {
             this.overlayElement.classList.remove('hidden');
             this.overlayElement.classList.add('visible');
@@ -160,47 +145,61 @@ class LoadingManager {
 
     hide(operation = 'default') {
         this.loadingStates.delete(operation);
-        
-        // Solo ocultar si no hay otras operaciones de carga activas
+
         if (this.loadingStates.size === 0 && this.overlayElement) {
             this.overlayElement.classList.remove('visible');
             this.overlayElement.classList.add('hidden');
         }
     }
 
-    // Mostrar loading en un botón específico
-    showButtonLoading(button, originalText = null) {
+    /**
+     * Muestra estado de carga en un botón reemplazando su texto temporalmente.
+     * Guarda el innerHTML original para restaurarlo después.
+     * @param {HTMLElement} button - El botón a modificar
+     * @param {string} loadingText - Texto a mostrar durante la carga
+     */
+    showButtonLoading(button, loadingText = 'Guardando...') {
         if (!button) return;
-        
-        if (originalText) {
-            button.dataset.originalText = originalText;
-        } else {
-            button.dataset.originalText = button.textContent;
-        }
-        
-        button.classList.add('btn-loading');
+
+        // 1. Si ya estamos cargando este botón, no hacer nada para no perder el original
+        if (button.dataset.isLoading === 'true') return;
+
+        // 2. Guardar estado original
+        // Usamos innerHTML para preservar iconos u otros elementos dentro del botón
+        button.dataset.originalContent = button.innerHTML;
+        button.dataset.isLoading = 'true';
+
+        // 3. Cambiar estado visual
         button.disabled = true;
-        
-        if (button.querySelector('.btn-text')) {
-            button.querySelector('.btn-text').style.opacity = '0';
-        } else {
-            const textSpan = document.createElement('span');
-            textSpan.className = 'btn-text';
-            textSpan.textContent = button.textContent;
-            button.innerHTML = '';
-            button.appendChild(textSpan);
-        }
+        button.classList.add('btn-loading-state');
+        // Cambiar texto
+        button.innerHTML = loadingText;
     }
 
+    /**
+     * Restaura el estado original del botón.
+     * @param {HTMLElement} button - El botón a restaurar
+     */
     hideButtonLoading(button) {
         if (!button) return;
-        
-        button.classList.remove('btn-loading');
-        button.disabled = false;
-        
-        if (button.dataset.originalText) {
-            button.textContent = button.dataset.originalText;
-            delete button.dataset.originalText;
+
+        // Solo restaurar si realmente estaba en estado de carga iniciado por este manager
+        if (button.dataset.isLoading === 'true') {
+            // Restaurar contenido original
+            if (button.dataset.originalContent !== undefined) {
+                button.innerHTML = button.dataset.originalContent;
+                delete button.dataset.originalContent;
+            }
+
+            // Restaurar estado
+            button.disabled = false;
+            button.classList.remove('btn-loading-state');
+            delete button.dataset.isLoading;
+        } else {
+            // Fallback de seguridad: si por alguna razón no tiene flag pero queremos "limpiarlo"
+            // Aseguramos que esté habilitado al menos.
+            button.disabled = false;
+            button.classList.remove('btn-loading-state');
         }
     }
 
@@ -215,32 +214,27 @@ class LoadingManager {
         input.classList.remove('search-loading');
     }
 
-    // Limpiar todos los estados de carga
     clearAll() {
         this.loadingStates.clear();
         if (this.overlayElement) {
             this.overlayElement.classList.remove('visible');
             this.overlayElement.classList.add('hidden');
         }
-        
-        // Limpiar botones
-        document.querySelectorAll('.btn-loading').forEach(btn => {
+
+        // Limpiar botones manualmente si es necesario (mejor reiniciar UI completa)
+        document.querySelectorAll('[data-is-loading="true"]').forEach(btn => {
             this.hideButtonLoading(btn);
         });
-        
-        // Limpiar inputs de búsqueda
+
         document.querySelectorAll('.search-loading').forEach(input => {
             this.hideSearchLoading(input);
         });
     }
 
     isLoading(operation = null) {
-        if (operation) {
-            return this.loadingStates.has(operation);
-        }
+        if (operation) return this.loadingStates.has(operation);
         return this.loadingStates.size > 0;
     }
 }
 
-// Instancia singleton del gestor de carga
 export const loadingManager = new LoadingManager();

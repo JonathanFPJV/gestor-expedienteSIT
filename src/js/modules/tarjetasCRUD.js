@@ -7,6 +7,8 @@
 import { dataService } from './dataService.js';
 import { eventBus, APP_EVENTS } from './eventBus.js';
 import { loadingManager } from './loadingManager.js';
+import { pdfSelector } from './pdfSelector.js';
+import { ocrExtractor } from './ocrExtractor.js';
 
 class TarjetasCRUD {
     constructor() {
@@ -21,7 +23,7 @@ class TarjetasCRUD {
         this.currentTarjetaId = null;
         this.selectedPdfPath = null; // Para almacenar la ruta del PDF seleccionado
         this.isInitialized = false; // Para controlar la carga inicial de datos
-        
+
         // Referencias al DOM
         this.elements = {};
     }
@@ -31,19 +33,19 @@ class TarjetasCRUD {
      */
     init() {
         console.log('🎫 Inicializando módulo de gestión de tarjetas...');
-        
+
         // Cachear referencias al DOM
         this.cacheElements();
-        
+
         // Configurar event listeners
         this.setupEventListeners();
-        
+
         // Suscribirse a eventos del eventBus
         this.subscribeToEvents();
-        
+
         // Configurar observer para detectar cuando la vista se activa
         this.setupViewActivationListener();
-        
+
         console.log('✅ Módulo de tarjetas inicializado');
     }
 
@@ -52,7 +54,7 @@ class TarjetasCRUD {
      */
     setupViewActivationListener() {
         const vistaTarjetas = document.getElementById('vista-tarjetas-crud');
-        
+
         if (!vistaTarjetas) {
             console.warn('⚠️ No se encontró el elemento vista-tarjetas-crud');
             return;
@@ -63,7 +65,7 @@ class TarjetasCRUD {
             mutations.forEach((mutation) => {
                 if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
                     const vistaTarjetas = document.getElementById('vista-tarjetas-crud');
-                    
+
                     if (vistaTarjetas && vistaTarjetas.classList.contains('active')) {
                         console.log('🎯 Vista de tarjetas activada - Recargando datos...');
                         // 🔄 SIEMPRE recargar cuando se active la vista para mostrar cambios
@@ -95,17 +97,17 @@ class TarjetasCRUD {
         this.elements.searchCrudInput = document.getElementById('search-tarjetas-crud-input');
         this.elements.clearSearchBtn = document.getElementById('clear-search-tarjetas');
         this.elements.limpiarFiltrosBtn = document.getElementById('limpiar-filtros-tarjetas-btn');
-        
+
         // Tabla
         this.elements.tarjetasTable = document.getElementById('tarjetas-table');
         this.elements.tarjetasTbody = document.getElementById('tarjetas-tbody');
-        
+
         // Paginación
         this.elements.paginationInfo = document.getElementById('pagination-info-tarjetas');
         this.elements.pageInfo = document.getElementById('page-info-tarjetas');
         this.elements.prevPageBtn = document.getElementById('prev-page-tarjetas');
         this.elements.nextPageBtn = document.getElementById('next-page-tarjetas');
-        
+
         // Modal
         this.elements.modal = document.getElementById('modal-tarjeta');
         this.elements.modalTitle = document.getElementById('modal-tarjeta-title');
@@ -127,11 +129,11 @@ class TarjetasCRUD {
 
         // Búsqueda en tiempo real
         if (this.elements.searchCrudInput) {
-            this.elements.searchCrudInput.addEventListener('input', (e) => 
+            this.elements.searchCrudInput.addEventListener('input', (e) =>
                 this.filterTableInRealTime(e.target.value)
             );
         }
-        
+
         // Botón limpiar búsqueda
         if (this.elements.clearSearchBtn) {
             this.elements.clearSearchBtn.addEventListener('click', () => this.clearQuickSearch());
@@ -196,15 +198,15 @@ class TarjetasCRUD {
     async cargarTarjetas() {
         try {
             loadingManager.show('cargar-tarjetas', 'Cargando tarjetas...');
-            
+
             const resultado = await window.api.invoke('tarjeta:obtener-todas');
-            
+
             if (resultado.success) {
                 this.tarjetas = resultado.tarjetas;
                 this.filteredTarjetas = [...this.tarjetas];
                 this.currentPage = 1;
                 this.renderTarjetas();
-                
+
                 console.log(`✅ ${resultado.count} tarjetas cargadas`);
             } else {
                 this.mostrarError(resultado.message);
@@ -222,7 +224,7 @@ class TarjetasCRUD {
      */
     async buscarTarjetas() {
         const searchTerm = this.elements.searchCrudInput?.value?.trim() || '';
-        
+
         if (!searchTerm) {
             this.filteredTarjetas = [...this.tarjetas];
             this.currentPage = 1;
@@ -232,14 +234,14 @@ class TarjetasCRUD {
 
         try {
             loadingManager.show('buscar-tarjetas', 'Buscando tarjetas...');
-            
+
             const resultado = await window.api.invoke('tarjeta:buscar', searchTerm);
-            
+
             if (resultado.success) {
                 this.filteredTarjetas = resultado.tarjetas;
                 this.currentPage = 1;
                 this.renderTarjetas();
-                
+
                 console.log(`🔍 Búsqueda "${searchTerm}": ${resultado.count} resultados`);
             } else {
                 this.mostrarError(resultado.message);
@@ -259,60 +261,60 @@ class TarjetasCRUD {
         if (this.elements.searchCrudInput) {
             this.elements.searchCrudInput.value = '';
         }
-        
+
         // Limpiar búsqueda rápida también
         this.clearQuickSearch();
-        
+
         this.filteredTarjetas = [...this.tarjetas];
         this.currentPage = 1;
         this.renderTarjetas();
     }
-    
+
     // 🔍 Filtrar tabla en tiempo real con debounce y búsqueda en backend
     filterTableInRealTime(searchTerm) {
         const term = searchTerm.trim();
-        
+
         // Mostrar/ocultar botón de limpiar
         if (this.elements.clearSearchBtn) {
             this.elements.clearSearchBtn.style.display = term ? 'block' : 'none';
         }
-        
+
         // Limpiar el timer anterior
         if (this.searchDebounceTimer) {
             clearTimeout(this.searchDebounceTimer);
         }
-        
+
         // Si no hay término, cargar todas las tarjetas
         if (!term) {
             this.loadTarjetas();
             return;
         }
-        
+
         // Mostrar indicador de búsqueda
         this.showSearchingIndicator();
-        
+
         // Configurar nuevo timer con debounce
         this.searchDebounceTimer = setTimeout(async () => {
             try {
                 console.log(`🔍 Buscando tarjetas en backend: "${term}"`);
-                
+
                 // Llamar al backend con búsqueda y paginación
                 const resultado = await window.api.invoke('buscar-tarjetas', {
                     searchTerm: term,
                     page: 1, // Siempre empezar en página 1 al buscar
                     limit: this.itemsPerPage
                 });
-                
+
                 if (resultado.success) {
                     // Actualizar datos con resultados de búsqueda
                     this.tarjetas = resultado.tarjetas;
                     this.filteredTarjetas = resultado.tarjetas;
                     this.currentPage = resultado.page;
                     this.totalPages = resultado.totalPages;
-                    
+
                     // Renderizar tabla con resultados
                     this.renderTarjetas();
-                    
+
                     console.log(`✅ Búsqueda completada: ${resultado.total} resultados encontrados`);
                 } else {
                     console.error('❌ Error en búsqueda:', resultado.error);
@@ -330,7 +332,7 @@ class TarjetasCRUD {
             }
         }, this.searchDebounceDelay);
     }
-    
+
     // 🔄 Mostrar indicador de búsqueda
     showSearchingIndicator() {
         const tbody = this.elements.tablaTarjetasBody;
@@ -338,7 +340,7 @@ class TarjetasCRUD {
             tbody.style.opacity = '0.5';
         }
     }
-    
+
     // 🔄 Ocultar indicador de búsqueda
     hideSearchingIndicator() {
         const tbody = this.elements.tablaTarjetasBody;
@@ -346,7 +348,7 @@ class TarjetasCRUD {
             tbody.style.opacity = '1';
         }
     }
-    
+
     // 🧹 Limpiar búsqueda rápida
     clearQuickSearch() {
         if (this.elements.searchCrudInput) {
@@ -355,7 +357,7 @@ class TarjetasCRUD {
         if (this.elements.clearSearchBtn) {
             this.elements.clearSearchBtn.style.display = 'none';
         }
-        
+
         // Mostrar todas las tarjetas
         this.filteredTarjetas = [...this.tarjetas];
         this.currentPage = 1;
@@ -403,7 +405,7 @@ class TarjetasCRUD {
     async crearBadgeEstado(estado) {
         try {
             const info = await window.api.invoke('tarjeta:obtener-info-estado', estado);
-            
+
             if (info && info.success) {
                 const { valor, color, icono } = info.info;
                 return `<span class="estado-badge" style="background: ${color}; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.85rem; font-weight: 500;">
@@ -413,7 +415,7 @@ class TarjetasCRUD {
         } catch (error) {
             console.warn('⚠️ Error al obtener info de estado:', error);
         }
-        
+
         // Fallback si falla la obtención de info
         return `<span class="estado-badge" style="background: #6c757d; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.85rem;">
             ${estado || 'ACTIVA'}
@@ -425,22 +427,22 @@ class TarjetasCRUD {
      */
     crearFilaTarjeta(tarjeta) {
         const tr = document.createElement('tr');
-        
+
         // Determinar el estado del acta de entrega
         let actaEntregaHtml = '❌ No';
         if (tarjeta.actaEntregaId) {
             actaEntregaHtml = `<span style="color: #28a745; font-weight: bold;" title="Acta ID: ${tarjeta.actaEntregaId}">✅ Sí (#${tarjeta.actaEntregaId})</span>`;
         }
-        
+
         // Determinar el estado del expediente
         let expedienteHtml = '❌ No';
         if (tarjeta.resolucionId || tarjeta.expedienteId) {
             expedienteHtml = '✅ Sí';
         }
-        
+
         // Crear badge de estado (temporal, se actualizará después)
         const estadoBadge = '<span class="loading-badge">⏳ Cargando...</span>';
-        
+
         tr.innerHTML = `
             <td>${tarjeta.placa || '-'}</td>
             <td>${tarjeta.numeroTarjeta || '-'}</td>
@@ -494,7 +496,7 @@ class TarjetasCRUD {
         if (this.elements.paginationInfo) {
             const startIndex = (this.currentPage - 1) * this.itemsPerPage + 1;
             const endIndex = Math.min(this.currentPage * this.itemsPerPage, this.filteredTarjetas.length);
-            this.elements.paginationInfo.textContent = 
+            this.elements.paginationInfo.textContent =
                 `Mostrando ${startIndex}-${endIndex} de ${this.filteredTarjetas.length} tarjetas`;
         }
 
@@ -518,7 +520,7 @@ class TarjetasCRUD {
      */
     cambiarPagina(nuevaPagina) {
         if (nuevaPagina < 1 || nuevaPagina > this.totalPages) return;
-        
+
         this.currentPage = nuevaPagina;
         this.renderTarjetas();
     }
@@ -531,7 +533,7 @@ class TarjetasCRUD {
         this.selectedPdfPath = null; // Resetear PDF seleccionado
         this.elements.modalTitle.textContent = 'Nueva Tarjeta';
         this.elements.modalEliminar.style.display = 'none';
-        
+
         // Limpiar formulario
         this.elements.modalForm.innerHTML = `
             <div class="form-group">
@@ -574,9 +576,10 @@ class TarjetasCRUD {
             </div>
             <div class="form-group" id="pdf-select-container" style="display: none;">
                 <label for="modal-pdf-path">Documento PDF de la Tarjeta:</label>
-                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                    <input type="text" id="modal-pdf-path" placeholder="Ningún archivo seleccionado" readonly>
-                    <button type="button" id="seleccionar-pdf-tarjeta-btn" class="btn-secondary">Seleccionar PDF</button>
+                <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                    <input type="text" id="modal-pdf-path" placeholder="Ningún archivo seleccionado" readonly style="flex: 1; min-width: 200px;">
+                    <button type="button" id="seleccionar-pdf-tarjeta-btn" class="btn-secondary">📎 Seleccionar PDF</button>
+                    <button type="button" id="extraer-ocr-tarjeta-btn" class="btn-secondary" style="display: none;">🔍 Extraer OCR</button>
                 </div>
                 <small style="color: #666; margin-top: 0.25rem; display: block;">
                     El PDF se guardará en la carpeta del expediente seleccionado
@@ -589,7 +592,7 @@ class TarjetasCRUD {
         const expedienteContainer = document.getElementById('expediente-select-container');
         const actaEntregaContainer = document.getElementById('acta-entrega-select-container');
         const pdfContainer = document.getElementById('pdf-select-container');
-        
+
         if (checkboxAsociar) {
             checkboxAsociar.addEventListener('change', async (e) => {
                 if (e.target.checked) {
@@ -614,6 +617,19 @@ class TarjetasCRUD {
         if (seleccionarPdfBtn) {
             seleccionarPdfBtn.addEventListener('click', async () => {
                 await this.seleccionarPdfTarjeta();
+                // Mostrar botón de extraer OCR después de seleccionar
+                const extraerOcrBtn = document.getElementById('extraer-ocr-tarjeta-btn');
+                if (extraerOcrBtn) {
+                    extraerOcrBtn.style.display = 'block';
+                }
+            });
+        }
+
+        // Event listener para botón de extraer OCR
+        const extraerOcrBtn = document.getElementById('extraer-ocr-tarjeta-btn');
+        if (extraerOcrBtn) {
+            extraerOcrBtn.addEventListener('click', async () => {
+                await this.extraerOcrTarjeta();
             });
         }
 
@@ -629,17 +645,17 @@ class TarjetasCRUD {
     async editarTarjeta(tarjetaId) {
         try {
             loadingManager.show('editar-tarjeta', 'Cargando tarjeta...');
-            
+
             const resultado = await window.api.invoke('tarjeta:obtener-por-id', tarjetaId);
-            
+
             if (resultado.success) {
                 this.currentTarjetaId = tarjetaId;
                 this.selectedPdfPath = null; // Resetear PDF seleccionado
                 const tarjeta = resultado.tarjeta;
-                
+
                 this.elements.modalTitle.textContent = 'Editar Tarjeta';
                 this.elements.modalEliminar.style.display = 'inline-block';
-                
+
                 // Llenar formulario
                 this.elements.modalForm.innerHTML = `
                     <div class="form-group">
@@ -682,11 +698,12 @@ class TarjetasCRUD {
                     </div>
                     <div class="form-group" id="pdf-select-container" style="display: ${tarjeta.resolucionId ? 'block' : 'none'};">
                         <label for="modal-pdf-path">Documento PDF de la Tarjeta:</label>
-                        <div style="display: flex; gap: 0.5rem; align-items: center;">
-                            <input type="text" id="modal-pdf-path" value="${tarjeta.pdfPath ? 'PDF guardado: ' + tarjeta.pdfPath.split(/[\\/]/).pop() : ''}" placeholder="Ningún archivo seleccionado" readonly>
+                        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                            <input type="text" id="modal-pdf-path" value="${tarjeta.pdfPath ? 'PDF guardado: ' + tarjeta.pdfPath.split(/[\\/]/).pop() : ''}" placeholder="Ningún archivo seleccionado" readonly style="flex: 1; min-width: 200px;">
                             <button type="button" id="seleccionar-pdf-tarjeta-btn" class="btn-secondary">
-                                ${tarjeta.pdfPath ? 'Reemplazar PDF' : 'Seleccionar PDF'}
+                                ${tarjeta.pdfPath ? '📎 Reemplazar PDF' : '📎 Seleccionar PDF'}
                             </button>
+                            <button type="button" id="extraer-ocr-tarjeta-btn" class="btn-secondary" style="display: ${tarjeta.pdfPath ? 'block' : 'none'};">🔍 Extraer OCR</button>
                             ${tarjeta.pdfPath ? '<button type="button" id="abrir-pdf-tarjeta-btn" class="btn-secondary">📄 Abrir</button>' : ''}
                         </div>
                         <small style="color: #666; margin-top: 0.25rem; display: block;">
@@ -700,7 +717,7 @@ class TarjetasCRUD {
                 const expedienteContainer = document.getElementById('expediente-select-container');
                 const actaEntregaContainer = document.getElementById('acta-entrega-select-container');
                 const pdfContainer = document.getElementById('pdf-select-container');
-                
+
                 if (checkboxAsociar) {
                     checkboxAsociar.addEventListener('change', async (e) => {
                         if (e.target.checked) {
@@ -723,6 +740,19 @@ class TarjetasCRUD {
                 if (seleccionarPdfBtn) {
                     seleccionarPdfBtn.addEventListener('click', async () => {
                         await this.seleccionarPdfTarjeta();
+                        // Mostrar botón de extraer OCR después de seleccionar
+                        const extraerOcrBtn = document.getElementById('extraer-ocr-tarjeta-btn');
+                        if (extraerOcrBtn) {
+                            extraerOcrBtn.style.display = 'block';
+                        }
+                    });
+                }
+
+                // Event listener para botón de extraer OCR
+                const extraerOcrBtn = document.getElementById('extraer-ocr-tarjeta-btn');
+                if (extraerOcrBtn) {
+                    extraerOcrBtn.addEventListener('click', async () => {
+                        await this.extraerOcrTarjeta();
                     });
                 }
 
@@ -763,21 +793,21 @@ class TarjetasCRUD {
     async cargarExpedientesEnSelect(expedienteIdSeleccionado = null) {
         try {
             const resultado = await window.api.invoke('obtener-todos-expedientes');
-            
+
             if (resultado && Array.isArray(resultado)) {
                 const select = document.getElementById('modal-expediente-id');
                 if (select) {
                     select.innerHTML = '<option value="">Seleccionar...</option>';
-                    
+
                     resultado.forEach(exp => {
                         const option = document.createElement('option');
                         option.value = exp._id;
                         option.textContent = `${exp.numeroExpediente}-${exp.anioExpediente} - ${exp.nombreEmpresa || 'Sin nombre'}`;
-                        
+
                         if (exp._id === expedienteIdSeleccionado) {
                             option.selected = true;
                         }
-                        
+
                         select.appendChild(option);
                     });
                 }
@@ -793,21 +823,21 @@ class TarjetasCRUD {
     async cargarEstadosEnSelect(estadoSeleccionado = 'ACTIVA') {
         try {
             const resultado = await window.api.invoke('tarjeta:obtener-estados-disponibles');
-            
+
             if (resultado && resultado.success && Array.isArray(resultado.estados)) {
                 const select = document.getElementById('modal-estado');
                 if (select) {
                     select.innerHTML = '';
-                    
+
                     resultado.estados.forEach(estado => {
                         const option = document.createElement('option');
                         option.value = estado.valor;
                         option.textContent = `${estado.icono} ${estado.valor} - ${estado.descripcion}`;
-                        
+
                         if (estado.valor === estadoSeleccionado) {
                             option.selected = true;
                         }
-                        
+
                         select.appendChild(option);
                     });
                 }
@@ -824,22 +854,22 @@ class TarjetasCRUD {
     async cargarActasEntregaEnSelect(actaEntregaIdSeleccionado = null) {
         try {
             const resultado = await window.api.invoke('acta-entrega:obtener-todas');
-            
+
             if (resultado && resultado.success && Array.isArray(resultado.actas)) {
                 const select = document.getElementById('modal-acta-entrega-id');
                 if (select) {
                     select.innerHTML = '<option value="">Ninguna</option>';
-                    
+
                     resultado.actas.forEach(acta => {
                         const option = document.createElement('option');
                         option.value = acta._id;
                         const fecha = acta.fechaEntrega ? new Date(acta.fechaEntrega).toLocaleDateString('es-ES') : 'Sin fecha';
                         option.textContent = `Acta #${acta._id} - ${fecha} (${acta.n_tarjetas_entregadas || 0} tarjetas)`;
-                        
+
                         if (acta._id === actaEntregaIdSeleccionado) {
                             option.selected = true;
                         }
-                        
+
                         select.appendChild(option);
                     });
                 }
@@ -854,7 +884,7 @@ class TarjetasCRUD {
      */
     async guardarTarjeta() {
         const operacion = this.currentTarjetaId ? 'actualizar-tarjeta' : 'crear-tarjeta';
-        
+
         try {
             // Obtener valores del formulario
             const placa = document.getElementById('modal-placa')?.value?.trim();
@@ -901,7 +931,7 @@ class TarjetasCRUD {
                 expedienteId: cleanValue(expedienteId),
                 actaEntregaId: cleanValue(actaEntregaId)
             };
-            
+
             console.log('📤 Enviando datos de tarjeta:', {
                 tarjetaId: this.currentTarjetaId,
                 tarjetaData,
@@ -925,14 +955,14 @@ class TarjetasCRUD {
             if (resultado.success) {
                 // Cerrar modal primero
                 this.cerrarModal();
-                
+
                 // Actualizar solo la tarjeta modificada sin recargar toda la página
                 if (tarjetaIdAnterior) {
                     await this.actualizarTarjetaEnTabla(resultado.tarjeta);
                 } else {
                     await this.agregarTarjetaATabla(resultado.tarjeta);
                 }
-                
+
                 this.mostrarExito(resultado.message);
             } else {
                 this.mostrarError(resultado.message);
@@ -963,7 +993,7 @@ class TarjetasCRUD {
 
             // Re-renderizar solo la página actual
             this.renderTarjetas();
-            
+
             console.log('✅ Tarjeta actualizada en la tabla');
         } catch (error) {
             console.error('❌ Error al actualizar tarjeta en tabla:', error);
@@ -984,7 +1014,7 @@ class TarjetasCRUD {
 
             // Re-renderizar
             this.renderTarjetas();
-            
+
             console.log('✅ Tarjeta agregada a la tabla');
         } catch (error) {
             console.error('❌ Error al agregar tarjeta a tabla:', error);
@@ -996,7 +1026,7 @@ class TarjetasCRUD {
      */
     confirmarEliminarTarjeta(tarjetaId) {
         this.currentTarjetaId = tarjetaId;
-        
+
         if (confirm('¿Está seguro de eliminar esta tarjeta? Esta acción no se puede deshacer.')) {
             this.eliminarTarjeta();
         }
@@ -1020,14 +1050,14 @@ class TarjetasCRUD {
 
             if (resultado.success) {
                 this.cerrarModal();
-                
+
                 // Eliminar de los arrays sin recargar
                 this.tarjetas = this.tarjetas.filter(t => t._id !== tarjetaIdAEliminar);
                 this.filteredTarjetas = this.filteredTarjetas.filter(t => t._id !== tarjetaIdAEliminar);
-                
+
                 // Re-renderizar tabla
                 this.renderTarjetas();
-                
+
                 this.mostrarExito(resultado.message);
             } else {
                 this.mostrarError(resultado.message);
@@ -1057,16 +1087,16 @@ class TarjetasCRUD {
             this.elements.modal.style.display = 'none';
             document.body.style.overflow = 'auto';
         }
-        
+
         // Limpiar estado
         this.currentTarjetaId = null;
         this.selectedPdfPath = null;
-        
+
         // Limpiar formulario
         if (this.elements.modalForm) {
             this.elements.modalForm.innerHTML = '';
         }
-        
+
         // Asegurar que todos los loadings estén ocultos
         loadingManager.clearAll();
     }
@@ -1076,7 +1106,7 @@ class TarjetasCRUD {
      */
     formatearFecha(fecha) {
         if (!fecha) return '-';
-        
+
         try {
             const date = new Date(fecha);
             return date.toLocaleDateString('es-ES', {
@@ -1106,24 +1136,73 @@ class TarjetasCRUD {
     }
 
     /**
-     * Seleccionar archivo PDF para la tarjeta
+     * Seleccionar archivo PDF para la tarjeta (SOLO SELECCIÓN)
      */
     async seleccionarPdfTarjeta() {
         try {
-            const filePath = await window.api.invoke('tarjeta:seleccionar-pdf');
-            
-            if (filePath) {
-                this.selectedPdfPath = filePath;
+            const result = await pdfSelector.selectPdf();
+
+            if (result.success && result.filePath) {
+                this.selectedPdfPath = result.filePath;
                 const pdfPathInput = document.getElementById('modal-pdf-path');
                 if (pdfPathInput) {
-                    const fileName = filePath.split(/[\\/]/).pop();
+                    const fileName = pdfSelector.getFileName(result.filePath);
                     pdfPathInput.value = `Seleccionado: ${fileName}`;
                 }
-                console.log('📄 PDF seleccionado:', filePath);
+                console.log('📄 PDF seleccionado:', result.filePath);
+                this.mostrarExito('PDF seleccionado. Ahora puedes extraer el texto OCR si lo necesitas.');
+            } else if (result.error && result.error !== 'Selección cancelada') {
+                this.mostrarError(result.error);
             }
         } catch (error) {
             console.error('❌ Error al seleccionar PDF:', error);
             this.mostrarError('Error al seleccionar archivo PDF');
+        }
+    }
+
+    /**
+     * Extraer texto OCR del PDF seleccionado para la tarjeta (SOLO EXTRACCIÓN)
+     */
+    async extraerOcrTarjeta() {
+        try {
+            if (!this.selectedPdfPath) {
+                this.mostrarError('Primero debes seleccionar un archivo PDF');
+                return;
+            }
+
+            console.log('🔍 Extrayendo OCR del PDF:', this.selectedPdfPath);
+
+            // Extraer con callback de progreso
+            const result = await ocrExtractor.extractWithProgress(
+                this.selectedPdfPath,
+                (percent, message) => {
+                    console.log(`📈 Progreso OCR: ${percent}% - ${message}`);
+                    // Aquí podríamos actualizar un indicador visual en el modal si existiera
+                }
+            );
+
+            if (result.success && result.extractedData) {
+                console.log('✅ OCR completado:', result.extractedData);
+
+                // Auto-completar campos del modal con datos extraídos
+                const placaInput = document.getElementById('modal-placa');
+                if (placaInput && !placaInput.value && result.extractedData.placa) {
+                    placaInput.value = result.extractedData.placa;
+                }
+
+                const numeroInput = document.getElementById('modal-numero-tarjeta');
+                if (numeroInput && !numeroInput.value && result.extractedData.numeroTarjeta) {
+                    numeroInput.value = result.extractedData.numeroTarjeta;
+                }
+
+                this.mostrarExito('Texto OCR extraído y campos auto-completados exitosamente');
+            } else {
+                this.mostrarError(result.error || 'No se pudo extraer texto del PDF');
+            }
+
+        } catch (error) {
+            console.error('❌ Error al extraer OCR:', error);
+            this.mostrarError('Error al procesar OCR: ' + error.message);
         }
     }
 
@@ -1138,7 +1217,7 @@ class TarjetasCRUD {
             }
 
             const resultado = await window.api.invoke('tarjeta:abrir-pdf', pdfPath);
-            
+
             if (!resultado.success) {
                 this.mostrarError(resultado.message || 'No se pudo abrir el PDF');
             }

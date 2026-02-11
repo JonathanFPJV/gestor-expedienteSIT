@@ -16,27 +16,27 @@ export const getExpedienteData = () => {
     const numeroExpediente = document.getElementById('numeroExpediente').value.trim();
     const anioExpediente = parseInt(document.getElementById('anioExpediente').value) || new Date().getFullYear();
     const fechaExpediente = document.getElementById('fecha').value;
-    
+
     // Campos adicionales
     const numeroResolucion = document.getElementById('numeroResolucion').value.trim() || null;
     const informeTecnico = document.getElementById('informeTecnico').value.trim() || null;
     const unidadNegocio = document.getElementById('unidadNegocio').value || null;
     const nombreEmpresa = document.getElementById('nombreEmpresa').value.trim() || null;
     const numeroFichero = document.getElementById('numeroFichero').value.trim() || null;
-    
+
     // Observaciones - solo incluir si el contenedor está visible
     const observacionesContainer = document.getElementById('observaciones-container');
-    const observaciones = observacionesContainer.classList.contains('hidden') ? 
+    const observaciones = observacionesContainer.classList.contains('hidden') ?
         null : (document.getElementById('observaciones').value.trim() || null);
-    
+
     // Generar expediente completo para compatibilidad y visualización
     const expedienteCompleto = `${numeroExpediente}-${anioExpediente}`;
-    
+
     // Actualizar campo oculto para compatibilidad
     document.getElementById('expediente').value = expedienteCompleto;
-    
+
     // Retornar datos en formato SQLite3 (campos nuevos)
-    return { 
+    return {
         numeroExpediente,
         anioExpediente,
         fechaExpediente,  // Cambio de 'fecha' a 'fechaExpediente'
@@ -52,85 +52,85 @@ export const getExpedienteData = () => {
 // Función para cargar estados disponibles desde el backend
 export const cargarEstadosEnSelector = async (selectElement, estadoSeleccionado = 'ACTIVA') => {
     if (!selectElement) return;
-    
+
     try {
         const resultado = await window.api.invoke('tarjeta:obtener-estados-disponibles');
-        
+
         if (resultado && resultado.success && Array.isArray(resultado.estados)) {
             selectElement.innerHTML = '';
-            
+
             resultado.estados.forEach(estado => {
                 const option = document.createElement('option');
                 option.value = estado.valor;
-                option.textContent = `${estado.icono} ${estado.valor}`;
-                
+                option.textContent = estado.valor;
+
                 if (estado.valor === estadoSeleccionado) {
                     option.selected = true;
                 }
-                
+
                 selectElement.appendChild(option);
             });
         }
     } catch (error) {
-        console.error('❌ Error al cargar estados:', error);
+        console.error('Error al cargar estados:', error);
         // Mantener valor por defecto si hay error
-        selectElement.innerHTML = '<option value="ACTIVA">✅ ACTIVA</option>';
+        selectElement.innerHTML = '<option value="ACTIVA">ACTIVA</option>';
     }
 };
 
 export const getTarjetaData = () => {
     const tarjetas = [];
     const tarjetaItems = tarjetasList.querySelectorAll('.tarjeta-item');
-    
+
     tarjetaItems.forEach(item => {
         const placa = item.querySelector('.placa-input').value.trim();
         const numeroTarjeta = item.querySelector('.tarjeta-input').value.trim();
         const estadoSelect = item.querySelector('.estado-input');
         const estado = estadoSelect ? estadoSelect.value : 'ACTIVA';
         const pdfInput = item.querySelector('.pdf-tarjeta-path');
-        
+
         // 📎 Obtener la ruta del PDF desde dataset
         const pdfPath = pdfInput && pdfInput.dataset.pdfPath ? pdfInput.dataset.pdfPath : '';
-        
+
         // 📎 Obtener el ID de la tarjeta si existe (para modo edición)
         const tarjetaId = item.dataset.tarjetaId || null;
-        
+
         // 🔍 Verificar si el PDF fue cambiado (tiene marca de cambio)
         const pdfChanged = pdfInput && pdfInput.dataset.pdfChanged === 'true';
-        
+
         if (placa) {
-            const tarjetaData = { 
-                placa, 
+            const tarjetaData = {
+                placa,
                 numeroTarjeta: numeroTarjeta || null,
                 estado: estado || 'ACTIVA'
             };
-            
+
             // 🆕 Distinguir entre PDF nuevo y PDF existente
             if (pdfPath) {
                 // Si el PDF fue cambiado O es una ruta absoluta (nuevo archivo)
                 if (pdfChanged || pdfPath.match(/^[A-Z]:\\/i) || pdfPath.startsWith('/')) {
                     // Es un archivo nuevo del sistema → enviar como pdfSourcePath
                     tarjetaData.pdfSourcePath = pdfPath;
-                    console.log(`   📄 Tarjeta ${placa}: PDF NUEVO → pdfSourcePath = ${pdfPath}`);
+                    console.log(`   Tarjeta ${placa}: PDF NUEVO → pdfSourcePath = ${pdfPath}`);
                 } else {
                     // Es una ruta relativa de BD → mantener como pdfPath
                     tarjetaData.pdfPath = pdfPath;
-                    console.log(`   📎 Tarjeta ${placa}: PDF EXISTENTE → pdfPath = ${pdfPath}`);
+                    console.log(`   Tarjeta ${placa}: PDF EXISTENTE → pdfPath = ${pdfPath}`);
                 }
             } else {
                 tarjetaData.pdfPath = null;
-                console.log(`   ⚠️ Tarjeta ${placa}: Sin PDF`);
+                console.log(`   Tarjeta ${placa}: Sin PDF`);
             }
-            
+
             // Incluir ID si existe (modo edición)
             if (tarjetaId) {
                 tarjetaData._id = parseInt(tarjetaId);
             }
-            
+
             tarjetas.push(tarjetaData);
         }
     });
-    
+
     return tarjetas;
 };
 
@@ -142,20 +142,20 @@ export const addTarjetaInput = () => {
             <input type="text" class="placa-input" placeholder="Placa" required>
             <input type="text" class="tarjeta-input" placeholder="N° Tarjeta" required>
             <select class="estado-input" title="Estado de la tarjeta">
-                <option value="ACTIVA">✅ ACTIVA</option>
+                <option value="ACTIVA">ACTIVA</option>
             </select>
         </div>
         <div class="tarjeta-pdf-section">
             <input type="text" class="pdf-tarjeta-path" placeholder="PDF de tarjeta" readonly data-pdf-path="">
-            <button type="button" class="btn-seleccionar-pdf-tarjeta">📎 Agregar PDF</button>
+            <button type="button" class="btn-seleccionar-pdf-tarjeta">Agregar PDF</button>
         </div>
-        <button type="button" class="eliminar-tarjeta-btn">🗑️ Eliminar</button>
+        <button type="button" class="eliminar-tarjeta-btn">Eliminar</button>
     `;
     tarjetasList.appendChild(div);
-    
+
     // Cargar estados disponibles en el selector
     cargarEstadosEnSelector(div.querySelector('.estado-input'));
-    
+
     div.querySelector('.eliminar-tarjeta-btn').addEventListener('click', () => {
         div.remove();
     });
@@ -171,7 +171,7 @@ export const addTarjetaInput = () => {
                 pdfInput.dataset.pdfPath = pdfPath;
                 // 🔄 Marcar que el PDF fue cambiado (archivo NUEVO del sistema)
                 pdfInput.dataset.pdfChanged = 'true';
-                console.log('📎 PDF seleccionado para nueva tarjeta:', pdfPath);
+                console.log('PDF seleccionado para nueva tarjeta:', pdfPath);
             }
         }
     });
@@ -180,35 +180,37 @@ export const addTarjetaInput = () => {
 export const resetExpedienteForm = () => {
     const expedienteForm = document.getElementById('expediente-form');
     expedienteForm.reset();
-    
+
     // Limpiar flags de edición
     delete expedienteForm.dataset.editingId;
+    delete expedienteForm.dataset.expedienteId; // Por compatibilidad
+    delete expedienteForm.dataset.isEditing;
     delete expedienteForm.dataset.tarjetas;
     delete expedienteForm.dataset.actaEntregaId;
-    
+
     // Restaurar título del formulario
     const formTitle = document.querySelector('#vista-registro h2');
     if (formTitle) {
         formTitle.textContent = '📝 Registrar Nuevo Expediente';
     }
-    
+
     // Restaurar texto del botón de guardar
     const guardarBtn = document.getElementById('guardar-expediente-btn');
     if (guardarBtn) {
         guardarBtn.textContent = '💾 Guardar Expediente';
     }
-    
+
     // Restaurar valores por defecto
     document.getElementById('anioExpediente').value = new Date().getFullYear();
     document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
-    
+
     // Ocultar observaciones al resetear
     const observacionesContainer = document.getElementById('observaciones-container');
     const toggleObservacionesBtn = document.getElementById('toggle-observaciones');
     observacionesContainer.classList.add('hidden');
     toggleObservacionesBtn.innerHTML = '➕ Agregar Observaciones';
     toggleObservacionesBtn.classList.remove('active');
-    
+
     pdfFilePathInput.value = '';
     tarjetasList.innerHTML = '';
     addTarjetaInput(); // Agrega el primer campo por defecto
@@ -230,10 +232,10 @@ export const showNotification = (message, type = 'info', duration = 5000) => {
     if (!notificationContainer) {
         createNotificationContainer();
     }
-    
+
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
-    
+
     const icon = getNotificationIcon(type);
     notification.innerHTML = `
         <div class="notification-content">
@@ -242,21 +244,21 @@ export const showNotification = (message, type = 'info', duration = 5000) => {
             <button class="notification-close" onclick="this.parentElement.parentElement.remove()">×</button>
         </div>
     `;
-    
+
     notificationContainer.appendChild(notification);
-    
+
     // Animación de entrada
     setTimeout(() => {
         notification.classList.add('show');
     }, 10);
-    
+
     // Auto-remover después del tiempo especificado
     if (duration > 0) {
         setTimeout(() => {
             removeNotification(notification);
         }, duration);
     }
-    
+
     return notification;
 };
 
@@ -265,7 +267,7 @@ function createNotificationContainer() {
     notificationContainer.id = 'notification-container';
     notificationContainer.className = 'notification-container';
     document.body.appendChild(notificationContainer);
-    
+
     // Agregar estilos CSS
     addNotificationStyles();
 }
@@ -396,22 +398,22 @@ function removeNotification(notification) {
 export const displayTarjetasResults = (results) => {
     try {
         searchTarjetasResults.innerHTML = '';
-        
+
         if (results && results.length > 0) {
             // Crear un contenedor con animación
             const resultsContainer = document.createElement('div');
             resultsContainer.className = 'results-container';
-            
+
             results.forEach((r, index) => {
                 const item = document.createElement('div');
                 item.className = 'search-result-item-dual fade-in';
                 const resultId = `tarjeta-result-${index}`;
                 item.id = resultId;
-                
+
                 // 🎨 Agregar atributo data-estado para estilos dinámicos
                 const estado = r.estado || 'ACTIVA';
                 item.setAttribute('data-estado', estado);
-                
+
                 // Iconos para cada estado
                 const estadoIconos = {
                     'ACTIVA': '✓',
@@ -421,10 +423,10 @@ export const displayTarjetasResults = (results) => {
                     'EN_TRAMITE': '⟳',
                     'EN-TRAMITE': '⟳'
                 };
-                
+
                 const estadoNormalizado = estado.toUpperCase().replace(/ /g, '_');
                 const iconoEstado = estadoIconos[estadoNormalizado] || '●';
-                
+
                 // Crear estructura de dos columnas para información y PDFs
                 item.innerHTML = `
                     <div class="result-info-section">
@@ -477,45 +479,45 @@ export const displayTarjetasResults = (results) => {
                         ` : ''}
                     </div>
                 `;
-                
+
                 resultsContainer.appendChild(item);
-                
+
                 // Mostrar ambos PDFs con delay escalonado
                 setTimeout(() => {
                     // PDF de la tarjeta (izquierda)
                     if (r.pdfPath) {
                         simplePdfViewer.createViewer(
-                            `${resultId}-tarjeta`, 
-                            r.pdfPath, 
+                            `${resultId}-tarjeta`,
+                            r.pdfPath,
                             `${r.placa}`
                         );
                     } else {
-                        document.getElementById(`${resultId}-tarjeta`).innerHTML += 
+                        document.getElementById(`${resultId}-tarjeta`).innerHTML +=
                             '<div class="no-pdf-message">📭 Sin PDF</div>';
                     }
-                    
+
                     // PDF del expediente (derecha)
                     if (r.expedientePdfPath) {
                         simplePdfViewer.createViewer(
-                            `${resultId}-expediente`, 
-                            r.expedientePdfPath, 
+                            `${resultId}-expediente`,
+                            r.expedientePdfPath,
                             `Exp. ${r.expediente}`
                         );
                     } else {
-                        document.getElementById(`${resultId}-expediente`).innerHTML += 
+                        document.getElementById(`${resultId}-expediente`).innerHTML +=
                             '<div class="no-pdf-message">📭 Sin PDF</div>';
                     }
                 }, index * 150); // Animación escalonada
             });
-            
+
             searchTarjetasResults.appendChild(resultsContainer);
-            
+
             // Agregar información de resultados
             const infoDiv = document.createElement('div');
             infoDiv.className = 'search-info';
             infoDiv.innerHTML = `<p class="text-muted">Se encontraron ${results.length} resultado(s)</p>`;
             searchTarjetasResults.prepend(infoDiv);
-            
+
         } else {
             searchTarjetasResults.innerHTML = `
                 <div class="no-results">
@@ -524,10 +526,10 @@ export const displayTarjetasResults = (results) => {
                 </div>
             `;
         }
-        
+
         // Agregar estilos si no existen
         addResultsStyles();
-        
+
     } catch (error) {
         console.error('Error al mostrar resultados de tarjetas:', error);
         searchTarjetasResults.innerHTML = `
@@ -542,17 +544,17 @@ export const displayTarjetasResults = (results) => {
 export const displayExpedientesResults = (results) => {
     try {
         searchExpedientesResults.innerHTML = '';
-        
+
         if (results && results.length > 0) {
             const resultsContainer = document.createElement('div');
             resultsContainer.className = 'results-container';
-            
+
             results.forEach((expediente, index) => {
                 const item = document.createElement('div');
                 item.className = 'expediente-result-item fade-in';
                 const expedienteId = `expediente-result-${index}`;
                 item.id = expedienteId;
-                
+
                 item.innerHTML = `
                     <div class="expediente-header">
                         <h3>Expediente de Resolución</h3>
@@ -568,16 +570,16 @@ export const displayExpedientesResults = (results) => {
                         </div>
                     </div>
                 `;
-                
+
                 // Mostrar tarjetas asociadas con visualización dinámica
                 if (expediente.tarjetasAsociadas && expediente.tarjetasAsociadas.length > 0) {
                     const tarjetasDiv = document.createElement('div');
                     tarjetasDiv.className = 'tarjetas-asociadas';
-                    
+
                     const cantidadTarjetas = expediente.tarjetasAsociadas.length;
                     const mostrarColapsable = cantidadTarjetas > 3; // Colapsable si hay más de 3
                     const maxTarjetasVisibles = 2; // Mostrar solo 2 cuando está colapsado
-                    
+
                     // Encabezado con contador
                     const header = document.createElement('div');
                     header.className = 'tarjetas-header';
@@ -586,23 +588,23 @@ export const displayExpedientesResults = (results) => {
                         ${mostrarColapsable ? `<button class="toggle-tarjetas-btn" onclick="this.closest('.tarjetas-asociadas').querySelector('.tarjetas-list').classList.toggle('expanded'); this.textContent = this.closest('.tarjetas-asociadas').querySelector('.tarjetas-list').classList.contains('expanded') ? '▼ Ver menos' : '▶ Ver todas'">▶ Ver todas</button>` : ''}
                     `;
                     tarjetasDiv.appendChild(header);
-                    
+
                     // Contenedor de la lista de tarjetas
                     const tarjetasList = document.createElement('div');
                     tarjetasList.className = mostrarColapsable ? 'tarjetas-list collapsed' : 'tarjetas-list expanded';
-                    
+
                     expediente.tarjetasAsociadas.forEach((tarjeta, index) => {
                         const tarjetaItem = document.createElement('div');
                         tarjetaItem.className = 'tarjeta-asociada';
-                        
+
                         // Ocultar tarjetas después de las primeras 2 si está colapsado
                         if (mostrarColapsable && index >= maxTarjetasVisibles) {
                             tarjetaItem.classList.add('tarjeta-hidden');
                         }
-                        
+
                         // 🔧 Manejar diferentes nombres de campo para el número de tarjeta
                         const numeroTarjeta = tarjeta.numeroTarjeta || tarjeta.tarjeta || tarjeta.numero || 'N/A';
-                        
+
                         tarjetaItem.innerHTML = `
                             <div class="tarjeta-info">
                                 <span class="tarjeta-badge">${index + 1}</span>
@@ -610,7 +612,7 @@ export const displayExpedientesResults = (results) => {
                                 ${tarjeta.pdfPath ? `<button class="ver-pdf-tarjeta-btn" data-pdf-path="${tarjeta.pdfPath.replace(/"/g, '&quot;')}">📄 Ver PDF</button>` : ''}
                             </div>
                         `;
-                        
+
                         // Agregar event listener al botón de PDF si existe
                         if (tarjeta.pdfPath) {
                             const pdfBtn = tarjetaItem.querySelector('.ver-pdf-tarjeta-btn');
@@ -622,16 +624,16 @@ export const displayExpedientesResults = (results) => {
                                 });
                             }
                         }
-                        
+
                         tarjetasList.appendChild(tarjetaItem);
                     });
-                    
+
                     tarjetasDiv.appendChild(tarjetasList);
                     item.appendChild(tarjetasDiv);
                 }
-                
+
                 resultsContainer.appendChild(item);
-                
+
                 // Solo mostrar PDF del expediente (no de las tarjetas) usando el visor simple
                 if (expediente.pdfPath) {
                     setTimeout(() => {
@@ -639,15 +641,15 @@ export const displayExpedientesResults = (results) => {
                     }, (index * 100) + 100);
                 }
             });
-            
+
             searchExpedientesResults.appendChild(resultsContainer);
-            
+
             // Agregar información de resultados
             const infoDiv = document.createElement('div');
             infoDiv.className = 'search-info';
             infoDiv.innerHTML = `<p class="text-muted">Se encontraron ${results.length} expediente(s)</p>`;
             searchExpedientesResults.prepend(infoDiv);
-            
+
         } else {
             searchExpedientesResults.innerHTML = `
                 <div class="no-results">
@@ -656,7 +658,7 @@ export const displayExpedientesResults = (results) => {
                 </div>
             `;
         }
-        
+
     } catch (error) {
         console.error('Error al mostrar resultados de expedientes:', error);
         searchExpedientesResults.innerHTML = `
@@ -669,7 +671,7 @@ export const displayExpedientesResults = (results) => {
 
 function addResultsStyles() {
     if (document.getElementById('results-styles')) return;
-    
+
     const style = document.createElement('style');
     style.id = 'results-styles';
     style.textContent = `
@@ -780,7 +782,7 @@ export const showSearchTyping = (type) => {
 // Agregar estilos para el indicador de escritura
 function addTypingStyles() {
     if (document.getElementById('typing-styles')) return;
-    
+
     const style = document.createElement('style');
     style.id = 'typing-styles';
     style.textContent = `

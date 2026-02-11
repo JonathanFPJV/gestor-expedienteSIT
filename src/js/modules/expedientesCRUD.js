@@ -1,80 +1,115 @@
 // src/js/modules/expedientesCRUD.js
+// Clase coordinadora principal de expedientes - Refactorizada
+
 import { dataService } from './dataService.js';
 import { eventBus, APP_EVENTS } from './eventBus.js';
+import { pdfSelector } from './pdfSelector.js';
+import { ocrExtractor } from './ocrExtractor.js';
 
+// Servicios
+import { expedienteService } from './services/ExpedienteService.js';
+import { expedienteSearchService } from './services/ExpedienteSearchService.js';
+import { tarjetaFormService } from './services/TarjetaFormService.js';
+import { actaEntregaService } from './services/ActaEntregaService.js';
+
+// UI Components
+import ExpedienteTableRenderer from './ui/ExpedienteTableRenderer.js';
+import PaginationController from './ui/PaginationController.js';
+import { expedienteFormManager } from './ui/ExpedienteFormManager.js';
+import { expedienteViewer } from './ui/ExpedienteViewer.js';
+import * as ui from './ui.js';
+
+// Operations
+import { expedienteDeleteOperation } from './operations/ExpedienteDeleteOperation.js';
+import { expedienteExportOperation } from './operations/ExpedienteExportOperation.js';
+
+/**
+ * Clase coordinadora principal de Expedientes CRUD
+ * Responsabilidad: Coordinar servicios, gestionar evento y estado global
+ */
 export class ExpedientesCRUD {
     constructor() {
+        // Estado
         this.expedientes = [];
         this.filteredExpedientes = [];
-        this.currentPage = 1;
-        this.itemsPerPage = 10;
-        this.totalPages = 1;
-        this.totalRecords = 0;
         this.currentExpediente = null;
         this.isInitialized = false;
-        this.usePagination = true; // 🆕 Flag para usar paginación del backend
-        
-        // 🔍 Debounce timer para búsqueda
-        this.searchDebounceTimer = null;
-        this.searchDebounceDelay = 500; // 500ms de espera después de dejar de escribir
-        this.searchInProgress = false; // 🆕 Flag para saber si hay una búsqueda activa
-        this.lastSearchTerm = ''; // 🆕 Último término buscado para evitar búsquedas duplicadas
-        
+
+        // Servicios
+        this.expedienteService = expedienteService;
+        this.searchService = expedienteSearchService;
+        this.tarjetaService = tarjetaFormService;
+        this.actaService = actaEntregaService;
+        this.actaService = actaEntregaService;
+        this.formManager = expedienteFormManager;
+        this.viewer = expedienteViewer;
+        this.deleteOperation = expedienteDeleteOperation;
+        this.exportOperation = expedienteExportOperation;
+
+        // UI Components
+        this.tableRenderer = null; // Se inicializa después de inicializar elementos
+        this.paginationController = new PaginationController({
+            startPage: 1,
+            itemsPerPage: 10,
+            usePagination: true
+        });
+
+        // Inicialización
         this.initializeElements();
+        this.initializeServices();
         this.initializeEventListeners();
-        // ✅ NO cargar filtros en constructor - se cargarán con los datos
-        this.subscribeToEvents(); // 🔄 Suscribirse a eventos para reactividad
-        this.setupViewActivationListener(); // 🔄 Escuchar cuando se activa la vista
+        this.subscribeToEvents();
+        this.setupViewActivationListener();
+    }
+
+    /**
+     * Inicializar servicios con referencias DOM
+     */
+    initializeServices() {
+        // Inicializar table renderer
+        this.tableRenderer = new ExpedienteTableRenderer(this.tbody);
+
+        // Configurar pagination controller
+        this.paginationController.setElements({
+            paginationInfo: this.paginationInfo,
+            pageInfo: this.pageInfo,
+            prevPageBtn: this.prevPageBtn,
+            nextPageBtn: this.nextPageBtn
+        });
     }
 
     /**
      * Configurar listener para cuando se active la vista de expedientes
      */
     setupViewActivationListener() {
-        // Cargar expedientes cuando se muestre la vista
         const observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
                 if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
                     const vistaCrud = document.getElementById('vista-crud');
                     if (vistaCrud && vistaCrud.classList.contains('active')) {
-                        console.log('🎯 Vista de expedientes activada - Recargando datos...');
-                        // ✅ Cancelar búsquedas pendientes
                         this.cancelPendingSearch();
-                        // ✅ Restaurar estado de campos de búsqueda y filtros
                         this.restoreSearchFieldsState();
-                        // 🔄 SIEMPRE recargar cuando se active la vista para mostrar cambios
                         this.loadExpedientes();
                     }
                 }
             });
         });
 
-        // Observar cambios en la vista-crud
         const vistaCrud = document.getElementById('vista-crud');
         if (vistaCrud) {
             observer.observe(vistaCrud, { attributes: true });
-            
-            // ✅ NO cargar datos automáticamente - solo cuando usuario active la vista
         }
     }
 
     /**
-     * ✅ Cancelar búsqueda pendiente (debounce timer)
+     * Cancelar búsqueda pendiente
      */
     cancelPendingSearch() {
-        if (this.searchDebounceTimer) {
-            clearTimeout(this.searchDebounceTimer);
-            this.searchDebounceTimer = null;
-            console.log('🚫 Búsqueda pendiente cancelada');
-        }
-        // 🆕 Resetear estado de búsqueda
-        this.searchInProgress = false;
-        this.lastSearchTerm = '';
+        this.searchService.cancelPendingSearch();
     }
 
     /**
-     * ✅ Restaurar estado de campos de búsqueda y filtros
-     * Se llama cuando se activa la vista para asegurar que los campos estén desbloqueados
+     * Restaurar estado de campos de búsqueda y filtros
      */
     restoreSearchFieldsState() {
         // Restaurar campo de búsqueda
@@ -106,9 +141,12 @@ export class ExpedientesCRUD {
             this.exportarExcelBtn.style.opacity = '1';
         }
 
-        console.log('✅ Estado de campos de búsqueda restaurado');
+        console.log('Estado de campos de búsqueda restaurado');
     }
 
+    /**
+     * Inicializar referencias a elementos DOM
+     */
     initializeElements() {
         // Elementos de la tabla
         this.tbody = document.getElementById('expedientes-tbody');
@@ -116,32 +154,33 @@ export class ExpedientesCRUD {
         this.pageInfo = document.getElementById('page-info');
         this.prevPageBtn = document.getElementById('prev-page');
         this.nextPageBtn = document.getElementById('next-page');
-        
+
         // Elementos de búsqueda y filtros
         this.searchInput = document.getElementById('search-crud-input');
         this.clearSearchBtn = document.getElementById('clear-search-crud');
         this.filterAnio = document.getElementById('filter-anio');
         this.filterUnidad = document.getElementById('filter-unidad');
         this.limpiarFiltrosBtn = document.getElementById('limpiar-filtros-btn');
-        
+
         // Botones
         this.nuevoExpedienteBtn = document.getElementById('nuevo-expediente-btn');
         this.exportarExcelBtn = document.getElementById('exportar-excel-btn');
     }
 
+    /**
+     * Inicializar event listeners
+     */
     initializeEventListeners() {
-        // Búsqueda rápida en tiempo real
-        this.searchInput?.addEventListener('input', (e) => this.filterTableInRealTime(e.target.value));
+        // Búsqueda rápida
+        this.searchInput?.addEventListener('input', (e) => this.handleSearch(e.target.value));
         this.clearSearchBtn?.addEventListener('click', () => this.clearQuickSearch());
-        
-        // 🆕 Reactivar búsqueda cuando el usuario hace clic en el campo
+
+        // Reactivar búsqueda al enfocar
         this.searchInput?.addEventListener('focus', () => {
-            console.log('🎯 Campo de búsqueda enfocado - búsqueda reactivada');
-            this.searchInProgress = false;
-            // Si hay texto y es diferente al último resultado, buscar de nuevo
+            this.searchService.searchInProgress = false;
             const currentTerm = this.searchInput.value.trim();
-            if (currentTerm && currentTerm !== this.lastSearchTerm) {
-                this.filterTableInRealTime(currentTerm);
+            if (currentTerm && currentTerm !== this.searchService.lastSearchTerm) {
+                this.handleSearch(currentTerm);
             }
         });
 
@@ -163,8 +202,6 @@ export class ExpedientesCRUD {
         // Escuchar eventos de eliminación del backend
         if (window.api && window.api.on) {
             window.api.on('expediente-eliminado', (data) => {
-                console.log('📢 Evento recibido: expediente-eliminado', data);
-                // Recargar expedientes automáticamente
                 this.loadExpedientes().catch(error => {
                     console.error('Error al recargar expedientes después de eliminación:', error);
                 });
@@ -172,513 +209,205 @@ export class ExpedientesCRUD {
         }
     }
 
-    // 🔄 Suscribirse a eventos para actualización reactiva
+    /**
+     * Suscribirse a eventos del sistema
+     */
     subscribeToEvents() {
-        console.log('🔔 Suscribiendo ExpedientesCRUD a eventos del sistema...');
-        
-        // Escuchar cuando se actualiza un expediente
+        console.log('Suscribiendo ExpedientesCRUD a eventos del sistema...');
+
         eventBus.on(APP_EVENTS.EXPEDIENTE_UPDATED, (data) => {
-            console.log('📢 Evento EXPEDIENTE_UPDATED recibido:', data);
             this.refreshExpedienteInTable(data.expediente);
         });
 
-        // Escuchar cuando se elimina un expediente
         eventBus.on(APP_EVENTS.EXPEDIENTE_DELETED, (data) => {
-            console.log('📢 Evento EXPEDIENTE_DELETED recibido:', data);
-            this.removeExpedienteFromTable(data.expedienteId);
+            this.removeExpedienteFromTable(data.id);
         });
 
-        // Escuchar cuando se crea un expediente
         eventBus.on(APP_EVENTS.EXPEDIENTE_CREATED, (data) => {
-            console.log('📢 Evento EXPEDIENTE_CREATED recibido:', data);
             this.addExpedienteToTable(data.expediente);
         });
 
-        console.log('✅ Suscripción a eventos completada');
+        console.log('Suscripción a eventos completada');
     }
 
-    // 🔄 Actualizar un expediente específico en la tabla sin recargar todo
-    async refreshExpedienteInTable(updatedExpediente) {
-        try {
-            console.log('🔄 Actualizando expediente en tabla local:', updatedExpediente);
-            
-            // Buscar y actualizar en el array principal
-            const index = this.expedientes.findIndex(e => e._id === updatedExpediente._id);
-            if (index !== -1) {
-                this.expedientes[index] = { ...this.expedientes[index], ...updatedExpediente };
-                console.log('✅ Expediente actualizado en array principal');
-            } else {
-                console.warn('⚠️ Expediente no encontrado en array principal, recargaremos todo');
-                await this.loadExpedientes();
-                return;
-            }
-
-            // Actualizar en el array filtrado si existe
-            const filteredIndex = this.filteredExpedientes.findIndex(e => e._id === updatedExpediente._id);
-            if (filteredIndex !== -1) {
-                this.filteredExpedientes[filteredIndex] = { ...this.filteredExpedientes[filteredIndex], ...updatedExpediente };
-                console.log('✅ Expediente actualizado en array filtrado');
-            }
-
-            // Re-renderizar solo la tabla (no hace llamada al backend)
+    /**
+     * Actualizar un expediente específico en la tabla
+     */
+    refreshExpedienteInTable(updatedExpediente) {
+        const index = this.expedientes.findIndex(exp => exp._id === updatedExpediente._id);
+        if (index !== -1) {
+            this.expedientes[index] = updatedExpediente;
+            this.filteredExpedientes = [...this.expedientes];
             this.renderTable();
-            this.updatePagination();
-            
-            console.log('✨ Tabla actualizada exitosamente sin recargar desde API');
-        } catch (error) {
-            console.error('❌ Error al actualizar expediente en tabla:', error);
+            console.log('Expediente actualizado en tabla');
         }
     }
 
-    // 🗑️ Eliminar un expediente de la tabla sin recargar todo
+    /**
+     * Eliminar un expediente de la tabla
+     */
     removeExpedienteFromTable(expedienteId) {
-        try {
-            console.log('🗑️ Eliminando expediente de tabla local:', expedienteId);
-            
-            // Eliminar del array principal
-            this.expedientes = this.expedientes.filter(e => e._id !== expedienteId);
-            
-            // Eliminar del array filtrado
-            this.filteredExpedientes = this.filteredExpedientes.filter(e => e._id !== expedienteId);
-            
-            // Re-renderizar tabla
-            this.renderTable();
-            this.updatePagination();
-            
-            console.log('✨ Expediente eliminado de la tabla exitosamente');
-        } catch (error) {
-            console.error('❌ Error al eliminar expediente de tabla:', error);
-        }
+        this.expedientes = this.expedientes.filter(exp => exp._id !== expedienteId);
+        this.filteredExpedientes = [...this.expedientes];
+        this.renderTable();
+        this.updatePagination();
+        console.log('Expediente eliminado de tabla');
     }
 
-    // ➕ Agregar un nuevo expediente a la tabla sin recargar todo
+    /**
+     * Agregar un nuevo expediente a la tabla
+     */
     addExpedienteToTable(newExpediente) {
-        try {
-            console.log('➕ Agregando nuevo expediente a tabla local:', newExpediente);
-            
-            // Agregar al principio del array principal
-            this.expedientes.unshift(newExpediente);
-            
-            // Aplicar filtros para ver si el nuevo expediente debe aparecer
-            this.applyFilters();
-            
-            // Re-renderizar tabla
-            this.renderTable();
-            this.updatePagination();
-            
-            console.log('✨ Nuevo expediente agregado a la tabla exitosamente');
-        } catch (error) {
-            console.error('❌ Error al agregar expediente a tabla:', error);
+        if (!newExpediente || typeof newExpediente !== 'object') {
+            console.error('Intento de agregar expediente inválido a la tabla:', newExpediente);
+            return;
         }
+
+        // Asegurar que tenga las propiedades mínimas
+        if (!newExpediente.numeroExpediente) {
+            console.warn('Expediente sin número, intentando recargar tabla completa...');
+            this.loadExpedientes();
+            return;
+        }
+
+        this.expedientes.unshift(newExpediente);
+        this.filteredExpedientes = [...this.expedientes];
+        this.paginationController.currentPage = 1;
+        this.renderTable();
+        this.updatePagination();
+        console.log('Nuevo expediente agregado a tabla');
     }
+
+    /**
+     * Cargar expedientes
+     */
     async loadExpedientes() {
         try {
-            console.log('🔄 Cargando expedientes...');
-            this.showLoadingTable();
-            
-            // Verificar que dataService esté disponible
-            if (!dataService) {
-                console.warn('⚠️ DataService no está disponible, usando datos de prueba');
-                this.expedientes = this.createTestData();
+            console.log('Cargando expedientes...');
+            this.tableRenderer.showLoadingState();
+
+            const result = await this.expedienteService.loadExpedientes({
+                page: this.paginationController.currentPage,
+                limit: this.paginationController.itemsPerPage,
+                usePagination: true
+            });
+
+            if (result.success) {
+                this.expedientes = result.data;
                 this.filteredExpedientes = [...this.expedientes];
-                this.currentPage = 1;
+
+                // Actualizar paginación
+                this.paginationController.updateState({
+                    totalPages: result.pagination.totalPages,
+                    totalRecords: result.pagination.totalRecords
+                });
+
                 this.renderTable();
                 this.updatePagination();
                 this.populateYearFilter();
-                return;
-            }
 
-            // 🆕 Usar paginación del backend
-            if (this.usePagination) {
-                const resultado = await dataService.getExpedientesPaginados({
-                    page: this.currentPage,
-                    limit: this.itemsPerPage,
-                    sortBy: 'fechaExpediente',
-                    sortOrder: 'desc'
-                });
-
-                if (resultado.success) {
-                    this.expedientes = resultado.data;
-                    this.filteredExpedientes = [...this.expedientes];
-                    this.totalPages = resultado.pagination.totalPages;
-                    this.totalRecords = resultado.pagination.totalRecords;
-                    
-                    console.log(`✅ Expedientes paginados cargados: ${this.expedientes.length} de ${this.totalRecords}`);
-                } else {
-                    console.error('❌ Error al cargar expedientes paginados:', resultado.message);
-                    this.expedientes = [];
-                    this.filteredExpedientes = [];
-                }
+                console.log('Expedientes cargados correctamente');
             } else {
-                // Modo antiguo (cargar todo)
-                this.expedientes = await dataService.getAllExpedientes();
-                
-                if (!this.expedientes) {
-                    console.warn('⚠️ La respuesta de expedientes es null/undefined, usando datos de prueba');
-                    this.expedientes = this.createTestData();
-                } else if (!Array.isArray(this.expedientes)) {
-                    console.warn('⚠️ Los expedientes no son un array:', this.expedientes, 'usando datos de prueba');
-                    this.expedientes = this.createTestData();
-                } else {
-                    console.log('Total de expedientes cargados:', this.expedientes.length);
-                }
-                
-                this.filteredExpedientes = [...this.expedientes];
+                this.tableRenderer.showErrorState(result.error);
+                console.error('❌ Error al cargar expedientes:', result.error);
             }
-            
-            this.renderTable();
-            this.updatePagination();
-            this.populateYearFilter();
-            
-            console.log('✅ Expedientes cargados y renderizados correctamente');
         } catch (error) {
             console.error('❌ Error al cargar expedientes:', error);
-            console.log('🔧 Usando datos de prueba como fallback');
-            this.expedientes = this.createTestData();
-            this.filteredExpedientes = [...this.expedientes];
-            this.currentPage = 1;
-            this.renderTable();
-            this.updatePagination();
-            this.populateYearFilter();
+            this.tableRenderer.showErrorState('Error al cargar expedientes');
         }
     }
 
-    createTestData() {
-        return [
-            {
-                _id: 'test1',
-                numeroExpediente: '001',
-                anioExpediente: '2024',
-                fecha: '2024-01-15',
-                numeroResolucion: 'RES-001-2024',
-                nombreEmpresa: 'Empresa de Prueba S.A.',
-                unidadNegocio: 'C1',
-                tarjetasAsociadas: [{ numero: '123456789' }, { numero: '987654321' }]
-            },
-            {
-                _id: 'test2',
-                numeroExpediente: '002',
-                anioExpediente: '2024',
-                fecha: '2024-02-20',
-                numeroResolucion: 'RES-002-2024',
-                nombreEmpresa: 'Transportes Ejemplo Ltda.',
-                unidadNegocio: 'C2',
-                tarjetasAsociadas: [{ numero: '555666777' }]
-            },
-            {
-                _id: 'test3',
-                numeroExpediente: '003',
-                anioExpediente: '2023',
-                fecha: '2023-12-10',
-                numeroResolucion: 'RES-003-2023',
-                nombreEmpresa: 'Logística Demo Corp.',
-                unidadNegocio: 'C3',
-                tarjetasAsociadas: []
-            }
-        ];
-    }
-
-    showLoadingTable() {
-        if (!this.tbody) return;
-        
-        this.tbody.innerHTML = `
-            <tr>
-                <td colspan="8" style="text-align: center; padding: 40px; color: #666;">
-                    <div class="loading-spinner"></div>
-                    Cargando expedientes...
-                </td>
-            </tr>
-        `;
-    }
-
-    showEmptyTable() {
-        if (!this.tbody) return;
-        
-        this.tbody.innerHTML = `
-            <tr>
-                <td colspan="8" style="text-align: center; padding: 40px; color: #666;">
-                    No se encontraron expedientes
-                </td>
-            </tr>
-        `;
-    }
-
-    populateYearFilter() {
-        if (!this.filterAnio || !this.expedientes || this.expedientes.length === 0) return;
-        
-        const years = [...new Set(this.expedientes.map(exp => 
-            exp.anioExpediente || new Date(exp.fecha).getFullYear()
-        ))].sort((a, b) => b - a);
-
-        this.filterAnio.innerHTML = '<option value="">Todos</option>';
-        years.forEach(year => {
-            const option = document.createElement('option');
-            option.value = year;
-            option.textContent = year;
-            this.filterAnio.appendChild(option);
-        });
-    }
-
+    /**
+     * Renderizar tabla
+     */
     renderTable() {
-        if (!this.tbody) return;
-
-        // 🆕 Si usamos paginación del backend, los datos ya vienen paginados
-        let expedientesToShow;
-        if (this.usePagination) {
-            expedientesToShow = this.filteredExpedientes; // Ya están paginados
-        } else {
-            // Paginación local (modo antiguo)
-            const startIndex = (this.currentPage - 1) * this.itemsPerPage;
-            const endIndex = startIndex + this.itemsPerPage;
-            expedientesToShow = this.filteredExpedientes.slice(startIndex, endIndex);
-        }
-
-        this.tbody.innerHTML = '';
-
-        if (expedientesToShow.length === 0) {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td colspan="8" style="text-align: center; padding: 40px; color: #666;">
-                    No se encontraron expedientes
-                </td>
-            `;
-            this.tbody.appendChild(row);
-            return;
-        }
-
-        expedientesToShow.forEach(expediente => {
-            const row = document.createElement('tr');
-            const expedienteCompleto = `${expediente.numeroExpediente || 'N/A'}-${expediente.anioExpediente || 'N/A'}`;
-            
-            // Calcular información de tarjetas - solo mostrar número
-            const tarjetasAsociadas = expediente.tarjetasAsociadas || [];
-            const tarjetasCount = tarjetasAsociadas.length;
-            
-            // Crear texto simple de tarjetas (solo número)
-            let tarjetasText = '';
-            if (tarjetasCount === 0) {
-                tarjetasText = '<span class="text-muted">0</span>';
-            } else if (tarjetasCount === 1) {
-                tarjetasText = '<span class="badge badge-primary">1</span>';
-            } else {
-                tarjetasText = `<span class="badge badge-success">${tarjetasCount}</span>`;
-            }
-
-            row.innerHTML = `
-                <td><strong>${expedienteCompleto}</strong></td>
-                <td>${expediente.anioExpediente || 'N/A'}</td>
-                <td>${expediente.fecha || 'N/A'}</td>
-                <td><strong>${expediente.numeroResolucion || '-'}</strong></td>
-                <td>${expediente.nombreEmpresa || '-'}</td>
-                <td><span class="badge">${expediente.unidadNegocio || '-'}</span></td>
-                <td style="text-align: center;">${tarjetasText}</td>
-                <td>
-                    <div class="action-btns">
-                        <button class="btn-action btn-view" onclick="expedientesCRUD.viewExpediente(${expediente._id})" title="Ver detalles">
-                            👁️
-                        </button>
-                        <button class="btn-action btn-edit" onclick="expedientesCRUD.editExpediente(${expediente._id})" title="Editar">
-                            ✏️
-                        </button>
-                        <button class="btn-action btn-delete" onclick="expedientesCRUD.confirmDelete(${expediente._id})" title="Eliminar">
-                            🗑️
-                        </button>
-                    </div>
-                </td>
-            `;
-            this.tbody.appendChild(row);
+        this.tableRenderer.renderTable(this.filteredExpedientes, {
+            onView: (id) => this.viewExpediente(id),
+            onEdit: (id) => this.editExpediente(id),
+            onDelete: (id) => this.confirmDelete(id)
         });
     }
 
+    /**
+     * Actualizar paginación
+     */
     updatePagination() {
-        // 🆕 Si usamos paginación del backend, usar los valores del servidor
-        const totalItems = this.usePagination ? this.totalRecords : this.filteredExpedientes.length;
-        const totalPages = this.usePagination ? this.totalPages : Math.ceil(this.filteredExpedientes.length / this.itemsPerPage);
-
-        // Información
-        if (this.paginationInfo) {
-            if (this.usePagination) {
-                const startItem = totalItems === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1;
-                const endItem = Math.min(this.currentPage * this.itemsPerPage, totalItems);
-                this.paginationInfo.textContent = `Mostrando ${startItem}-${endItem} de ${totalItems} expedientes`;
-            } else {
-                const startItem = totalItems === 0 ? 0 : (this.currentPage - 1) * this.itemsPerPage + 1;
-                const endItem = Math.min(this.currentPage * this.itemsPerPage, totalItems);
-                this.paginationInfo.textContent = `Mostrando ${startItem}-${endItem} de ${totalItems} expedientes`;
-            }
-        }
-
-        if (this.pageInfo) {
-            this.pageInfo.textContent = `Página ${this.currentPage} de ${totalPages}`;
-        }
-
-        // Botones
-        if (this.prevPageBtn) {
-            this.prevPageBtn.disabled = this.currentPage <= 1;
-        }
-        if (this.nextPageBtn) {
-            this.nextPageBtn.disabled = this.currentPage >= totalPages;
-        }
+        this.paginationController.updatePaginationUI();
     }
 
-    handleSearch() {
-        const searchTerm = this.searchInput?.value.toLowerCase().trim() || '';
-        
-        // Verificar que expedientes esté inicializado
-        if (!this.expedientes || !Array.isArray(this.expedientes)) {
-            this.filteredExpedientes = [];
-            this.renderTable();
-            this.updatePagination();
-            return;
-        }
-        
-        if (searchTerm === '') {
-            this.filteredExpedientes = [...this.expedientes];
-        } else {
-            this.filteredExpedientes = this.expedientes.filter(expediente => {
-                const expedienteCompleto = `${expediente.numeroExpediente || ''}-${expediente.anioExpediente || ''}`;
-                return (
-                    expedienteCompleto.toLowerCase().includes(searchTerm) ||
-                    (expediente.numeroResolucion && expediente.numeroResolucion.toLowerCase().includes(searchTerm)) ||
-                    (expediente.nombreEmpresa && expediente.nombreEmpresa.toLowerCase().includes(searchTerm)) ||
-                    (expediente.unidadNegocio && expediente.unidadNegocio.toLowerCase().includes(searchTerm)) ||
-                    (expediente.informeTecnico && expediente.informeTecnico.toLowerCase().includes(searchTerm))
-                );
-            });
-        }
+    /**
+     * Manejar búsqueda
+     */
+    handleSearch(searchTerm) {
+        this.searchService.filterTableInRealTime(
+            searchTerm,
+            () => {
+                // onSearchStart
+                this.showSearchingIndicator();
+                if (this.clearSearchBtn) {
+                    this.clearSearchBtn.style.display = searchTerm.trim() ? 'block' : 'none';
+                }
+            },
+            (result) => {
+                // onSearchComplete
+                this.hideSearchingIndicator();
 
-        this.applyFilters();
-    }
+                if (result.cleared) {
+                    // Búsqueda limpiada
+                    this.loadExpedientes();
+                } else if (result.success) {
+                    this.expedientes = result.expedientes;
+                    this.filteredExpedientes = [...result.expedientes];
 
-    applyFilters() {
-        let filtered = [...this.filteredExpedientes];
+                    const totalPages = Math.ceil(result.total / this.paginationController.itemsPerPage);
+                    this.paginationController.updateState({
+                        currentPage: 1,
+                        totalRecords: result.total,
+                        totalPages: totalPages
+                    });
 
-        // Filtro por año
-        const selectedYear = this.filterAnio?.value;
-        if (selectedYear) {
-            filtered = filtered.filter(exp => 
-                exp.anioExpediente == selectedYear || 
-                new Date(exp.fecha).getFullYear() == selectedYear
-            );
-        }
-
-        // Filtro por unidad
-        const selectedUnidad = this.filterUnidad?.value;
-        if (selectedUnidad) {
-            filtered = filtered.filter(exp => exp.unidadNegocio === selectedUnidad);
-        }
-
-        this.filteredExpedientes = filtered;
-        this.currentPage = 1;
-        this.renderTable();
-        this.updatePagination();
-    }
-
-    clearFilters() {
-        if (this.searchInput) this.searchInput.value = '';
-        if (this.filterAnio) this.filterAnio.value = '';
-        if (this.filterUnidad) this.filterUnidad.value = '';
-        
-        // Limpiar búsqueda rápida también
-        this.clearQuickSearch();
-        
-        this.filteredExpedientes = [...this.expedientes];
-        this.currentPage = 1;
-        this.renderTable();
-        this.updatePagination();
-    }
-    
-    // 🔍 Filtrar tabla con búsqueda en backend (con debounce)
-    filterTableInRealTime(searchTerm) {
-        const term = searchTerm.trim();
-        
-        // Mostrar/ocultar botón de limpiar
-        if (this.clearSearchBtn) {
-            this.clearSearchBtn.style.display = term ? 'block' : 'none';
-        }
-        
-        // Cancelar búsqueda anterior pendiente
-        if (this.searchDebounceTimer) {
-            clearTimeout(this.searchDebounceTimer);
-        }
-        
-        // Si no hay término, limpiar búsqueda
-        if (!term) {
-            this.clearQuickSearch();
-            this.searchInProgress = false;
-            this.lastSearchTerm = '';
-            return;
-        }
-        
-        // 🆕 Si ya hay una búsqueda completada con el mismo término, no buscar de nuevo
-        if (this.searchInProgress && term === this.lastSearchTerm) {
-            console.log('⏸️ Búsqueda ya completada para este término, esperando nuevo focus');
-            return;
-        }
-        
-        // Mostrar indicador de carga mientras se espera
-        this.showSearchingIndicator();
-        
-        // Esperar a que el usuario termine de escribir (debounce)
-        this.searchDebounceTimer = setTimeout(async () => {
-            try {
-                console.log(`🔍 Buscando en backend: "${term}"`);
-                
-                // Llamar al backend con el término de búsqueda
-                const resultado = await window.api.invoke('buscar-expedientes', {
-                    searchTerm: term,
-                    page: 1,
-                    limit: this.itemsPerPage
-                });
-                
-                if (resultado.success) {
-                    this.expedientes = resultado.expedientes || [];
-                    this.filteredExpedientes = [...this.expedientes];
-                    this.totalRecords = resultado.total || this.expedientes.length;
-                    this.totalPages = Math.ceil(this.totalRecords / this.itemsPerPage);
-                    this.currentPage = 1;
-                    
                     this.renderTable();
                     this.updatePagination();
-                    
-                    // 🆕 Marcar búsqueda como completada
-                    this.searchInProgress = true;
-                    this.lastSearchTerm = term;
-                    
-                    console.log(`✅ Búsqueda completada: ${this.expedientes.length} resultados`);
-                    console.log('💤 Búsqueda pausada hasta próximo focus o cambio de texto');
                 } else {
-                    console.error('❌ Error en búsqueda:', resultado.message);
-                    this.showError('Error al buscar expedientes');
+                    this.showError(result.error || 'Error al buscar');
                 }
-            } catch (error) {
-                console.error('❌ Error al buscar:', error);
-                this.showError('Error de conexión al buscar');
-            } finally {
-                // ✅ SIEMPRE restaurar indicador de búsqueda
-                this.hideSearchingIndicator();
-            }
-        }, this.searchDebounceDelay);
+            },
+            { itemsPerPage: this.paginationController.itemsPerPage }
+        );
     }
-    
-    // 💫 Mostrar indicador de búsqueda
-    showSearchingIndicator() {
-        if (this.searchInput) {
-            // Solo cambiar opacidad visual, NO bloquear el input
-            this.searchInput.style.opacity = '0.7';
-            // ❌ NO usar pointerEvents = 'none' - impide escribir mientras busca
-        }
+
+    /**
+     * Aplicar filtros (año y unidad)
+     */
+    applyFilters() {
+        const filters = {
+            year: this.filterAnio?.value,
+            unidad: this.filterUnidad?.value
+        };
+
+        const filtered = this.searchService.applyFilters(this.expedientes, filters);
+        this.filteredExpedientes = filtered;
+
+        this.paginationController.currentPage = 1;
+        this.renderTable();
+        this.updatePagination();
     }
-    
-    // 💫 Ocultar indicador de búsqueda
-    hideSearchingIndicator() {
-        if (this.searchInput) {
-            this.searchInput.style.opacity = '1';
-            // Restaurar estilo normal
-        }
+
+    /**
+     * Limpiar filtros
+     */
+    clearFilters() {
+        if (this.filterAnio) this.filterAnio.value = '';
+        if (this.filterUnidad) this.filterUnidad.value = '';
+        this.filteredExpedientes = [...this.expedientes];
+        this.paginationController.currentPage = 1;
+        this.renderTable();
+        this.updatePagination();
     }
-    
-    // 🧹 Limpiar búsqueda rápida
+
+    /**
+     * Limpiar búsqueda rápida
+     */
     clearQuickSearch() {
         if (this.searchInput) {
             this.searchInput.value = '';
@@ -686,877 +415,283 @@ export class ExpedientesCRUD {
         if (this.clearSearchBtn) {
             this.clearSearchBtn.style.display = 'none';
         }
-        
-        // 🆕 Resetear estado de búsqueda
-        this.searchInProgress = false;
-        this.lastSearchTerm = '';
-        
-        // Volver a aplicar filtros normales
-        this.applyFilters();
+        this.searchService.clearSearch();
+        this.loadExpedientes();
     }
 
+    /**
+     * Mostrar indicador de búsqueda
+     */
+    showSearchingIndicator() {
+        if (this.searchInput) {
+            this.searchInput.style.borderColor = '#2196F3';
+            this.searchInput.style.boxShadow = '0 0 4px rgba(33, 150, 243, 0.4)';
+        }
+    }
+
+    /**
+     * Ocultar indicador de búsqueda
+     */
+    hideSearchingIndicator() {
+        if (this.searchInput) {
+            this.searchInput.style.borderColor = '';
+            this.searchInput.style.boxShadow = '';
+        }
+    }
+
+    /**
+     * Página anterior
+     */
     previousPage() {
-        if (this.currentPage > 1) {
-            this.currentPage--;
-            
-            // 🆕 Si usamos paginación del backend, recargar datos
-            if (this.usePagination) {
-                this.loadExpedientes();
-            } else {
-                this.renderTable();
-                this.updatePagination();
-            }
-        }
+        this.paginationController.previousPage(() => {
+            this.loadExpedientes();
+        });
     }
 
+    /**
+     * Página siguiente
+     */
     nextPage() {
-        const totalPages = this.usePagination ? this.totalPages : Math.ceil(this.filteredExpedientes.length / this.itemsPerPage);
-        
-        if (this.currentPage < totalPages) {
-            this.currentPage++;
-            
-            // 🆕 Si usamos paginación del backend, recargar datos
-            if (this.usePagination) {
-                this.loadExpedientes();
-            } else {
-                this.renderTable();
-                this.updatePagination();
-            }
+        this.paginationController.nextPage(() => {
+            this.loadExpedientes();
+        });
+    }
+
+    /**
+     * Poblar filtro de año
+     */
+    populateYearFilter() {
+        if (!this.filterAnio) return;
+
+        const years = [...new Set(this.expedientes.map(exp =>
+            exp.anioExpediente || new Date(exp.fecha).getFullYear()
+        ))].filter(year => year).sort((a, b) => b - a);
+
+        const currentValue = this.filterAnio.value;
+        this.filterAnio.innerHTML = '<option value="">Todos los años</option>';
+
+        years.forEach(year => {
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = year;
+            this.filterAnio.appendChild(option);
+        });
+
+        if (currentValue) {
+            this.filterAnio.value = currentValue;
         }
     }
 
-    async viewExpediente(expedienteId) {
-        try {
-            if (!this.expedientes || !Array.isArray(this.expedientes)) {
-                this.showError('Los expedientes no están cargados');
-                return;
-            }
-            
-            const expediente = this.expedientes.find(exp => exp._id === expedienteId);
-            if (expediente) {
-                const expedienteCompleto = `${expediente.numeroExpediente}-${expediente.anioExpediente}`;
-                const tarjetasAsociadas = expediente.tarjetasAsociadas || [];
-                
-                // Crear lista de tarjetas detallada
-                let tarjetasInfo = '';
-                if (tarjetasAsociadas.length === 0) {
-                    tarjetasInfo = 'No hay tarjetas asociadas';
-                } else {
-                    tarjetasInfo = `Total: ${tarjetasAsociadas.length} tarjetas\n\n`;
-                    tarjetasAsociadas.forEach((tarjeta, index) => {
-                        tarjetasInfo += `${index + 1}. Placa: ${tarjeta.placa || 'N/A'} | Tarjeta: ${tarjeta.numeroTarjeta || tarjeta.tarjeta || 'N/A'}\n`;
-                    });
-                }
-                
-                const info = `📋 DETALLES DEL EXPEDIENTE
-
-🔢 Expediente: ${expedienteCompleto}
-📅 Fecha: ${expediente.fecha || 'N/A'}
-📄 N° Resolución: ${expediente.numeroResolucion || 'Sin resolución'}
-🏢 Empresa: ${expediente.nombreEmpresa || 'N/A'}
-🏭 Unidad de Negocio: ${expediente.unidadNegocio || 'N/A'}
-� Informe Técnico: ${expediente.informeTecnico || 'N/A'}
-📁 Fichero: ${expediente.numeroFichero || 'N/A'}
-
-🎫 TARJETAS ASOCIADAS:
-${tarjetasInfo}
-
-📎 Archivos:
-${expediente.pdfPath ? '✅ PDF del expediente disponible' : '❌ Sin PDF del expediente'}
-
-💬 Observaciones:
-${expediente.observaciones || 'Sin observaciones'}`;
-                
-                alert(info);
-            } else {
-                this.showError('Expediente no encontrado');
-            }
-        } catch (error) {
-            console.error('Error al ver expediente:', error);
-            this.showError('Error al ver expediente');
+    /**
+     * Ver expediente (solo lectura)
+     */
+    /**
+     * Ver expediente (solo lectura)
+     */
+    viewExpediente(expedienteId) {
+        const expediente = this.expedientes.find(exp => exp._id === expedienteId);
+        if (expediente) {
+            console.log('Visualizando expediente:', expediente.numeroExpediente);
+            this.viewer.showExpedienteDetails(expediente);
         }
     }
 
+    /**
+     * Editar expediente
+     */
     async editExpediente(expedienteId) {
-        try {
-            console.log('🔍 editExpediente llamado con ID:', expedienteId, `(tipo: ${typeof expedienteId})`);
-            
-            // Buscar expediente en el array local primero
-            let expedienteCompleto = this.expedientes.find(exp => exp._id === expedienteId);
-            
-            if (!expedienteCompleto) {
-                console.error('❌ Expediente no encontrado en array local');
-                this.showError('Expediente no encontrado');
-                return;
-            }
-            
-            console.log('✅ Expediente encontrado en array local:', expedienteCompleto);
-            console.log('� Tarjetas asociadas:', expedienteCompleto.tarjetasAsociadas);
-            
-            // NOTA: El acta de entrega se obtiene desde las tarjetas, no del expediente
-            // Esto se maneja en loadExpedienteIntoForm()
-            
-            console.log('✅ Expediente completo preparado, navegando al formulario');
-            
-            // Navegar a la vista de registro
-            if (window.navigationManager) {
-                window.navigationManager.navigateTo('vista-registro');
-                
-                // Esperar a que la vista esté visible
-                setTimeout(() => {
-                    this.loadExpedienteIntoForm(expedienteCompleto);
-                }, 100);
-            } else {
-                console.error('❌ navigationManager no disponible');
-            }
-        } catch (error) {
-            console.error('Error al editar expediente:', error);
-            this.showError('Error al cargar expediente para edición');
-        }
-    }
+        console.log('Editar expediente:', expedienteId);
 
-    async loadExpedienteIntoForm(expediente) {
-        try {
-            console.log('📝 Cargando expediente completo en formulario:', expediente);
-            
-            // 1️⃣ Cargar datos básicos del expediente
-            document.getElementById('numeroExpediente').value = expediente.numeroExpediente || '';
-            document.getElementById('anioExpediente').value = expediente.anioExpediente || new Date().getFullYear();
-            document.getElementById('numeroResolucion').value = expediente.numeroResolucion || '';
-            document.getElementById('fecha').value = expediente.fechaExpediente || expediente.fecha || '';
-            document.getElementById('informeTecnico').value = expediente.informeTecnico || '';
-            document.getElementById('numeroFichero').value = expediente.numeroFichero || '';
-            document.getElementById('nombreEmpresa').value = expediente.nombreEmpresa || '';
-            document.getElementById('unidadNegocio').value = expediente.unidadNegocio || '';
-            document.getElementById('observaciones').value = expediente.observaciones || '';
-            
-            // Si hay observaciones, mostrar el contenedor
-            if (expediente.observaciones) {
-                const observacionesContainer = document.getElementById('observaciones-container');
-                if (observacionesContainer) {
-                    observacionesContainer.classList.remove('hidden');
-                }
-            }
-            
-            // 2️⃣ Cargar TARJETAS ASOCIADAS (EDITABLES)
-            if (expediente.tarjetasAsociadas && expediente.tarjetasAsociadas.length > 0) {
-                console.log(`📋 Cargando ${expediente.tarjetasAsociadas.length} tarjetas asociadas`);
-                console.log('🔍 Estructura completa de tarjetas:', JSON.stringify(expediente.tarjetasAsociadas, null, 2));
-                
-                const tarjetasList = document.getElementById('tarjetas-list');
-                if (tarjetasList) {
-                    tarjetasList.innerHTML = ''; // Limpiar lista
-                    
-                    // 🔍 Verificar si alguna tarjeta tiene acta de entrega asociada
-                    let actaEntregaId = null;
-                    for (const tarjeta of expediente.tarjetasAsociadas) {
-                        console.log(`🔍 Revisando tarjeta:`, {
-                            placa: tarjeta.placa,
-                            numero: tarjeta.numero || tarjeta.numeroTarjeta,
-                            actaEntregaId: tarjeta.actaEntregaId,
-                            _id: tarjeta._id
-                        });
-                        
-                        if (tarjeta.actaEntregaId) {
-                            actaEntregaId = tarjeta.actaEntregaId;
-                            console.log(`✅ ¡ENCONTRADO! Tarjeta ${tarjeta.placa} tiene acta de entrega ID: ${actaEntregaId}`);
-                            break;
-                        }
-                    }
-                    
-                    // Si encontramos un acta, cargarla
-                    if (actaEntregaId) {
-                        console.log(`🚀 Llamando a loadActaEntregaInfo con ID: ${actaEntregaId}`);
-                        await this.loadActaEntregaInfo(actaEntregaId);
-                    } else {
-                        console.warn('⚠️ No se encontró ninguna tarjeta con actaEntregaId');
-                    }
-                    
-                    expediente.tarjetasAsociadas.forEach((tarjeta, index) => {
-                        const tarjetaDiv = document.createElement('div');
-                        tarjetaDiv.className = 'tarjeta-item';
-                        tarjetaDiv.dataset.tarjetaIndex = index;
-                        tarjetaDiv.dataset.tarjetaId = tarjeta._id || ''; // Guardar ID de la tarjeta
-                        
-                        // Determinar si tiene PDF
-                        const tienePdf = tarjeta.pdfPath && tarjeta.pdfPath !== '';
-                        const pdfFileName = tienePdf ? tarjeta.pdfPath.split(/[\\/]/).pop() : 'Sin PDF';
-                        
-                        tarjetaDiv.innerHTML = `
-                            <div>
-                                <div class="tarjeta-datos">
-                                    <input type="text" 
-                                           class="placa-input"
-                                           placeholder="Placa del vehículo" 
-                                           value="${tarjeta.placa || ''}"
-                                           data-field="placa"
-                                           onchange="window.expedientesCRUD.updateTarjetaData(${index}, 'placa', this.value)">
-                                    <input type="text" 
-                                           class="tarjeta-input"
-                                           placeholder="Número de tarjeta" 
-                                           value="${tarjeta.numero || tarjeta.numeroTarjeta || ''}"
-                                           data-field="numero"
-                                           onchange="window.expedientesCRUD.updateTarjetaData(${index}, 'numero', this.value)">
-                                    <select class="estado-input"
-                                            data-field="estado"
-                                            onchange="window.expedientesCRUD.updateTarjetaData(${index}, 'estado', this.value)">
-                                        <option value="ACTIVA">✅ ACTIVA</option>
-                                    </select>
-                                </div>
-                                <div class="tarjeta-pdf-section">
-                                    <input type="text" 
-                                           class="pdf-tarjeta-path" 
-                                           placeholder="PDF de tarjeta" 
-                                           value="${pdfFileName}"
-                                           readonly
-                                           data-pdf-path="${tarjeta.pdfPath || ''}"
-                                           data-pdf-changed="false">
-                                    <button type="button" 
-                                            class="btn-seleccionar-pdf-tarjeta" 
-                                            onclick="window.expedientesCRUD.seleccionarPdfTarjeta(${index})"
-                                            title="Seleccionar o cambiar PDF de la tarjeta">
-                                        📎 ${tienePdf ? 'Cambiar' : 'Agregar'}
-                                    </button>
-                                    ${tienePdf ? `
-                                    <button type="button" 
-                                            class="btn-ver-pdf-tarjeta" 
-                                            onclick="window.expedientesCRUD.verPdfTarjeta(${index})"
-                                            title="Ver PDF actual">
-                                        👁️ Ver
-                                    </button>
-                                    ` : ''}
-                                </div>
-                            </div>
-                            <button type="button" 
-                                    class="eliminar-tarjeta-btn" 
-                                    onclick="window.expedientesCRUD.removeTarjetaFromForm(${index})"
-                                    title="Eliminar esta tarjeta">
-                                🗑️
-                            </button>
-                        `;
-                        tarjetasList.appendChild(tarjetaDiv);
-                        
-                        // Cargar estados disponibles en el selector
-                        const estadoSelect = tarjetaDiv.querySelector('.estado-input');
-                        this.cargarEstadosEnSelector(estadoSelect, tarjeta.estado || 'ACTIVA');
-                    });
-                }
-            }
-            
-            // 3️⃣ NOTA: El acta de entrega se carga desde las tarjetas, no directamente del expediente
-            
-            // 4️⃣ Cargar ruta de PDF si existe
-            if (expediente.pdfPath) {
-                console.log('📎 Cargando ruta de PDF:', expediente.pdfPath);
-                const pdfFilePathInput = document.getElementById('pdf-file-path');
-                if (pdfFilePathInput) {
-                    pdfFilePathInput.value = expediente.pdfPath;
-                }
-            }
-            
-            // 5️⃣ Cambiar título del formulario a "Editar Expediente"
-            const formTitle = document.querySelector('#vista-registro h2');
-            if (formTitle) {
-                formTitle.textContent = `✏️ Editar Expediente ${expediente.numeroExpediente}-${expediente.anioExpediente}`;
-            }
-            
-            // 6️⃣ Cambiar texto del botón de guardar
-            const guardarBtn = document.getElementById('guardar-expediente-btn');
-            if (guardarBtn) {
-                guardarBtn.textContent = '💾 Actualizar Expediente';
-            }
-            
-            // 7️⃣ Guardar el ID del expediente para actualización
+        const expediente = this.expedientes.find(exp => exp._id === expedienteId);
+        if (!expediente) {
+            this.showError('Expediente no encontrado');
+            return;
+        }
+
+        // Cargar en formulario usando FormManager
+        await this.formManager.loadExpedienteIntoForm(expediente, (tarjetas) => {
+            // Callback de actualización de tarjetas
             const form = document.getElementById('expediente-form');
             if (form) {
-                form.dataset.editingId = expediente._id;
-                
-                // Guardar tarjetas en formato JSON para el submit
-                if (expediente.tarjetasAsociadas) {
-                    form.dataset.tarjetas = JSON.stringify(expediente.tarjetasAsociadas);
-                }
-                
-                // Guardar acta de entrega si existe
-                if (expediente.actaEntrega) {
-                    form.dataset.actaEntregaId = expediente.actaEntrega._id;
-                }
-            }
-            
-            console.log('✅ Expediente cargado completamente en formulario');
-        } catch (error) {
-            console.error('❌ Error al cargar expediente en formulario:', error);
-            this.showError('Error al cargar datos en el formulario');
-        }
-    }
-    
-    // 🏭 Cargar estados disponibles en un selector
-    async cargarEstadosEnSelector(selectElement, estadoSeleccionado = 'ACTIVA') {
-        if (!selectElement) return;
-        
-        try {
-            const resultado = await window.api.invoke('tarjeta:obtener-estados-disponibles');
-            
-            if (resultado && resultado.success && Array.isArray(resultado.estados)) {
-                selectElement.innerHTML = '';
-                
-                resultado.estados.forEach(estado => {
-                    const option = document.createElement('option');
-                    option.value = estado.valor;
-                    option.textContent = `${estado.icono} ${estado.valor}`;
-                    
-                    if (estado.valor === estadoSeleccionado) {
-                        option.selected = true;
-                    }
-                    
-                    selectElement.appendChild(option);
-                });
-            }
-        } catch (error) {
-            console.error('❌ Error al cargar estados:', error);
-            // Mantener valor por defecto si hay error
-            selectElement.innerHTML = '<option value="ACTIVA">✅ ACTIVA</option>';
-        }
-    }
-    
-    // 🔄 Método para actualizar datos de tarjeta en tiempo real
-    updateTarjetaData(index, field, value) {
-        try {
-            const form = document.getElementById('expediente-form');
-            if (!form || !form.dataset.tarjetas) return;
-            
-            const tarjetas = JSON.parse(form.dataset.tarjetas);
-            if (tarjetas[index]) {
-                tarjetas[index][field] = value;
                 form.dataset.tarjetas = JSON.stringify(tarjetas);
-                console.log(`✅ Tarjeta ${index} actualizada: ${field} = ${value}`);
             }
-        } catch (error) {
-            console.error('❌ Error al actualizar tarjeta:', error);
+        });
+
+        // Guardar ID del expediente en edición con el nombre correcto que espera main.js
+        const form = document.getElementById('expediente-form');
+        if (form) {
+            form.dataset.editingId = expedienteId;
+            form.dataset.isEditing = 'true'; // Bandera explícita adicional
         }
-    }
-    
-    // 🗑️ Método para eliminar tarjeta del formulario durante edición
-    removeTarjetaFromForm(index) {
-        try {
-            const form = document.getElementById('expediente-form');
-            if (!form || !form.dataset.tarjetas) return;
-            
-            const tarjetas = JSON.parse(form.dataset.tarjetas);
-            tarjetas.splice(index, 1);
-            form.dataset.tarjetas = JSON.stringify(tarjetas);
-            
-            // Re-renderizar la lista CON CAMPOS EDITABLES
-            const tarjetasList = document.getElementById('tarjetas-list');
-            if (tarjetasList) {
-                tarjetasList.innerHTML = '';
-                tarjetas.forEach((tarjeta, idx) => {
-                    const tarjetaDiv = document.createElement('div');
-                    tarjetaDiv.className = 'tarjeta-item';
-                    tarjetaDiv.dataset.tarjetaIndex = idx;
-                    tarjetaDiv.innerHTML = `
-                        <input type="text" 
-                               placeholder="Placa del vehículo" 
-                               value="${tarjeta.placa || ''}"
-                               data-field="placa"
-                               onchange="window.expedientesCRUD.updateTarjetaData(${idx}, 'placa', this.value)">
-                        <input type="text" 
-                               placeholder="Número de tarjeta" 
-                               value="${tarjeta.numero || tarjeta.numeroTarjeta || ''}"
-                               data-field="numero"
-                               onchange="window.expedientesCRUD.updateTarjetaData(${idx}, 'numero', this.value)">
-                        <select class="estado-input"
-                                data-field="estado"
-                                onchange="window.expedientesCRUD.updateTarjetaData(${idx}, 'estado', this.value)">
-                            <option value="ACTIVA">✅ ACTIVA</option>
-                        </select>
-                        <button type="button" 
-                                class="eliminar-tarjeta-btn" 
-                                onclick="window.expedientesCRUD.removeTarjetaFromForm(${idx})">
-                            🗑️ Eliminar
-                        </button>
-                    `;
-                    tarjetasList.appendChild(tarjetaDiv);
-                    
-                    // Cargar estados disponibles en el selector
-                    const estadoSelect = tarjetaDiv.querySelector('.estado-input');
-                    this.cargarEstadosEnSelector(estadoSelect, tarjeta.estado || 'ACTIVA');
-                });
-            }
-            
-            console.log('✅ Tarjeta eliminada del formulario');
-        } catch (error) {
-            console.error('❌ Error al eliminar tarjeta:', error);
-        }
-    }
-    
-    // 📄 Método para cargar información del Acta de Entrega (SOLO LECTURA)
-    async loadActaEntregaInfo(actaEntregaId) {
-        try {
-            console.log('📄 ========================================');
-            console.log('📄 INICIANDO CARGA DE ACTA DE ENTREGA');
-            console.log('📄 Acta ID:', actaEntregaId);
-            console.log('📄 ========================================');
-            
-            // Usar invoke en lugar de enviar para este canal IPC
-            const actaResponse = await window.api.invoke('acta-entrega:obtener-por-id', actaEntregaId);
-            
-            console.log('📄 Respuesta del backend:', actaResponse);
-            
-            // El handler retorna { success, acta } en lugar de { success, data }
-            if (actaResponse && actaResponse.success && actaResponse.acta) {
-                const acta = actaResponse.acta;
-                console.log('✅ Acta de entrega obtenida:', JSON.stringify(acta, null, 2));
-                
-                // Mostrar la sección del acta
-                const incluirActaCheckbox = document.getElementById('incluir-acta-entrega');
-                const actaFields = document.getElementById('acta-entrega-fields');
-                
-                if (incluirActaCheckbox) {
-                    incluirActaCheckbox.checked = true;
-                    incluirActaCheckbox.disabled = true; // Deshabilitar para que no se pueda modificar
-                }
-                
-                if (actaFields) {
-                    actaFields.style.display = 'block';
-                }
-                
-                // Esperar un momento para que se muestren los campos
-                setTimeout(() => {
-                    // Cargar datos del acta (SOLO LECTURA)
-                    const fechaEntregaInput = document.getElementById('fechaEntrega');
-                    const nTarjetasInput = document.getElementById('n_tarjetas_entregadas');
-                    const observacionesActaInput = document.getElementById('observacionesActa');
-                    const pdfActaPathInput = document.getElementById('pdf-acta-path');
-                    
-                    if (fechaEntregaInput) {
-                        fechaEntregaInput.value = acta.fechaEntrega || '';
-                        fechaEntregaInput.readOnly = true; // SOLO LECTURA
-                        fechaEntregaInput.style.backgroundColor = '#f5f5f5';
-                        fechaEntregaInput.style.cursor = 'not-allowed';
-                    }
-                    
-                    if (nTarjetasInput) {
-                        nTarjetasInput.value = acta.n_tarjetas_entregadas || 0;
-                        nTarjetasInput.readOnly = true; // SOLO LECTURA
-                        nTarjetasInput.style.backgroundColor = '#f5f5f5';
-                        nTarjetasInput.style.cursor = 'not-allowed';
-                    }
-                    
-                    if (observacionesActaInput) {
-                        observacionesActaInput.value = acta.observaciones || '';
-                        observacionesActaInput.readOnly = true; // SOLO LECTURA
-                        observacionesActaInput.style.backgroundColor = '#f5f5f5';
-                        observacionesActaInput.style.cursor = 'not-allowed';
-                    }
-                    
-                    if (pdfActaPathInput) {
-                        pdfActaPathInput.value = acta.pdfPathEntrega || 'Sin PDF asociado';
-                    }
-                    
-                    // Deshabilitar botón de seleccionar PDF
-                    const seleccionarPdfActaBtn = document.getElementById('seleccionar-pdf-acta-btn');
-                    if (seleccionarPdfActaBtn) {
-                        seleccionarPdfActaBtn.disabled = true;
-                        seleccionarPdfActaBtn.style.opacity = '0.5';
-                        seleccionarPdfActaBtn.style.cursor = 'not-allowed';
-                    }
-                    
-                    console.log('✅ Acta de entrega mostrada como SOLO LECTURA');
-                }, 100);
-            } else {
-                console.warn('⚠️ No se pudo obtener el acta de entrega');
-            }
-        } catch (error) {
-            console.error('❌ Error al cargar acta de entrega:', error);
-        }
+
+        // Cambiar a vista de registro
+        const event = new CustomEvent('cambiar-vista', { detail: 'vista-registro' });
+        document.dispatchEvent(event);
     }
 
-    async confirmDelete(expedienteId) {
-        try {
-            console.log('🔍 Obteniendo información detallada para eliminación...');
-            
-            // Obtener información detallada del expediente y sus dependencias
-            const infoResult = await dataService.getDeleteInfo(expedienteId);
-            
-            if (!infoResult.success) {
-                this.showError('Error al obtener información del expediente: ' + infoResult.error);
-                return;
-            }
-
-            const { expediente, tarjetas, summary } = infoResult.data;
-            
-            // Crear mensaje de advertencia detallado
-            let warningMessage = `⚠️ ADVERTENCIA: Esta acción eliminará permanentemente:\n\n`;
-            warningMessage += `📄 Expediente: ${expediente.numero}\n`;
-            warningMessage += `🏢 Empresa: ${expediente.empresa}\n`;
-            warningMessage += `📄 N° Resolución: ${expediente.resolucion}\n`;
-            
-            if (expediente.pdfPath) {
-                warningMessage += `📎 Archivo PDF del expediente\n`;
-            }
-            
-            if (summary.totalTarjetas > 0) {
-                warningMessage += `🎫 ${summary.totalTarjetas} tarjeta(s) asociada(s):\n`;
-                // Mostrar las primeras 5 tarjetas para que el usuario sepa exactamente qué se eliminará
-                tarjetas.slice(0, 5).forEach((tarjeta, index) => {
-                    warningMessage += `   ${index + 1}. Placa: ${tarjeta.placa || 'N/A'}${tarjeta.tarjeta ? ` | Tarjeta: ${tarjeta.tarjeta}` : ''}\n`;
-                });
-                if (summary.totalTarjetas > 5) {
-                    warningMessage += `   ... y ${summary.totalTarjetas - 5} tarjeta(s) más\n`;
-                }
-                
-                if (summary.tarjetasConPDF > 0) {
-                    warningMessage += `📎 ${summary.tarjetasConPDF} archivo(s) PDF de tarjetas\n`;
-                }
-            }
-            
-            if (summary.totalArchivos > 0) {
-                warningMessage += `\n📁 Total de archivos a eliminar: ${summary.totalArchivos}\n`;
-            }
-            
-            warningMessage += `\n🚨 Esta acción NO se puede deshacer.\n\n`;
-            warningMessage += `¿Está seguro de que desea continuar?`;
-            
-            const confirmed = confirm(warningMessage);
-            
-            if (confirmed) {
-                await this.executeDelete(expedienteId, expediente);
-            }
-            
-        } catch (error) {
-            console.error('❌ Error en confirmación de eliminación:', error);
-            this.showError('Error al confirmar eliminación: ' + error.message);
-        }
-    }
-
-    async executeDelete(expedienteId, expedienteInfo) {
-        const operacion = 'eliminar-expediente';
-        
-        try {
-            // Mostrar indicador de carga
-            if (window.loadingManager) {
-                window.loadingManager.show(operacion, 'Eliminando expediente...');
-            }
-            
-            console.log('🗑️ Ejecutando eliminación en cascada...');
-            console.log('📋 ExpedienteId:', expedienteId);
-            
-            const result = await dataService.deleteExpediente(expedienteId);
-            
-            // ✅ OPTIMIZACIÓN: Ocultar loading INMEDIATAMENTE después de recibir respuesta
-            if (window.loadingManager) {
-                window.loadingManager.hide(operacion);
-            }
-            
-            console.log('📊 Resultado completo recibido:', result);
-            console.log('✅ result.success:', result?.success);
-            console.log('📝 result.summary:', result?.summary);
-            
-            // Verificar si result existe y tiene la estructura correcta
-            if (!result) {
-                console.error('❌ Resultado es null o undefined');
-                this.showError('Error: No se recibió respuesta del servidor');
-                return;
-            }
-            
-            if (result.success) {
-                // Mensaje de éxito detallado
-                let successMessage = `✅ Eliminación exitosa:\n\n`;
-                successMessage += `📄 Expediente: ${result.summary.expediente}\n`;
-                successMessage += `🏢 Empresa: ${result.summary.empresa}\n`;
-                successMessage += `🎫 Tarjetas eliminadas: ${result.summary.tarjetasEliminadas}\n`;
-                successMessage += `📎 Archivos eliminados: ${result.summary.archivosEliminados}\n`;
-                
-                if (result.summary.warnings > 0) {
-                    successMessage += `⚠️ Advertencias: ${result.summary.warnings}\n`;
-                }
-                
-                successMessage += `⏱️ Tiempo: ${result.summary.duration}ms`;
-                
-                this.showSuccess(successMessage);
-                
-                // 🔔 EMITIR EVENTO para actualización reactiva
-                console.log('� Emitiendo evento EXPEDIENTE_DELETED...');
-                eventBus.emit(APP_EVENTS.EXPEDIENTE_DELETED, { 
-                    expedienteId: expedienteId,
-                    summary: result.summary 
-                });
-                console.log('✅ Evento emitido - la tabla se actualizará automáticamente');
-            } else {
-                this.showError('Error en la eliminación: ' + result.message);
-            }
-            
-        } catch (error) {
-            // Ocultar loading en caso de error
-            if (window.loadingManager) {
-                window.loadingManager.hide(operacion);
-            }
-            
-            console.error('❌ Error ejecutando eliminación:', error);
-            
-            let errorMessage = 'Error al eliminar expediente';
-            
-            if (error.operation && error.operation.steps) {
-                const failedStep = error.operation.steps.find(s => s.status === 'failed');
-                if (failedStep) {
-                    errorMessage += `\nFallo en: ${failedStep.step}`;
-                    errorMessage += `\nError: ${failedStep.error}`;
-                }
-            }
-            
-            if (error.message) {
-                errorMessage += `\nDetalle: ${error.message}`;
-            }
-            
-            this.showError(errorMessage);
-        }
-    }
-
-    // Método legacy - ahora redirige al nuevo sistema
-    async deleteExpediente(expedienteId, expediente) {
-        console.log('⚠️ Usando método legacy deleteExpediente, redirigiendo a executeDelete');
-        await this.executeDelete(expedienteId, expediente);
-    }
-
-    async deleteExpedienteById(expedienteId) {
-        try {
-            await dataService.deleteExpediente(expedienteId);
-            this.showSuccess('Expediente eliminado correctamente');
-            this.loadExpedientes(); // Recargar lista
-        } catch (error) {
-            console.error('Error al eliminar expediente:', error);
-            this.showError('Error al eliminar expediente');
-        }
-    }
-
+    /**
+     * Abrir modal para nuevo expediente
+     */
     openNewExpedienteModal() {
-        // Navegar a la vista de registro
-        if (window.navigationManager) {
-            window.navigationManager.navigateTo('vista-registro');
-            
-            // Limpiar el formulario y prepararlo para crear nuevo expediente
-            setTimeout(() => {
-                this.prepareFormForNew();
-            }, 100);
+        this.formManager.prepareFormForNew();
+
+        // Cambiar a vista de registro
+        const event = new CustomEvent('cambiar-vista', { detail: 'vista-registro' });
+        document.dispatchEvent(event);
+    }
+
+    /**
+     * Confirmar eliminación
+     */
+    async confirmDelete(expedienteId) {
+        await this.deleteOperation.confirmDelete(
+            expedienteId,
+            async (id, info) => {
+                // onConfirm
+                await this.deleteOperation.executeDelete(
+                    id,
+                    (result) => {
+                        // onSuccess
+                        this.showSuccess('Expediente eliminado correctamente');
+                        this.loadExpedientes();
+                    },
+                    (error) => {
+                        // onError
+                        this.showError(error);
+                    }
+                );
+            },
+            () => {
+                // onCancel
+                console.log('Eliminación cancelada por el usuario');
+            }
+        );
+    }
+
+    /**
+     * Exportar a Excel
+     */
+    async exportToExcel() {
+        await this.exportOperation.exportToExcel(
+            {
+                searchTerm: this.searchInput?.value || '',
+                year: this.filterAnio?.value || '',
+                unidad: this.filterUnidad?.value || ''
+            },
+            (result) => {
+                // onSuccess
+                this.showSuccess(`Archivo exportado: ${result.filePath}`);
+            },
+            (error) => {
+                // onError
+                this.showError(error);
+            }
+        );
+    }
+
+    // === MÉTODOS DE TARJETAS (Delegados) ===
+
+    /**
+     * Actualizar datos de tarjeta
+     */
+    updateTarjetaData(index, field, value) {
+        return this.tarjetaService.updateTarjetaData(index, field, value);
+    }
+
+    /**
+     * Eliminar tarjeta del formulario
+     */
+    removeTarjetaFromForm(index) {
+        return this.tarjetaService.removeTarjetaFromForm(index, (tarjetas) => {
+            this.tarjetaService.renderTarjetasList(tarjetas, (select, estado) => {
+                this.tarjetaService.cargarEstadosEnSelector(select, estado);
+            });
+        });
+    }
+
+    /**
+     * Seleccionar PDF de tarjeta
+     */
+    async seleccionarPdfTarjeta(index) {
+        const result = await this.tarjetaService.seleccionarPdfTarjeta(index);
+
+        if (result.success) {
+            // Actualizar UI
+            const pdfPathInput = document.querySelector(`[data-tarjeta-index="${index}"] .pdf-path-input`);
+            if (pdfPathInput) {
+                pdfPathInput.value = `Seleccionado: ${result.fileName}`;
+            }
+
+            // Mostrar botón de extraer OCR
+            const extraerOcrBtn = document.querySelector(`[data-tarjeta-index="${index}"] .extraer-ocr-btn`);
+            if (extraerOcrBtn) {
+                extraerOcrBtn.style.display = 'inline-block';
+            }
+
+            this.showSuccess('PDF seleccionado correctamente');
+        } else if (result.error) {
+            this.showError(result.error);
+        }
+    }
+
+    /**
+     * Extraer OCR de tarjeta
+     */
+    async extraerOcrTarjeta(index) {
+        const result = await this.tarjetaService.extraerOcrTarjeta(index, (progress, message) => {
+            console.log(`OCR: ${progress}% - ${message}`);
+        });
+
+        if (result.success && result.extractedData) {
+            // Auto-completar campos de tarjeta
+            if (result.extractedData.placa) {
+                this.tarjetaService.updateTarjetaData(index, 'placa', result.extractedData.placa);
+            }
+            if (result.extractedData.numeroTarjeta) {
+                this.tarjetaService.updateTarjetaData(index, 'numero', result.extractedData.numeroTarjeta);
+            }
+
+            this.showSuccess('Texto extraído y campos auto-completados');
         } else {
-            console.error('❌ navigationManager no disponible');
+            this.showError(result.error || 'No se pudieron extraer datos');
         }
     }
-    
-    // 🆕 Preparar formulario para crear nuevo expediente
-    prepareFormForNew() {
-        try {
-            console.log('📝 Preparando formulario para nuevo expediente');
-            
-            // 1️⃣ Limpiar el formulario
-            const form = document.getElementById('expediente-form');
-            if (form) {
-                form.reset();
-                delete form.dataset.editingId;
-                delete form.dataset.tarjetas;
-            }
-            
-            // 2️⃣ Limpiar lista de tarjetas
-            const tarjetasList = document.getElementById('tarjetas-list');
-            if (tarjetasList) {
-                tarjetasList.innerHTML = '';
-            }
-            
-            // 3️⃣ Ocultar campos de acta de entrega
-            const actaFields = document.getElementById('acta-entrega-fields');
-            const incluirActaCheckbox = document.getElementById('incluir-acta-entrega');
-            if (actaFields) actaFields.style.display = 'none';
-            if (incluirActaCheckbox) incluirActaCheckbox.checked = false;
-            
-            // 4️⃣ Ocultar observaciones
-            const observacionesContainer = document.getElementById('observaciones-container');
-            if (observacionesContainer) {
-                observacionesContainer.classList.add('hidden');
-            }
-            
-            // 5️⃣ Cambiar título del formulario
-            const formTitle = document.querySelector('#vista-registro h2');
-            if (formTitle) {
-                formTitle.textContent = '📋 Nuevo Registro de Expediente';
-            }
-            
-            // 6️⃣ Cambiar texto del botón de guardar
-            const guardarBtn = document.getElementById('guardar-expediente-btn');
-            if (guardarBtn) {
-                guardarBtn.textContent = '💾 Guardar Expediente';
-            }
-            
-            // 7️⃣ Establecer año actual por defecto
-            const anioInput = document.getElementById('anioExpediente');
-            if (anioInput) {
-                anioInput.value = new Date().getFullYear();
-            }
-            
-            console.log('✅ Formulario preparado para nuevo expediente');
-        } catch (error) {
-            console.error('❌ Error al preparar formulario:', error);
-        }
+
+    /**
+     * Ver PDF de tarjeta
+     */
+    async verPdfTarjeta(index) {
+        await this.tarjetaService.verPdfTarjeta(index);
     }
+
+    /**
+     * Cargar estados en selector
+     */
+    async cargarEstadosEnSelector(selectElement, estadoSeleccionado = 'ACTIVA') {
+        await this.tarjetaService.cargarEstadosEnSelector(selectElement, estadoSeleccionado);
+    }
+
+    /**
+     * Cargar información de acta de entrega
+     */
+    async loadActaEntregaInfo(actaEntregaId) {
+        await this.actaService.loadActaEntregaInfo(actaEntregaId, (acta) => {
+            this.actaService.renderActaReadOnly(acta);
+        });
+    }
+
+    // === MÉTODOS AUXILIARES ===
 
     showSuccess(message) {
-        // Implementar sistema de notificaciones
-        console.log('SUCCESS:', message);
-        alert(message); // Temporal
+        console.log('Exito:', message);
+        ui.showNotification(message, 'success');
     }
 
     showError(message) {
-        // Implementar sistema de notificaciones
-        console.error('ERROR:', message);
-        alert(message); // Temporal
-    }
-    
-    // 📎 Seleccionar PDF para una tarjeta específica
-    async seleccionarPdfTarjeta(index) {
-        try {
-            console.log(`📎 Seleccionando PDF para tarjeta ${index}`);
-            
-            // Invocar diálogo de selección de archivo
-            const filePath = await window.api.invoke('tarjeta:seleccionar-pdf');
-            
-            if (filePath) {
-                console.log('📄 PDF seleccionado:', filePath);
-                
-                // Actualizar el input de la tarjeta
-                const tarjetaDiv = document.querySelector(`[data-tarjeta-index="${index}"]`);
-                if (tarjetaDiv) {
-                    const pdfInput = tarjetaDiv.querySelector('.pdf-tarjeta-path');
-                    if (pdfInput) {
-                        const fileName = filePath.split(/[\\/]/).pop();
-                        pdfInput.value = fileName;
-                        pdfInput.dataset.pdfPath = filePath;
-                        pdfInput.dataset.pdfChanged = 'true'; // Marcar como cambiado
-                    }
-                    
-                    // Actualizar datos de la tarjeta
-                    this.updateTarjetaData(index, 'newPdfPath', filePath);
-                    
-                    // Actualizar botón para mostrar "Cambiar PDF"
-                    const btnSeleccionar = tarjetaDiv.querySelector('.btn-seleccionar-pdf-tarjeta');
-                    if (btnSeleccionar) {
-                        btnSeleccionar.textContent = '📎 Cambiar PDF';
-                    }
-                    
-                    // Agregar botón "Ver" si no existe
-                    if (!tarjetaDiv.querySelector('.btn-ver-pdf-tarjeta')) {
-                        const btnVer = document.createElement('button');
-                        btnVer.type = 'button';
-                        btnVer.className = 'btn-ver-pdf-tarjeta';
-                        btnVer.onclick = () => this.verPdfTarjeta(index);
-                        btnVer.title = 'Ver PDF';
-                        btnVer.textContent = '👁️ Ver';
-                        
-                        const pdfSection = tarjetaDiv.querySelector('.tarjeta-pdf-section');
-                        if (pdfSection) {
-                            pdfSection.appendChild(btnVer);
-                        }
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('❌ Error al seleccionar PDF de tarjeta:', error);
-            this.showError('Error al seleccionar archivo PDF');
-        }
-    }
-    
-    // 👁️ Ver PDF de una tarjeta
-    async verPdfTarjeta(index) {
-        try {
-            const tarjetaDiv = document.querySelector(`[data-tarjeta-index="${index}"]`);
-            if (!tarjetaDiv) return;
-            
-            const pdfInput = tarjetaDiv.querySelector('.pdf-tarjeta-path');
-            if (!pdfInput) return;
-            
-            const pdfPath = pdfInput.dataset.pdfPath;
-            if (!pdfPath || pdfPath === '') {
-                this.showError('No hay PDF asociado a esta tarjeta');
-                return;
-            }
-            
-            console.log('👁️ Abriendo PDF de tarjeta:', pdfPath);
-            
-            // Invocar apertura de PDF
-            const result = await window.api.invoke('tarjeta:abrir-pdf', pdfPath);
-            
-            if (!result.success) {
-                this.showError('Error al abrir PDF: ' + result.message);
-            }
-        } catch (error) {
-            console.error('❌ Error al ver PDF de tarjeta:', error);
-            this.showError('Error al abrir el archivo PDF');
-        }
-    }
-    
-    // 📊 Exportar expedientes a Excel con filtros aplicados
-    async exportToExcel() {
-        const btnOriginalHTML = this.exportarExcelBtn.innerHTML;
-        
-        try {
-            console.log('📊 Iniciando exportación a Excel...');
-            
-            // Mostrar indicador de carga en el botón
-            this.exportarExcelBtn.innerHTML = '⏳ Generando Excel...';
-            this.exportarExcelBtn.disabled = true;
-            
-            // Recolectar los filtros actuales (exactamente los mismos que usa la búsqueda)
-            const searchValue = this.searchInput?.value.trim() || '';
-            const anioFilter = this.filterAnio?.value || '';
-            const unidadFilter = this.filterUnidad?.value || '';
-            
-            // Construir objeto de filtros (mapear a los campos de BD)
-            const filters = {
-                // El search-crud-input se usa para buscar en varios campos
-                // La búsqueda será por numeroExpediente o interesado
-                numeroExpediente: searchValue, // Backend buscará con LIKE
-                numeroResolucion: searchValue, // También buscar en resolución
-                interesado: searchValue, // También buscar en interesado
-                asunto: '', // No tenemos filtro específico de asunto
-                tipoTramite: unidadFilter || 'todos', // Filtro de unidad
-                estadoExpediente: 'todos', // No tenemos filtro de estado
-                fechaInicio: '', // No tenemos filtros de fecha aún
-                fechaFin: '',
-                placa: '', // No hay filtro de placa en vista expedientes
-                numeroTarjeta: '' // No hay filtro de tarjeta en vista expedientes
-            };
-            
-            console.log('🔍 Filtros aplicados:', filters);
-            console.log('   Búsqueda:', searchValue);
-            console.log('   Año:', anioFilter);
-            console.log('   Unidad:', unidadFilter);
-            
-            // Llamar al nuevo handler IPC que hace JOIN y retorna TODO
-            const result = await window.api.invoke('expediente:exportar-excel', filters);
-            
-            if (result.success) {
-                this.showSuccess(result.message);
-                console.log('✅ Exportación completada:', result.filePath);
-                console.log('📊 Registros exportados:', result.count);
-            } else if (result.canceled) {
-                console.log('⚠️ Exportación cancelada por el usuario');
-            } else {
-                this.showError(result.message || 'Error al exportar');
-            }
-            
-        } catch (error) {
-            console.error('❌ Error al exportar a Excel:', error);
-            this.showError('Error al exportar datos a Excel: ' + error.message);
-        } finally {
-            // ✅ SIEMPRE restaurar botón (éxito, error, cancelación)
-            if (this.exportarExcelBtn) {
-                this.exportarExcelBtn.innerHTML = btnOriginalHTML;
-                this.exportarExcelBtn.disabled = false;
-            }
-        }
+        console.error('Error:', message);
+        ui.showNotification(message, 'error');
     }
 }
 
-// Crear instancia global
+// Instancia global
 export const expedientesCRUD = new ExpedientesCRUD();
-
-// Hacer disponible globalmente para los onclick en HTML
-window.expedientesCRUD = expedientesCRUD;

@@ -35,17 +35,17 @@ let actaExtractedData = null; // Datos extraídos del Acta de Entrega
 document.addEventListener('DOMContentLoaded', () => {
     // Inicializar servicios
     initializeApp();
-    
+
     // Inicializar UI de OCR
     ocrUI.initialize();
     batchOcrUI.initialize();
-    
+
     // Inicializar auto-completado de formulario
     formAutofill.initializeFormElements();
-    
+
     // Inicializar Dashboard
     initializeDashboard();
-    
+
     // Hacer disponibles globalmente
     window.navigationManager = navigationManager;
     window.expedientesCRUD = expedientesCRUD;
@@ -62,20 +62,35 @@ document.addEventListener('DOMContentLoaded', () => {
     window.ui = ui;
     window.simplePdfViewer = simplePdfViewer; // ✅ Visualizador de PDFs
     window.dashboardManager = dashboardManager; // 📊 Dashboard Manager
-    
+
     // Hacer disponibles las funciones de búsqueda para searchManager
     window.performTarjetasSearch = performTarjetasSearch;
     window.performExpedientesSearch = performExpedientesSearch;
-    
+
     // Escuchadores para la ventana principal
     const expedienteForm = document.getElementById('expediente-form');
     const seleccionarPdfBtn = document.getElementById('seleccionar-pdf-btn');
     const agregarTarjetaBtn = document.getElementById('agregar-tarjeta-btn');
-    
+
+    // 🆕 Escuchar eventos de cambio de vista desde módulos
+    document.addEventListener('cambiar-vista', (e) => {
+        if (e.detail) {
+            console.log('🔄 Solicitud de cambio de vista recibida:', e.detail);
+            navigationManager.showView(e.detail);
+
+            // Actualizar botón activo en el menú
+            const buttonId = navigationManager.getButtonIdFromView(e.detail);
+            if (buttonId) {
+                const button = document.getElementById(buttonId);
+                if (button) navigationManager.setActiveButton(button);
+            }
+        }
+    });
+
     // Botones de búsqueda
     const searchTarjetasBtn = document.getElementById('search-tarjetas-btn');
     const searchExpedientesBtn = document.getElementById('search-expedientes-btn');
-    
+
     // Tabs de búsqueda
     const tabTarjetas = document.getElementById('tab-tarjetas');
     const tabExpedientes = document.getElementById('tab-expedientes');
@@ -100,11 +115,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Botón toggle para observaciones
     const toggleObservacionesBtn = document.getElementById('toggle-observaciones');
     const observacionesContainer = document.getElementById('observaciones-container');
-    
+
     // Toggle para mostrar/ocultar observaciones
     toggleObservacionesBtn.addEventListener('click', () => {
         const isHidden = observacionesContainer.classList.contains('hidden');
-        
+
         if (isHidden) {
             observacionesContainer.classList.remove('hidden');
             toggleObservacionesBtn.innerHTML = '➖ Ocultar Observaciones';
@@ -122,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const incluirActaEntregaCheckbox = document.getElementById('incluir-acta-entrega');
     const actaEntregaFields = document.getElementById('acta-entrega-fields');
     let selectedActaPdfPath = null;
-    
+
     incluirActaEntregaCheckbox.addEventListener('change', (e) => {
         if (e.target.checked) {
             actaEntregaFields.style.display = 'block';
@@ -162,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     procesarActaOcrBtn.addEventListener('click', async () => {
         const pdfActaPath = document.getElementById('pdf-acta-path').value;
-        
+
         if (!pdfActaPath || pdfActaPath === 'Ningún archivo seleccionado') {
             ui.showNotification('⚠️ Primero debes seleccionar un PDF de Acta de Entrega', 'warning');
             return;
@@ -174,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
             actaOcrStatus.textContent = '🔄 Procesando acta con OCR...';
             actaOcrProgressBar.style.width = '20%';
             actaOcrProgressBar.textContent = '20%';
-            
+
             loadingManager.showButtonLoading(procesarActaOcrBtn, 'Procesando...');
 
             console.log('🔍 Iniciando procesamiento OCR del Acta...');
@@ -236,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             console.error('❌ Error procesando Acta con OCR:', error);
-            
+
             actaOcrProgressBar.style.background = '#f44336';
             actaOcrProgressBar.style.width = '100%';
             actaOcrProgressBar.textContent = 'Error';
@@ -339,28 +354,28 @@ document.addEventListener('DOMContentLoaded', () => {
         batchDetectedCards.forEach((card, index) => {
             if (card.data && (card.data.placaRodaje || card.data.codigoUnico)) {
                 ui.addTarjetaInput();
-                
+
                 // Obtener los inputs de la última tarjeta agregada
                 const tarjetaInputs = tarjetasList.querySelectorAll('.tarjeta-item');
                 const lastTarjeta = tarjetaInputs[tarjetaInputs.length - 1];
-                
+
                 if (lastTarjeta) {
                     const placaInput = lastTarjeta.querySelector('input[placeholder="Placa"]');
                     const numeroInput = lastTarjeta.querySelector('input[placeholder="N° Tarjeta"]');
                     const pdfInput = lastTarjeta.querySelector('.pdf-tarjeta-path');
-                    
+
                     if (placaInput && card.data.placaRodaje) {
                         placaInput.value = card.data.placaRodaje;
                         placaInput.classList.add('autofilled');
                         setTimeout(() => placaInput.classList.remove('autofilled'), 2000);
                     }
-                    
+
                     if (numeroInput && card.data.codigoUnico) {
                         numeroInput.value = card.data.codigoUnico;
                         numeroInput.classList.add('autofilled');
                         setTimeout(() => numeroInput.classList.remove('autofilled'), 2000);
                     }
-                    
+
                     // Si hay PDF generado, asignar la ruta directamente al input
                     if (card.pdfPath && pdfInput) {
                         // Mostrar solo el nombre del archivo
@@ -370,11 +385,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         pdfInput.dataset.pdfPath = card.pdfPath;
                         pdfInput.classList.add('autofilled');
                         setTimeout(() => pdfInput.classList.remove('autofilled'), 2000);
-                        
+
                         console.log(`   📄 PDF asignado: ${card.pdfPath}`);
                         console.log(`   💾 Guardado en dataset.pdfPath: ${pdfInput.dataset.pdfPath}`);
                     }
-                    
+
                     console.log(`✅ Tarjeta ${index + 1} aplicada:`, {
                         placa: card.data.placaRodaje,
                         numero: card.data.codigoUnico,
@@ -397,11 +412,11 @@ document.addEventListener('DOMContentLoaded', () => {
         batchDetectedCards = [];
         selectedPdfBatchPath = null;
         pdfBatchPathInput.value = '';
-        
+
         // Ocultar tabla de resultados
         batchResultsContainer.style.display = 'none';
         batchOcrUI.reset();
-        
+
         console.log('✅ Listo para nuevo procesamiento batch');
     });
 
@@ -421,7 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             loadingManager.showButtonLoading(dividirPdfBtn, 'Dividiendo PDF...');
-            
+
             console.log('📁 Iniciando división de PDF...');
             console.log(`   PDF original: ${selectedPdfBatchPath}`);
             console.log(`   Páginas procesadas: ${batchDetectedCards.length}`);
@@ -431,19 +446,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (resultado.success) {
                 const { archivosCreados, errores, carpetaDestino } = resultado;
-                
+
                 console.log('✅ División completada exitosamente');
                 console.log(`   Archivos creados: ${archivosCreados.length}`);
                 console.log(`   Errores: ${errores.length}`);
-                
+
                 // Actualizar la tabla con las rutas de los PDFs generados
                 batchOcrUI.updatePdfPaths(batchDetectedCards);
-                
+
                 // Mostrar resumen
                 let mensaje = `✅ PDF dividido exitosamente\n\n`;
                 mensaje += `📁 Carpeta: ${carpetaDestino}\n`;
                 mensaje += `📄 Archivos creados: ${archivosCreados.length}\n`;
-                
+
                 if (errores.length > 0) {
                     mensaje += `⚠️ Errores: ${errores.length}`;
                 }
@@ -461,7 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Preguntar si desea abrir la carpeta
                 const abrirCarpeta = confirm(mensaje + '\n\n¿Deseas abrir la carpeta donde se generaron los archivos?');
-                
+
                 if (abrirCarpeta) {
                     await window.api.shell.openPath(carpetaDestino);
                     console.log('📂 Carpeta abierta por el usuario');
@@ -472,7 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 📝 NOTA: NO limpiar batchDetectedCards aquí para permitir
                 // que el usuario pueda aplicar las tarjetas después de dividir
                 console.log('💡 Tarjetas siguen disponibles para aplicar al formulario');
-                
+
             } else {
                 throw new Error(resultado.message || 'Error desconocido al dividir PDF');
             }
@@ -490,60 +505,60 @@ document.addEventListener('DOMContentLoaded', () => {
     cancelarExpedienteBtn?.addEventListener('click', () => {
         // Confirmar antes de cancelar si hay datos en el formulario
         const form = document.getElementById('expediente-form');
-        const hasData = form.querySelector('#numeroExpediente')?.value || 
-                       form.querySelector('#nombreEmpresa')?.value ||
-                       form.querySelector('#tarjetas-list')?.children.length > 0;
-        
+        const hasData = form.querySelector('#numeroExpediente')?.value ||
+            form.querySelector('#nombreEmpresa')?.value ||
+            form.querySelector('#tarjetas-list')?.children.length > 0;
+
         if (hasData) {
             const confirmar = confirm('¿Estás seguro de cancelar? Se perderán todos los cambios no guardados.');
             if (!confirmar) return;
         }
-        
+
         // Limpiar variables globales
         selectedPdfPath = null;
         selectedPdfBatchPath = null;
         selectedActaPdfPath = null;
         batchDetectedCards = [];
-        
+
         // Limpiar inputs de PDFs batch
         if (pdfBatchPathInput) pdfBatchPathInput.value = '';
         if (batchResultsContainer) batchResultsContainer.style.display = 'none';
-        
+
         // Limpiar formulario
         ui.resetExpedienteForm();
-        
+
         // Navegar a la vista de gestión
         navigationManager.navigateTo('vista-crud');
-        
+
         console.log('🔙 Edición/creación cancelada - Regresando a vista de gestión');
     });
 
     // -- Lógica para guardar un expediente --
     expedienteForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+
         // Deshabilitar el botón de envío para evitar múltiples envíos
         const submitBtn = expedienteForm.querySelector('button[type="submit"]');
         loadingManager.showButtonLoading(submitBtn, 'Guardando...');
-        
+
         try {
             // Obtener datos del expediente
             const expedienteData = ui.getExpedienteData();
-            
+
             // Obtener tarjetas asociadas
             expedienteData.tarjetas = ui.getTarjetaData();
-            
+
             // Validaciones básicas
             if (!expedienteData.numeroExpediente) {
                 ui.showNotification('El número de expediente es requerido.', 'warning');
                 return;
             }
-            
+
             if (!expedienteData.fechaExpediente) {
                 ui.showNotification('La fecha del expediente es requerida.', 'warning');
                 return;
             }
-            
+
             // Si hay PDF del expediente seleccionado
             if (selectedPdfPath) {
                 expedienteData.pdfSourcePath = selectedPdfPath;
@@ -555,7 +570,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Si se marcó incluir acta de entrega, agregarla
             if (incluirActaEntregaCheckbox.checked) {
                 const fechaEntrega = document.getElementById('fechaEntrega').value;
-                
+
                 if (!fechaEntrega) {
                     ui.showNotification('La fecha de entrega del acta es requerida.', 'warning');
                     return;
@@ -569,22 +584,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 console.log('📋 Acta de entrega incluida:', expedienteData.actaEntrega);
             }
-            
+
             console.log('📤 Enviando datos al backend:', expedienteData);
 
             // Verificar si estamos editando o creando
             const editingId = expedienteForm.dataset.editingId;
             let result;
-            
+
             if (editingId) {
                 // MODO EDICIÓN - Actualizar expediente existente
                 console.log('✏️ Modo edición - Actualizando expediente ID:', editingId);
                 result = await dataService.updateExpediente(parseInt(editingId), expedienteData);
-                
+
                 // 📎 Actualizar PDFs de tarjetas si hay cambios
                 if (result.success) {
                     const tarjetasConPdfNuevo = [];
-                    
+
                     // Buscar tarjetas que tengan PDFs nuevos o modificados
                     if (expedienteData.tarjetas && expedienteData.tarjetas.length > 0) {
                         expedienteData.tarjetas.forEach((tarjeta, index) => {
@@ -594,7 +609,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 if (pdfInput && pdfInput.dataset.pdfChanged === 'true') {
                                     const tarjetaId = tarjetaDiv.dataset.tarjetaId;
                                     const newPdfPath = pdfInput.dataset.pdfPath;
-                                    
+
                                     if (tarjetaId && newPdfPath) {
                                         tarjetasConPdfNuevo.push({
                                             tarjetaId: parseInt(tarjetaId),
@@ -607,15 +622,15 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         });
                     }
-                    
+
                     // Actualizar PDFs de tarjetas modificadas
                     if (tarjetasConPdfNuevo.length > 0) {
                         console.log(`📎 Actualizando ${tarjetasConPdfNuevo.length} tarjetas con nuevos PDFs...`);
-                        
+
                         for (const tarjetaInfo of tarjetasConPdfNuevo) {
                             try {
-                                const updateResult = await window.api.invoke('tarjeta:actualizar', 
-                                    tarjetaInfo.tarjetaId, 
+                                const updateResult = await window.api.invoke('tarjeta:actualizar',
+                                    tarjetaInfo.tarjetaId,
                                     {
                                         placa: tarjetaInfo.placa,
                                         numeroTarjeta: tarjetaInfo.numeroTarjeta,
@@ -625,7 +640,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     },
                                     tarjetaInfo.pdfPath
                                 );
-                                
+
                                 if (updateResult.success) {
                                     console.log(`✅ PDF de tarjeta ${tarjetaInfo.tarjetaId} actualizado`);
                                 } else {
@@ -642,24 +657,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('➕ Modo creación - Creando nuevo expediente');
                 result = await dataService.createExpediente(expedienteData);
             }
-            
+
             console.log('📥 Respuesta del backend:', result);
-            
+
             if (result.success) {
                 const mensaje = editingId ? '✅ Expediente actualizado exitosamente.' : '✅ Expediente guardado exitosamente.';
                 ui.showNotification(mensaje, 'success');
                 ui.resetExpedienteForm();
-                
+
                 // Limpiar flag de edición
                 delete expedienteForm.dataset.editingId;
                 delete expedienteForm.dataset.tarjetas;
                 delete expedienteForm.dataset.actaEntregaId;
-                
+
                 selectedPdfPath = null;
                 selectedPdfBatchPath = null;
                 selectedActaPdfPath = null;
                 tarjetas = []; // Limpiar array de tarjetas
-                
+
                 // 🔄 Navegar automáticamente a la vista de gestión para ver el nuevo expediente
                 setTimeout(() => {
                     navigationManager.navigateTo('vista-crud');
@@ -681,11 +696,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // -- Lógica para buscar tarjetas --
     // La búsqueda ahora se maneja por searchManager automáticamente
-    
+
     // Configurar búsqueda mejorada con searchManager
     // searchManager.initializeSearch(); // Ya se inicializa automáticamente
 
-    // -- Lógica para seleccionar PDF con OCR + Auto-completado automático --
+    // -- Lógica para seleccionar PDF (SOLO SELECCIÓN) --
     seleccionarPdfBtn.addEventListener('click', async () => {
         loadingManager.showButtonLoading(seleccionarPdfBtn, 'Seleccionando...');
         try {
@@ -693,48 +708,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (selectedPdfPath) {
                 // Actualizar UI con nombre del archivo
                 ui.updatePdfFilePath(selectedPdfPath);
-                
-                // 🤖 Iniciar proceso completo: OCR → Parser → Auto-completado
-                console.log('🚀 Iniciando proceso completo OCR → Parser → Auto-completado...');
-                ocrUI.showProcessing('Extrayendo texto de la primera página...');
-                
-                try {
-                    // Paso 1: Extraer texto de la primera página
-                    const extractedText = await ocrProcessor.extractTextFromFirstPage(selectedPdfPath);
-                    
-                    if (extractedText && extractedText.trim().length > 0) {
-                        ocrUI.updateMessage('Analizando datos del expediente...');
-                        
-                        // Paso 2: Parsear el texto y extraer campos
-                        const parsedData = ocrParser.parseExpedienteData(extractedText);
-                        
-                        if (parsedData) {
-                            ocrUI.updateMessage('Auto-completando formulario...');
-                            
-                            // Paso 3: Auto-completar el formulario
-                            const stats = formAutofill.autofillForm(parsedData);
-                            
-                            // Mostrar resultado
-                            if (stats.filled > 0) {
-                                ocrUI.showSuccess(`✅ ${stats.filled} campos auto-completados`);
-                                ui.showNotification(`✨ Formulario auto-completado: ${stats.filled}/${stats.total} campos`, 'success');
-                            } else {
-                                ocrUI.showError('⚠️ No se detectaron datos');
-                                ui.showNotification('No se pudieron extraer datos del PDF', 'warning');
-                            }
-                        } else {
-                            ocrUI.showError('⚠️ No se detectaron datos');
-                            ui.showNotification('No se pudieron parsear los datos', 'warning');
-                        }
-                    } else {
-                        ocrUI.showError('⚠️ No se pudo extraer texto');
-                        ui.showNotification('No se detectó texto en el documento', 'warning');
-                    }
-                } catch (ocrError) {
-                    console.error('❌ Error en OCR:', ocrError);
-                    ocrUI.showError('❌ Error al procesar el documento');
-                    ui.showNotification('Error al procesar el PDF con OCR', 'error');
+
+                // Mostrar botón de extraer OCR
+                const extraerOcrBtn = document.getElementById('extraer-ocr-btn');
+                if (extraerOcrBtn) {
+                    extraerOcrBtn.style.display = 'inline-block';
                 }
+                console.log('📄PDF seleccionado:', selectedPdfPath);
+                ui.showNotification('📄 PDF seleccionado. Ahora puedes extraer el texto OCR.', 'success');
+
             }
         } catch (error) {
             console.error('Error al seleccionar PDF:', error);
@@ -743,6 +725,63 @@ document.addEventListener('DOMContentLoaded', () => {
             loadingManager.hideButtonLoading(seleccionarPdfBtn);
         }
     });
+
+    // -- Lógica para extraer OCR (SOLO EXTRACCIÓN) --
+    const extraerOcrBtn = document.getElementById('extraer-ocr-btn');
+    if (extraerOcrBtn) {
+        extraerOcrBtn.addEventListener('click', async () => {
+            if (!selectedPdfPath) {
+                ui.showNotification('⚠️ Primero debes seleccionar un PDF', 'warning');
+                return;
+            }
+
+            loadingManager.showButtonLoading(extraerOcrBtn, 'Extrayendo...');
+
+            try {
+                // 🤖 Iniciar proceso completo: OCR → Parser → Auto-completado
+                console.log('🚀 Iniciando proceso completo OCR → Parser → Auto-completado...');
+                ocrUI.showProcessing('Extrayendo texto de la primera página...');
+
+                // Paso 1: Extraer texto de la primera página
+                const extractedText = await ocrProcessor.extractTextFromFirstPage(selectedPdfPath);
+
+                if (extractedText && extractedText.trim().length > 0) {
+                    ocrUI.updateMessage('Analizando datos del expediente...');
+
+                    // Paso 2: Parsear el texto y extraer campos
+                    const parsedData = ocrParser.parseExpedienteData(extractedText);
+
+                    if (parsedData) {
+                        ocrUI.updateMessage('Auto-completando formulario...');
+
+                        // Paso 3: Auto-completar el formulario
+                        const stats = formAutofill.autofillForm(parsedData);
+
+                        // Mostrar resultado
+                        if (stats.filled > 0) {
+                            ocrUI.showSuccess(`✅ ${stats.filled} campos auto-completados`);
+                            ui.showNotification(`✨ Formulario auto-completado: ${stats.filled}/${stats.total} campos`, 'success');
+                        } else {
+                            ocrUI.showError('⚠️ No se detectaron datos');
+                            ui.showNotification('No se pudieron extraer datos del PDF', 'warning');
+                        }
+                    } else {
+                        ocrUI.showError('⚠️ No se detectaron datos');
+                        ui.showNotification('No se pudieron parsear los datos', 'warning');
+                    }
+                } else {
+                    ocrUI.showError('⚠️ No se pudo extraer texto');
+                    ui.showNotification('No se detectó texto en el documento', 'warning');
+                }
+            } catch (ocrError) {
+                console.error('❌ Error en OCR:', ocrError);
+                ocrUI.showError('❌ Error al procesar el documento');
+                ui.showNotification('Error al procesar el PDF con OCR', 'error');
+            } finally {
+                loadingManager.hideButtonLoading(extraerOcrBtn);
+            }
+        });
+    }
 });
 
 // Funciones auxiliares para búsquedas
@@ -750,9 +789,9 @@ async function performTarjetasSearch(forceRefresh = false, searchTerm = null) {
     const searchInput = document.getElementById('search-tarjetas-input');
     const searchBtn = document.getElementById('search-tarjetas-btn');
     const term = searchTerm || searchInput?.value.trim();
-    
+
     console.log('performTarjetasSearch llamada con:', { forceRefresh, searchTerm, term });
-    
+
     if (!term) {
         if (!searchTerm) { // Solo mostrar warning si es búsqueda manual
             ui.showNotification('Ingrese un término de búsqueda.', 'warning');
@@ -762,12 +801,12 @@ async function performTarjetasSearch(forceRefresh = false, searchTerm = null) {
 
     if (searchBtn) loadingManager.showButtonLoading(searchBtn, 'Buscando...');
     if (searchInput) loadingManager.showSearchLoading(searchInput);
-    
+
     try {
         console.log('Iniciando búsqueda de tarjetas con término:', term);
         const result = await dataService.searchTarjetas(term, forceRefresh);
         console.log('Resultado de búsqueda de tarjetas:', result);
-        
+
         if (result.success) {
             ui.displayTarjetasResults(result.data);
             if (result.data.length === 0) {
@@ -789,9 +828,9 @@ async function performExpedientesSearch(forceRefresh = false, searchTerm = null)
     const searchInput = document.getElementById('search-expedientes-input');
     const searchBtn = document.getElementById('search-expedientes-btn');
     const term = searchTerm || searchInput?.value.trim();
-    
+
     console.log('performExpedientesSearch llamada con:', { forceRefresh, searchTerm, term });
-    
+
     if (!term) {
         if (!searchTerm) { // Solo mostrar warning si es búsqueda manual
             ui.showNotification('Ingrese un término de búsqueda.', 'warning');
@@ -801,12 +840,12 @@ async function performExpedientesSearch(forceRefresh = false, searchTerm = null)
 
     if (searchBtn) loadingManager.showButtonLoading(searchBtn, 'Buscando...');
     if (searchInput) loadingManager.showSearchLoading(searchInput);
-    
+
     try {
         console.log('Iniciando búsqueda de expedientes con término:', term);
         const result = await dataService.searchExpedientes(term, forceRefresh);
         console.log('Resultado de búsqueda de expedientes:', result);
-        
+
         if (result.success) {
             ui.displayExpedientesResults(result.data);
             if (result.data.length === 0) {
@@ -828,24 +867,24 @@ async function performExpedientesSearch(forceRefresh = false, searchTerm = null)
 function initializeApp() {
     // Configurar event listeners reactivos
     setupReactiveListeners();
-    
+
     // Configurar listeners de IPC para comunicación entre ventanas
     setupIPCListeners();
-    
+
     // Inicializar sistema de tablas responsive
     tableResponsive.init();
-    
+
     // Inicializar módulo de tarjetas (expedientes se inicializa en su constructor)
     tarjetasCRUD.init();
-    
+
     // Inicializar módulo de actas de entrega
     actasEntregaCRUD.init();
-    
+
     console.log('Módulos CRUD disponibles e inicializados (Expedientes, Tarjetas, Actas)');
-    
+
     // Limpiar cualquier estado de carga residual
     loadingManager.clearAll();
-    
+
     console.log('Aplicación inicializada con sistema reactivo y responsive');
 }
 
@@ -855,10 +894,10 @@ function setupIPCListeners() {
     if (window.api && window.api.on) {
         window.api.on('expediente-actualizado', (payload) => {
             console.log('📡 IPC: expediente-actualizado recibido:', payload);
-            
+
             // Emitir evento local para que la tabla se actualice
             if (payload && payload.expediente) {
-                eventBus.emit(APP_EVENTS.EXPEDIENTE_UPDATED, { 
+                eventBus.emit(APP_EVENTS.EXPEDIENTE_UPDATED, {
                     expediente: payload.expediente
                 });
                 console.log('✅ Evento EXPEDIENTE_UPDATED emitido desde IPC');
@@ -868,9 +907,9 @@ function setupIPCListeners() {
         // Escuchar cuando se elimina un expediente
         window.api.on('expediente-eliminado', (payload) => {
             console.log('📡 IPC: expediente-eliminado recibido:', payload);
-            
+
             if (payload && payload.expedienteId) {
-                eventBus.emit(APP_EVENTS.EXPEDIENTE_DELETED, { 
+                eventBus.emit(APP_EVENTS.EXPEDIENTE_DELETED, {
                     expedienteId: payload.expedienteId
                 });
                 console.log('✅ Evento EXPEDIENTE_DELETED emitido desde IPC');
@@ -880,9 +919,9 @@ function setupIPCListeners() {
         // Escuchar cuando se crea un expediente
         window.api.on('expediente-guardado', (payload) => {
             console.log('📡 IPC: expediente-guardado recibido:', payload);
-            
+
             if (payload && payload.expediente) {
-                eventBus.emit(APP_EVENTS.EXPEDIENTE_CREATED, { 
+                eventBus.emit(APP_EVENTS.EXPEDIENTE_CREATED, {
                     expediente: payload.expediente
                 });
                 console.log('✅ Evento EXPEDIENTE_CREATED emitido desde IPC');
@@ -890,13 +929,13 @@ function setupIPCListeners() {
         });
 
         // ========== LISTENERS PARA ACTAS DE ENTREGA ==========
-        
+
         // Escuchar cuando se crea un acta de entrega
         window.api.on('acta-entrega-creada', (payload) => {
             console.log('📡 IPC: acta-entrega-creada recibido:', payload);
-            
+
             if (payload && payload.acta) {
-                eventBus.emit(APP_EVENTS.ACTA_CREATED, { 
+                eventBus.emit(APP_EVENTS.ACTA_CREATED, {
                     acta: payload.acta
                 });
                 console.log('✅ Evento ACTA_CREATED emitido desde IPC');
@@ -906,9 +945,9 @@ function setupIPCListeners() {
         // Escuchar cuando se actualiza un acta de entrega
         window.api.on('acta-entrega-actualizada', (payload) => {
             console.log('📡 IPC: acta-entrega-actualizada recibido:', payload);
-            
+
             if (payload && payload.acta) {
-                eventBus.emit(APP_EVENTS.ACTA_UPDATED, { 
+                eventBus.emit(APP_EVENTS.ACTA_UPDATED, {
                     acta: payload.acta
                 });
                 console.log('✅ Evento ACTA_UPDATED emitido desde IPC');
@@ -918,9 +957,9 @@ function setupIPCListeners() {
         // Escuchar cuando se elimina un acta de entrega
         window.api.on('acta-entrega-eliminada', (payload) => {
             console.log('📡 IPC: acta-entrega-eliminada recibido:', payload);
-            
+
             if (payload && payload.actaId) {
-                eventBus.emit(APP_EVENTS.ACTA_DELETED, { 
+                eventBus.emit(APP_EVENTS.ACTA_DELETED, {
                     actaId: payload.actaId,
                     summary: payload.summary
                 });
@@ -963,14 +1002,14 @@ function setupReactiveListeners() {
 function refreshActiveSearches() {
     const tarjetasInput = document.getElementById('search-tarjetas-input');
     const expedientesInput = document.getElementById('search-expedientes-input');
-    
+
     // Si hay un término de búsqueda de tarjetas, actualizar
     if (tarjetasInput && tarjetasInput.value.trim()) {
         setTimeout(() => {
             performTarjetasSearch(true, tarjetasInput.value.trim()); // Forzar refresh
         }, 500);
     }
-    
+
     // Si hay un término de búsqueda de expedientes, actualizar
     if (expedientesInput && expedientesInput.value.trim()) {
         setTimeout(() => {
@@ -982,10 +1021,10 @@ function refreshActiveSearches() {
 // ===== DASHBOARD INITIALIZATION =====
 function initializeDashboard() {
     console.log('📊 Configurando Dashboard...');
-    
+
     // Inicializar el Dashboard Manager
     dashboardManager.initialize();
-    
+
     // Botón de actualizar
     const refreshBtn = document.getElementById('btn-refresh-dashboard');
     if (refreshBtn) {
@@ -993,7 +1032,7 @@ function initializeDashboard() {
             dashboardManager.refreshDashboard();
         });
     }
-    
+
     // Botón de exportar
     const exportBtn = document.getElementById('btn-export-dashboard');
     if (exportBtn) {
@@ -1001,7 +1040,7 @@ function initializeDashboard() {
             dashboardManager.exportDashboard('json');
         });
     }
-    
+
     // Toggle de filtros del dashboard
     const toggleFilters = document.getElementById('toggle-dashboard-filters');
     if (toggleFilters) {
@@ -1009,7 +1048,7 @@ function initializeDashboard() {
             dashboardManager.toggleFiltersPanel();
         });
     }
-    
+
     // Botón aplicar filtros del dashboard
     const applyFiltersBtn = document.getElementById('btn-apply-dashboard-filters');
     if (applyFiltersBtn) {
@@ -1017,7 +1056,7 @@ function initializeDashboard() {
             dashboardManager.applyFilters();
         });
     }
-    
+
     // Botón limpiar filtros del dashboard
     const clearFiltersBtn = document.getElementById('btn-clear-dashboard-filters');
     if (clearFiltersBtn) {
@@ -1025,7 +1064,7 @@ function initializeDashboard() {
             dashboardManager.clearFilters();
         });
     }
-    
+
     // Cambio en rango predefinido del dashboard
     const rangoSelect = document.getElementById('dashboard-filter-rango');
     if (rangoSelect) {
@@ -1034,11 +1073,11 @@ function initializeDashboard() {
                 // Aplicar rango predefinido automáticamente
                 const fechaDesde = document.getElementById('dashboard-filter-fecha-desde');
                 const fechaHasta = document.getElementById('dashboard-filter-fecha-hasta');
-                
+
                 const now = new Date();
                 const year = now.getFullYear();
                 const month = now.getMonth();
-                
+
                 switch (e.target.value) {
                     case 'este-mes':
                         if (fechaDesde) fechaDesde.value = `${year}-${String(month + 1).padStart(2, '0')}-01`;
@@ -1073,6 +1112,6 @@ function initializeDashboard() {
             }
         });
     }
-    
+
     console.log('✅ Dashboard configurado');
 }

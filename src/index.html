@@ -302,8 +302,11 @@
                     <legend>📄 Cargar Documento del Expediente</legend>
                     <div class="form-group">
                         <label for="pdf-file-path">Adjuntar Expediente (PDF):</label>
-                        <input type="text" id="pdf-file-path" placeholder="Ningún archivo seleccionado" readonly>
-                        <button type="button" id="seleccionar-pdf-btn" class="toggle-btn">📁 Seleccionar PDF y Extraer Texto</button>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                            <input type="text" id="pdf-file-path" placeholder="Ningún archivo seleccionado" readonly style="flex: 1; min-width: 200px;">
+                            <button type="button" id="seleccionar-pdf-btn" class="toggle-btn">📎 Seleccionar PDF</button>
+                            <button type="button" id="extraer-ocr-btn" class="toggle-btn" style="display: none; background: #9C27B0;">🔍 Extraer OCR</button>
+                        </div>
                     </div>
                     <!-- Indicador de estado OCR -->
                     <div id="ocr-status" class="ocr-status" style="display: none;">
