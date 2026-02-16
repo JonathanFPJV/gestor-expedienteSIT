@@ -11,17 +11,17 @@
  */
 function registerPdfHandlers(ipcMain, fileHandlers) {
     if (!fileHandlers) {
-        console.warn('⚠️ FileHandlers no disponible, PDFs handlers no registrados');
+        console.warn('FileHandlers no disponible, PDFs handlers no registrados');
         return;
     }
 
     // Seleccionar PDF para tarjeta
     ipcMain.handle('tarjeta:seleccionar-pdf', async () => {
         try {
-            console.log('📥 Solicitud seleccionar PDF');
+            console.log('Solicitud seleccionar PDF');
             return await fileHandlers.openPdfDialog();
         } catch (error) {
-            console.error('❌ Error al seleccionar PDF:', error);
+            console.error('Error al seleccionar PDF:', error);
             return null;
         }
     });
@@ -29,14 +29,14 @@ function registerPdfHandlers(ipcMain, fileHandlers) {
     // Abrir PDF de tarjeta
     ipcMain.handle('tarjeta:abrir-pdf', (event, pdfPath) => {
         try {
-            console.log('📥 Solicitud abrir PDF:', pdfPath);
+            console.log('Solicitud abrir PDF:', pdfPath);
             fileHandlers.openPdf(pdfPath);
             return { success: true };
         } catch (error) {
-            console.error('❌ Error al abrir PDF:', error);
-            return { 
-                success: false, 
-                message: error.message || 'Error al abrir PDF' 
+            console.error('Error al abrir PDF:', error);
+            return {
+                success: false,
+                message: error.message || 'Error al abrir PDF'
             };
         }
     });

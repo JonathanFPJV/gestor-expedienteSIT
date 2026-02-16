@@ -21,24 +21,18 @@ export class OCRProcessor {
         }
 
         this.isProcessing = true;
-        console.log('==========================================');
-        console.log('OCR: Iniciando extracción de primera página');
-        console.log('Archivo:', pdfPath);
-        console.log('==========================================');
 
         try {
             // Paso 1: Leer el archivo PDF desde el sistema
-            console.log('Paso 1/4: Leyendo archivo PDF...');
-            const arrayBuffer = await window.api.readPdfFile(pdfPath);
-            console.log(`Archivo leído: ${arrayBuffer.byteLength} bytes`);
 
             // Paso 2: Cargar PDF con PDF.js
-            console.log('Paso 2/4: Cargando PDF con PDF.js...');
+            const arrayBuffer = await window.api.readPdfFile(pdfPath);
+
+            // Paso 2: Cargar PDF con PDF.js
             const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-            console.log(`PDF cargado: ${pdf.numPages} página(s) total`);
 
             // Paso 3: Renderizar SOLO la primera página a imagen
-            console.log('Paso 3/4: Renderizando primera página...');
+            // Paso 3: Renderizar SOLO la primera página a imagen
             const page = await pdf.getPage(1);
 
             // Configurar escala ALTA para mejor calidad OCR (3x mejora precisión)
@@ -65,13 +59,12 @@ export class OCRProcessor {
                 intent: 'print' // Mejor calidad que 'display'
             }).promise;
 
-            console.log(`Página renderizada: ${canvas.width}x${canvas.height}px (escala ${scale}x)`);
 
             // Convertir canvas a imagen PNG de máxima calidad
             const imageData = canvas.toDataURL('image/png', 1.0);
 
             // Paso 4: Extraer texto con Tesseract OCR - Configuración optimizada
-            console.log('Paso 4/4: Ejecutando OCR en español con configuración mejorada...');
+            // Paso 4: Extraer texto con Tesseract OCR - Configuración optimizada
             const result = await Tesseract.recognize(
                 imageData,
                 'spa', // Idioma español
@@ -80,7 +73,7 @@ export class OCRProcessor {
                         if (info.status === 'recognizing text') {
                             const progress = Math.round(info.progress * 100);
                             if (progress % 25 === 0) { // Log cada 25%
-                                console.log(`   📊 Progreso OCR: ${progress}%`);
+                                // console.log(`Progreso OCR: ${progress}%`);
                             }
                         }
                     },
@@ -95,25 +88,10 @@ export class OCRProcessor {
             const text = result.data.text;
             const confidence = Math.round(result.data.confidence);
 
-            console.log('==========================================');
-            console.log('OCR COMPLETADO EXITOSAMENTE');
-            console.log('==========================================');
-            console.log(`Confianza: ${confidence}%`);
-            console.log(`Caracteres extraídos (bruto): ${text.length}`);
-            console.log(`Líneas extraídas: ${text.split('\n').length}`);
-            console.log('-------------------------------------------');
-            console.log('TEXTO BRUTO (primeros 500 caracteres):');
-            console.log(text.substring(0, 500));
-            console.log('-------------------------------------------');
 
             // Limpiar y corregir el texto
             const cleanedText = this.cleanOCRText(text);
 
-            console.log('-------------------------------------------');
-            console.log('TEXTO LIMPIO (primeros 500 caracteres):');
-            console.log(cleanedText.substring(0, 500));
-            console.log('-------------------------------------------');
-            console.log('==========================================');
 
             // Guardar temporalmente el texto LIMPIO
             this.extractedText = cleanedText;
@@ -124,13 +102,11 @@ export class OCRProcessor {
             return cleanedText;
 
         } catch (error) {
-            console.error('==========================================');
-            console.error('ERROR EN PROCESAMIENTO OCR');
-            console.error('==========================================');
-            console.error('Tipo:', error.name);
-            console.error('Mensaje:', error.message);
-            console.error('Stack:', error.stack);
-            console.error('==========================================');
+            console.error('Error en procesamiento OCR:', {
+                tipo: error.name,
+                mensaje: error.message,
+                stack: error.stack
+            });
             throw error;
         } finally {
             this.isProcessing = false;
@@ -146,7 +122,6 @@ export class OCRProcessor {
     cleanOCRText(text) {
         if (!text) return '';
 
-        console.log('Limpiando y corrigiendo texto OCR...');
 
         let cleaned = text;
 
@@ -183,8 +158,7 @@ export class OCRProcessor {
         // 11. Eliminar líneas vacías al inicio y final
         cleaned = cleaned.trim();
 
-        console.log('Texto limpiado y corregido');
-        console.log(`   - Longitud original: ${text.length} → limpia: ${cleaned.length}`);
+        // console.log(`Longitud original: ${text.length} → limpia: ${cleaned.length}`);
 
         return cleaned;
     }
@@ -202,7 +176,6 @@ export class OCRProcessor {
      */
     clearExtractedText() {
         this.extractedText = null;
-        console.log('Texto OCR limpiado de memoria temporal');
     }
 
     /**

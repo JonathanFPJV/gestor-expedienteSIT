@@ -22,7 +22,7 @@ const { handleError, broadcastToAllWindows } = require('./utils');
  * @param {ActaEntregaService} actaEntregaService - Servicio de actas de entrega
  */
 function registerUpdateHandlers(actaEntregaService) {
-    console.log('✏️ Registrando handlers de actualización de actas de entrega...');
+    console.log('Registrando handlers de actualización de actas de entrega...');
 
     /**
      * Actualizar acta de entrega existente
@@ -36,25 +36,25 @@ function registerUpdateHandlers(actaEntregaService) {
      */
     ipcMain.handle('acta-entrega:actualizar', (event, actaId, actaData, tarjetasIds = null) => {
         try {
-            console.log('📥 Solicitud actualizar acta de entrega:', actaId);
+            console.log('Solicitud actualizar acta de entrega:', actaId);
             const result = actaEntregaService.updateActaEntrega(actaId, actaData, tarjetasIds);
-            
+
             if (result.success) {
                 // Notificar a todas las ventanas sobre la actualización
                 broadcastToAllWindows('acta-entrega-actualizada', {
                     acta: result.acta
                 });
-                
-                console.log('✅ Acta de entrega actualizada exitosamente:', actaId);
+
+                console.log('Acta de entrega actualizada exitosamente:', actaId);
             }
-            
+
             return result;
         } catch (error) {
             return handleError(error, 'actualizar acta de entrega');
         }
     });
 
-    console.log('✅ Update Handlers registrados (1 canal)');
+    console.log('Update Handlers registrados (1 canal)');
 }
 
 module.exports = registerUpdateHandlers;

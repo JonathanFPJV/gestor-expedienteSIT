@@ -16,7 +16,7 @@ const fs = require('fs');
 const pathConfig = require('../config/pathConfig');
 const initializeTables = require('./migrations/initTables');
 const { migrate: addEstadoToTarjetas } = require('./migrations/addEstadoToTarjetas');
-
+const { run: createCredencialesTable } = require('./migrations/createCredencialesTable');
 // Inicializar configuración de rutas (portable o estándar)
 pathConfig.initialize();
 
@@ -32,22 +32,23 @@ if (!fs.existsSync(dbDir)) {
 const dbPath = path.join(dbDir, 'gestor-sit.db');
 
 // Crear conexión a la base de datos
-const db = new Database(dbPath, { 
+const db = new Database(dbPath, {
     verbose: console.log // Para debug, remover en producción
 });
 
 // Habilitar claves foráneas (importante para integridad referencial)
 db.pragma('foreign_keys = ON');
 
-console.log('📂 Base de datos SQLite inicializada en:', dbPath);
+console.log(' Base de datos SQLite inicializada en:', dbPath);
 
 // Inicializar tablas y schema
 initializeTables(db);
 
 // Ejecutar migraciones
-console.log('🔄 Ejecutando migraciones pendientes...');
+console.log(' Ejecutando migraciones pendientes...');
 addEstadoToTarjetas(db);
-console.log('✅ Migraciones completadas');
+createCredencialesTable(db);
+console.log(' Migraciones completadas');
 
 // Importar modelos
 const expedienteModel = require('./models/expedienteModel');
@@ -65,9 +66,9 @@ const actasEntrega = actaEntregaModel(db);
 function close() {
     try {
         db.close();
-        console.log('✅ Conexión a base de datos cerrada');
+        console.log(' Conexión a base de datos cerrada');
     } catch (error) {
-        console.error('❌ Error al cerrar base de datos:', error);
+        console.error(' Error al cerrar base de datos:', error);
     }
 }
 

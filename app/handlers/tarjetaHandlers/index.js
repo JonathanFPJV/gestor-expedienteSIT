@@ -36,7 +36,7 @@ class TarjetaHandlers {
      * Registrar todos los manejadores IPC para tarjetas
      */
     registerHandlers() {
-        console.log('📝 Registrando manejadores IPC para Tarjetas...');
+        console.log('Registrando manejadores IPC para Tarjetas...');
 
         // Registrar handlers por categoría
         registerCreateHandler(ipcMain, this.tarjetaService);
@@ -47,7 +47,7 @@ class TarjetaHandlers {
         registerPdfHandlers(ipcMain, this.fileHandlers);
         registerEstadoHandlers(ipcMain, this.tarjetaService);
 
-        console.log('✅ Manejadores IPC de Tarjetas registrados exitosamente');
+        console.log('Manejadores IPC de Tarjetas registrados exitosamente');
         console.log('   📂 Handlers organizados en módulos:');
         console.log('      - createHandler: 1 canal (crear)');
         console.log('      - readHandler: 6 canales (consultas)');
@@ -84,7 +84,7 @@ class TarjetaHandlers {
             ipcMain.removeHandler(handler);
         });
 
-        console.log('🗑️ Manejadores IPC de Tarjetas removidos (14 canales)');
+        console.log('Manejadores IPC de Tarjetas removidos (14 canales)');
     }
 }
 

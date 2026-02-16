@@ -1,7 +1,7 @@
 // app/services/tarjetaService.js
 /**
  * TarjetaService - Punto de Entrada
- * ⚡ REFACTORIZADO - Arquitectura Limpia
+ * REFACTORIZADO - Arquitectura Limpia
  * 
  * Módulos especializados:
  * - tarjetaManager: CRUD de tarjetas

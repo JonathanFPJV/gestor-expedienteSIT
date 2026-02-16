@@ -141,8 +141,8 @@ function registerDashboardHandlers() {
      */
     ipcMain.handle('dashboard:get-full', async (event, filters = {}) => {
         try {
-            console.log('📊 [IPC] dashboard:get-full - Filtros:', filters);
-            
+            console.log('[IPC] dashboard:get-full - Filtros:', filters);
+          
             const [stats, charts, filterOptions] = await Promise.all([
                 dashboardService.getDashboardStats(filters),
                 dashboardService.getAllCharts(filters),
@@ -160,7 +160,7 @@ function registerDashboardHandlers() {
                 }
             };
         } catch (error) {
-            console.error('❌ Error en dashboard:get-full:', error);
+            console.error('Error en dashboard:get-full:', error);
             return { success: false, error: error.message };
         }
     });

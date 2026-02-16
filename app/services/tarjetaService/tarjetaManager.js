@@ -6,11 +6,11 @@
 
 const queries = require('./queries');
 const { normalizePlaca, buildQuery } = require('./utils');
-const { 
-    ESTADO_DEFAULT, 
-    esEstadoValido, 
+const {
+    ESTADO_DEFAULT,
+    esEstadoValido,
     getMensajeErrorEstado,
-    esTransicionPermitida 
+    esTransicionPermitida
 } = require('../../config/tarjetaEstados');
 
 /**
@@ -42,7 +42,7 @@ module.exports = function createTarjetaManager(db) {
             };
 
             const nuevaTarjeta = db.tarjetas.insert(tarjetaToInsert);
-            console.log('✅ Tarjeta creada con ID:', nuevaTarjeta._id, '| Estado:', nuevaTarjeta.estado);
+            console.log('Tarjeta creada con ID:', nuevaTarjeta._id, '| Estado:', nuevaTarjeta.estado);
 
             return nuevaTarjeta;
         },
@@ -78,7 +78,7 @@ module.exports = function createTarjetaManager(db) {
          */
         getAllTarjetas(filtros = {}) {
             const query = buildQuery(filtros);
-            
+
             // Usar el wrapper db.tarjetas.find() en lugar de prepare()
             const tarjetas = db.tarjetas.find(query);
             return tarjetas;
@@ -118,7 +118,7 @@ module.exports = function createTarjetaManager(db) {
                 throw new Error('No se pudo actualizar la tarjeta');
             }
 
-            console.log('✅ Tarjeta actualizada:', tarjetaId);
+            console.log('Tarjeta actualizada:', tarjetaId);
             return this.getTarjetaById(tarjetaId);
         },
 
@@ -129,8 +129,8 @@ module.exports = function createTarjetaManager(db) {
          */
         deleteTarjeta(tarjetaId) {
             const result = db.tarjetas.remove({ _id: tarjetaId });
-            
-            console.log('✅ Tarjeta eliminada:', tarjetaId);
+
+            console.log('Tarjeta eliminada:', tarjetaId);
             return result.changes || result;
         },
 
@@ -141,9 +141,9 @@ module.exports = function createTarjetaManager(db) {
          */
         deleteTarjetasByResolucion(resolucionId) {
             const result = db.tarjetas.remove({ resolucionId: resolucionId });
-            
+
             const changes = result.changes || result;
-            console.log(`✅ ${changes} tarjetas eliminadas de resolución ${resolucionId}`);
+            console.log(`${changes} tarjetas eliminadas de resolución ${resolucionId}`);
             return changes;
         },
 
@@ -158,10 +158,10 @@ module.exports = function createTarjetaManager(db) {
             }
 
             const termUpper = searchTerm.toUpperCase().trim();
-            
+
             // Buscar por placa o número de tarjeta
             const tarjetas = db.tarjetas.find({})
-                .filter(t => 
+                .filter(t =>
                     (t.placa && t.placa.toUpperCase().includes(termUpper)) ||
                     (t.numeroTarjeta && t.numeroTarjeta.toUpperCase().includes(termUpper))
                 );
@@ -208,7 +208,7 @@ module.exports = function createTarjetaManager(db) {
 
             // Obtener estado actual para validar transición
             const tarjetaActual = this.getTarjetaById(tarjetaId);
-            
+
             // Validar que la transición sea permitida
             if (!esTransicionPermitida(tarjetaActual.estado, nuevoEstado)) {
                 throw new Error(
@@ -225,7 +225,7 @@ module.exports = function createTarjetaManager(db) {
                 throw new Error('No se pudo actualizar el estado de la tarjeta');
             }
 
-            console.log(`✅ Estado de tarjeta ${tarjetaId} cambiado: ${tarjetaActual.estado} → ${nuevoEstado.toUpperCase()}`);
+            console.log(`Estado de tarjeta ${tarjetaId} cambiado: ${tarjetaActual.estado} → ${nuevoEstado.toUpperCase()}`);
             return this.getTarjetaById(tarjetaId);
         },
 

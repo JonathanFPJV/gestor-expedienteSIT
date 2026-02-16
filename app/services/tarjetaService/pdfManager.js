@@ -13,7 +13,7 @@ const { buildTarjetaFileName } = require('./utils');
  */
 module.exports = function createPdfManager(fileHandlers) {
     if (!fileHandlers) {
-        console.warn('⚠️ PdfManager inicializado sin fileHandlers');
+        console.warn('PdfManager inicializado sin fileHandlers');
         return {
             savePdf: () => null,
             deletePdf: () => false,
@@ -46,11 +46,11 @@ module.exports = function createPdfManager(fileHandlers) {
                     }
                 );
 
-                console.log('📄 PDF de tarjeta guardado:', saveResult.path);
+                console.log('PDF de tarjeta guardado:', saveResult.path);
                 return saveResult.path;
 
             } catch (error) {
-                console.warn('⚠️ No se pudo guardar el PDF de la tarjeta:', error);
+                console.warn('No se pudo guardar el PDF de la tarjeta:', error);
                 throw error;
             }
         },
@@ -62,24 +62,24 @@ module.exports = function createPdfManager(fileHandlers) {
          */
         async deletePdf(pdfPath) {
             if (!pdfPath || pdfPath.trim() === '') {
-                console.log('ℹ️ No hay PDF para eliminar (ruta vacía)');
+                console.log('No hay PDF para eliminar (ruta vacía)');
                 return true; // No es un error, simplemente no hay nada que eliminar
             }
 
             try {
-                console.log('🗑️ Intentando eliminar PDF de tarjeta:', pdfPath);
+                console.log('Intentando eliminar PDF de tarjeta:', pdfPath);
                 const result = await fileHandlers.deletePdf(pdfPath);
-                
+
                 if (result && result.success) {
-                    console.log('✅ PDF de tarjeta eliminado exitosamente:', pdfPath);
+                    console.log('PDF de tarjeta eliminado exitosamente:', pdfPath);
                     return true;
                 } else {
-                    console.warn('⚠️ La eliminación del PDF retornó resultado no exitoso:', result);
+                    console.warn('La eliminación del PDF retornó resultado no exitoso:', result);
                     return false;
                 }
 
             } catch (error) {
-                console.error('❌ Error al eliminar el PDF:', error.message);
+                console.error('Error al eliminar el PDF:', error.message);
                 console.error('   Ruta intentada:', pdfPath);
                 throw error; // Propagar el error para que el llamador pueda manejarlo
             }

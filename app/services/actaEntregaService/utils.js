@@ -31,7 +31,7 @@ function copyPdfFile(sourcePath, actaId) {
     }
 
     const pdfDir = path.join(app.getPath('userData'), 'pdfs', 'actas-entrega');
-    
+
     // Crear directorio si no existe
     if (!fs.existsSync(pdfDir)) {
         fs.mkdirSync(pdfDir, { recursive: true });
@@ -41,7 +41,6 @@ function copyPdfFile(sourcePath, actaId) {
     const destPath = path.join(pdfDir, fileName);
 
     fs.copyFileSync(sourcePath, destPath);
-    console.log('📄 PDF copiado a:', destPath);
 
     return destPath;
 }
@@ -58,10 +57,9 @@ function deletePdfFile(pdfPath) {
 
     try {
         fs.unlinkSync(pdfPath);
-        console.log('🗑️ PDF eliminado:', pdfPath);
         return true;
     } catch (error) {
-        console.warn('⚠️ No se pudo eliminar el PDF:', error.message);
+        console.warn('No se pudo eliminar el PDF:', error.message);
         return false;
     }
 }
@@ -133,7 +131,7 @@ function validateDatabase(db) {
     if (!db) {
         throw new Error('ActaEntregaService: db es null o undefined');
     }
-    
+
     if (typeof db.prepare !== 'function') {
         throw new Error('ActaEntregaService: db no tiene método prepare');
     }

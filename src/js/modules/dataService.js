@@ -75,7 +75,7 @@ class DataService {
 
     /**
      * Obtener todos los expedientes (SIN PAGINACIÓN)
-     * ⚠️ DEPRECADO: Usar getExpedientesPaginados() para mejor rendimiento
+     *  DEPRECADO: Usar getExpedientesPaginados() para mejor rendimiento
      */
     async getAllExpedientes() {
         try {

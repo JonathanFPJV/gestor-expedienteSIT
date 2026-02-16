@@ -9,7 +9,7 @@
  * @param {Database} db - Instancia de better-sqlite3
  */
 function initializeTables(db) {
-    console.log('🔧 Inicializando tablas...');
+    console.log(' Inicializando tablas...');
 
     // 1. ActasResolucion (Maestro - Expedientes)
     db.exec(`
@@ -69,7 +69,7 @@ function initializeTables(db) {
         CREATE INDEX IF NOT EXISTS idx_tarjetas_acta_entrega ON TarjetasVehiculos(actaEntregaId);
     `);
 
-    console.log('✅ Tablas inicializadas correctamente');
+    console.log(' Tablas inicializadas correctamente');
 }
 
 module.exports = initializeTables;

@@ -24,7 +24,7 @@ function mapExpedienteCompleto(expediente, db) {
     try {
         // Buscar tarjetas asociadas
         const tarjetasAsociadas = db.tarjetas.find({ resolucionId: expediente._id });
-        
+
         // Retornar expediente con todos los campos
         return {
             _id: expediente._id,
@@ -46,7 +46,7 @@ function mapExpedienteCompleto(expediente, db) {
             tarjetasAsociadas: tarjetasAsociadas || []
         };
     } catch (error) {
-        console.error(`❌ Error mapeando expediente ${expediente._id}:`, error);
+        console.error(`Error mapeando expediente ${expediente._id}:`, error);
         return {
             ...mapExpedienteForFrontend(expediente),
             tarjetasAsociadas: []
@@ -97,7 +97,7 @@ function notifyAllWindows(eventName, payload) {
     BrowserWindow.getAllWindows().forEach(win => {
         win.webContents.send(eventName, payload);
     });
-    console.log(`📢 Evento enviado a todas las ventanas: ${eventName}`);
+    console.log(`Evento enviado a todas las ventanas: ${eventName}`);
 }
 
 /**
@@ -109,7 +109,7 @@ function notifyAllWindows(eventName, payload) {
  * @returns {Object} Objeto de error estructurado
  */
 function handleError(error, operation) {
-    console.error(`❌ Error en ${operation}:`, error);
+    console.error(`Error en ${operation}:`, error);
     return {
         success: false,
         message: error.message || `Error al ${operation}`,

@@ -16,7 +16,7 @@ function registerEstadoHandlers(ipcMain, tarjetaService) {
     // Obtener lista de estados disponibles
     ipcMain.handle('tarjeta:obtener-estados-disponibles', handleError(
         async () => {
-            console.log('📥 Solicitud obtener estados disponibles');
+            console.log('Solicitud obtener estados disponibles');
             return {
                 success: true,
                 estados: getAllEstados()
@@ -28,7 +28,7 @@ function registerEstadoHandlers(ipcMain, tarjetaService) {
     // Obtener información de un estado específico
     ipcMain.handle('tarjeta:obtener-info-estado', handleError(
         async (estado) => {
-            console.log('📥 Solicitud obtener info de estado:', estado);
+            console.log('Solicitud obtener info de estado:', estado);
             const info = getInfoEstado(estado);
             return {
                 success: !!info,
@@ -42,7 +42,7 @@ function registerEstadoHandlers(ipcMain, tarjetaService) {
     // Obtener tarjetas por estado
     ipcMain.handle('tarjeta:obtener-por-estado', handleError(
         async (estado) => {
-            console.log('📥 Solicitud obtener tarjetas por estado:', estado);
+            console.log('Solicitud obtener tarjetas por estado:', estado);
             return await tarjetaService.getTarjetasByEstado(estado);
         },
         'Error al obtener tarjetas por estado'
@@ -51,7 +51,7 @@ function registerEstadoHandlers(ipcMain, tarjetaService) {
     // Cambiar estado de tarjeta
     ipcMain.handle('tarjeta:cambiar-estado', handleError(
         async (tarjetaId, nuevoEstado) => {
-            console.log('📥 Solicitud cambiar estado de tarjeta:', tarjetaId, '→', nuevoEstado);
+            console.log('Solicitud cambiar estado de tarjeta:', tarjetaId, '→', nuevoEstado);
             return await tarjetaService.cambiarEstadoTarjeta(tarjetaId, nuevoEstado);
         },
         'Error al cambiar estado de tarjeta'
@@ -60,7 +60,7 @@ function registerEstadoHandlers(ipcMain, tarjetaService) {
     // Cancelar tarjeta
     ipcMain.handle('tarjeta:cancelar', handleError(
         async (tarjetaId) => {
-            console.log('📥 Solicitud cancelar tarjeta:', tarjetaId);
+            console.log('Solicitud cancelar tarjeta:', tarjetaId);
             return await tarjetaService.cancelarTarjeta(tarjetaId);
         },
         'Error al cancelar tarjeta'
@@ -69,7 +69,7 @@ function registerEstadoHandlers(ipcMain, tarjetaService) {
     // Activar tarjeta
     ipcMain.handle('tarjeta:activar', handleError(
         async (tarjetaId) => {
-            console.log('📥 Solicitud activar tarjeta:', tarjetaId);
+            console.log('Solicitud activar tarjeta:', tarjetaId);
             return await tarjetaService.activarTarjeta(tarjetaId);
         },
         'Error al activar tarjeta'

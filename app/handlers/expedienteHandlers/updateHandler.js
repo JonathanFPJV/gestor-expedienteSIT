@@ -21,7 +21,7 @@ const { handleError, notifyAllWindows, prepareExpedientePayload } = require('./u
  * @param {ExpedienteService} expedienteService - Servicio de expedientes
  */
 function registerUpdateHandlers(expedienteService) {
-    console.log('✏️ Registrando handlers de actualización de expedientes...');
+    console.log('Registrando handlers de actualización de expedientes...');
 
     /**
      * Actualizar expediente existente
@@ -29,11 +29,11 @@ function registerUpdateHandlers(expedienteService) {
      */
     ipcMain.handle('actualizar-expediente', async (event, expedienteId, expedienteData) => {
         try {
-            console.log('📥 Solicitud actualizar expediente ID:', expedienteId, `(tipo: ${typeof expedienteId})`);
+            console.log('Solicitud actualizar expediente ID:', expedienteId, `(tipo: ${typeof expedienteId})`);
             console.log('📝 Datos a actualizar:', expedienteData);
-            
+
             const result = await expedienteService.updateExpediente(expedienteId, expedienteData);
-            console.log('✅ Expediente actualizado exitosamente');
+            console.log('Expediente actualizado exitosamente');
 
             // Preparar payload para notificación
             const payload = prepareExpedientePayload(result.expediente, result.tarjetas);
@@ -47,7 +47,7 @@ function registerUpdateHandlers(expedienteService) {
         }
     });
 
-    console.log('✅ Update Handlers registrados (1 canal)');
+    console.log('Update Handlers registrados (1 canal)');
 }
 
 module.exports = registerUpdateHandlers;

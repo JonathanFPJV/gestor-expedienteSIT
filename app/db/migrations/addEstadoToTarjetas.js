@@ -10,7 +10,7 @@
  * @param {Database} db - Instancia de better-sqlite3
  */
 function migrate(db) {
-    console.log('🔄 Ejecutando migración: Agregar campo estado a TarjetasVehiculos');
+    console.log('Ejecutando migración: Agregar campo estado a TarjetasVehiculos');
 
     try {
         // Verificar si la columna ya existe
@@ -18,7 +18,7 @@ function migrate(db) {
         const estadoExists = tableInfo.some(col => col.name === 'estado');
 
         if (estadoExists) {
-            console.log('⚠️ El campo "estado" ya existe en TarjetasVehiculos');
+            console.log('El campo "estado" ya existe en TarjetasVehiculos');
             return;
         }
 
@@ -42,12 +42,12 @@ function migrate(db) {
             ON TarjetasVehiculos(estado)
         `);
 
-        console.log('✅ Campo "estado" agregado exitosamente a TarjetasVehiculos');
-        console.log('✅ Todas las tarjetas existentes marcadas como ACTIVA');
-        console.log('ℹ️  Estados permitidos se validan en capa de aplicación (extensible)');
+        console.log('Campo "estado" agregado exitosamente a TarjetasVehiculos');
+        console.log('Todas las tarjetas existentes marcadas como ACTIVA');
+        console.log('Estados permitidos se validan en capa de aplicación (extensible)');
 
     } catch (error) {
-        console.error('❌ Error en migración addEstadoToTarjetas:', error);
+        console.error(' Error en migración addEstadoToTarjetas:', error);
         throw error;
     }
 }
@@ -57,8 +57,8 @@ function migrate(db) {
  * SQLite no soporta DROP COLUMN, se requeriría recrear la tabla
  */
 function rollback(db) {
-    console.warn('⚠️ Rollback no soportado para esta migración en SQLite');
-    console.warn('⚠️ Se requiere recrear la tabla para eliminar la columna');
+    console.warn(' Rollback no soportado para esta migración en SQLite');
+    console.warn(' Se requiere recrear la tabla para eliminar la columna');
 }
 
 module.exports = { migrate, rollback };

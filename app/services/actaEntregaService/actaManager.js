@@ -21,7 +21,7 @@ module.exports = function createActaManager(db) {
          */
         createActa(actaData) {
             const stmt = db.prepare(queries.insertActa);
-            
+
             const result = stmt.run(
                 actaData.n_tarjetas_entregadas || 0,
                 actaData.fechaEntrega,
@@ -29,9 +29,7 @@ module.exports = function createActaManager(db) {
                 actaData.observaciones || null
             );
 
-            const actaId = result.lastInsertRowid;
-            console.log('✅ Acta creada con ID:', actaId);
-            
+
             return actaId;
         },
 
@@ -57,14 +55,11 @@ module.exports = function createActaManager(db) {
          * @returns {Array} Lista de actas
          */
         getAllActas(filtros = {}) {
-            console.log('📋 Obteniendo todas las actas de entrega');
-
             const { query, params } = buildFilteredQuery(queries.getAllActas, filtros);
-            
+
             const stmt = db.prepare(query);
             const actas = stmt.all(...params);
 
-            console.log(`✅ ${actas.length} actas encontradas`);
             return actas;
         },
 
@@ -76,15 +71,13 @@ module.exports = function createActaManager(db) {
          */
         updateActa(actaId, actaData, actaExistente) {
             const stmt = db.prepare(queries.updateActa);
-            
+
             stmt.run(
                 actaData.n_tarjetas_entregadas || actaExistente.n_tarjetas_entregadas,
                 actaData.fechaEntrega || actaExistente.fechaEntrega,
                 actaData.observaciones !== undefined ? actaData.observaciones : actaExistente.observaciones,
                 actaId
             );
-
-            console.log('✅ Acta actualizada:', actaId);
         },
 
         /**
@@ -94,8 +87,6 @@ module.exports = function createActaManager(db) {
         deleteActa(actaId) {
             const stmt = db.prepare(queries.deleteActa);
             stmt.run(actaId);
-            
-            console.log('✅ Acta eliminada:', actaId);
         },
 
         /**
@@ -110,7 +101,7 @@ module.exports = function createActaManager(db) {
 
             const term = `%${searchTerm.toLowerCase()}%`;
             const stmt = db.prepare(queries.searchActas);
-            
+
             return stmt.all(term, term, term, term, term, term);
         },
 

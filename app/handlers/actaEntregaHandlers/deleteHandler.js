@@ -25,7 +25,7 @@ const { handleError, broadcastToAllWindows } = require('./utils');
  * @param {ActaEntregaService} actaEntregaService - Servicio de actas de entrega
  */
 function registerDeleteHandlers(actaEntregaService) {
-    console.log('🗑️ Registrando handlers de eliminación de actas de entrega...');
+    console.log('Registrando handlers de eliminación de actas de entrega...');
 
     /**
      * Eliminar acta de entrega
@@ -40,27 +40,27 @@ function registerDeleteHandlers(actaEntregaService) {
      */
     ipcMain.handle('acta-entrega:eliminar', (event, actaId) => {
         try {
-            console.log('📥 Solicitud eliminar acta de entrega:', actaId);
+            console.log('Solicitud eliminar acta de entrega:', actaId);
             const result = actaEntregaService.deleteActaEntrega(actaId);
-            
+
             if (result.success) {
                 // Notificar a todas las ventanas sobre la eliminación
                 broadcastToAllWindows('acta-entrega-eliminada', {
                     actaId: actaId,
                     summary: result.summary
                 });
-                
-                console.log('✅ Acta de entrega eliminada exitosamente:', actaId);
-                console.log('📊 Resumen:', result.summary);
+
+                console.log('Acta de entrega eliminada exitosamente:', actaId);
+                console.log('Resumen:', result.summary);
             }
-            
+
             return result;
         } catch (error) {
             return handleError(error, 'eliminar acta de entrega');
         }
     });
 
-    console.log('✅ Delete Handlers registrados (1 canal)');
+    console.log('Delete Handlers registrados (1 canal)');
 }
 
 module.exports = registerDeleteHandlers;

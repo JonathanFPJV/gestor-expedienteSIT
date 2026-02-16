@@ -26,7 +26,7 @@ module.exports = function createActaEntregaManager(db) {
             };
 
             const newActaEntrega = db.actasEntrega.insert(actaToInsert);
-            console.log('✅ Acta de Entrega creada:', newActaEntrega._id);
+            console.log('Acta de Entrega creada:', newActaEntrega._id);
 
             return newActaEntrega;
         },
@@ -48,7 +48,7 @@ module.exports = function createActaEntregaManager(db) {
          */
         updateActaEntrega(actaId, actaData) {
             const updateData = {};
-            
+
             if (actaData.fechaEntrega !== undefined) updateData.fechaEntrega = actaData.fechaEntrega;
             if (actaData.n_tarjetas_entregadas !== undefined) updateData.n_tarjetas_entregadas = actaData.n_tarjetas_entregadas;
             if (actaData.pdfPathEntrega !== undefined) updateData.pdfPathEntrega = actaData.pdfPathEntrega;
@@ -56,8 +56,8 @@ module.exports = function createActaEntregaManager(db) {
 
             db.actasEntrega.update({ _id: actaId }, { $set: updateData });
             const actaActualizada = db.actasEntrega.findOne({ _id: actaId });
-            
-            console.log('✅ Acta de Entrega actualizada:', actaId);
+
+            console.log('Acta de Entrega actualizada:', actaId);
             return actaActualizada;
         },
 
@@ -69,11 +69,11 @@ module.exports = function createActaEntregaManager(db) {
         deleteActaEntrega(actaId) {
             const result = db.actasEntrega.remove({ _id: actaId });
             const changes = typeof result === 'number' ? result : (result.changes || 0);
-            
+
             if (changes > 0) {
-                console.log('✅ Acta de Entrega eliminada de la BD');
+                console.log('Acta de Entrega eliminada de la BD');
             }
-            
+
             return changes;
         }
     };

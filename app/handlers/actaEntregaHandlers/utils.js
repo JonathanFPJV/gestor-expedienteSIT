@@ -28,7 +28,7 @@ function broadcastToAllWindows(channel, payload) {
             win.webContents.send(channel, payload);
         }
     });
-    console.log(`📢 Evento enviado a todas las ventanas: ${channel}`);
+    console.log(`Evento enviado a todas las ventanas: ${channel}`);
 }
 
 /**
@@ -44,7 +44,7 @@ function broadcastToAllWindows(channel, payload) {
  * return handleError(error, 'crear acta de entrega', { actaId: 123 });
  */
 function handleError(error, operation, additionalData = {}) {
-    console.error(`❌ Error en ${operation}:`, error);
+    console.error(`Error en ${operation}:`, error);
     return {
         success: false,
         message: error.message || `Error al ${operation}`,
@@ -67,11 +67,11 @@ function handleSuccess(data, message = null) {
         success: true,
         ...data
     };
-    
+
     if (message) {
         response.message = message;
     }
-    
+
     return response;
 }
 

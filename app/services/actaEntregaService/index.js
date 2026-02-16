@@ -30,8 +30,6 @@ class ActaEntregaService {
         this.tarjetaManager = createTarjetaManager(db);
         this.pdfManager = createPdfManager(db);
         this.statsManager = createStatsManager(db);
-
-        console.log('✅ ActaEntregaService inicializado con db válido');
     }
 
     /**
@@ -41,7 +39,6 @@ class ActaEntregaService {
      * @returns {Object} Resultado de la operación
      */
     createActaEntrega(actaData, tarjetasIds = []) {
-        console.log('📝 Creando acta de entrega:', actaData);
 
         return executeTransaction(this.db, () => {
             // 1. Crear acta
@@ -76,7 +73,6 @@ class ActaEntregaService {
      * @returns {Object} Acta completa con tarjetas
      */
     getActaEntregaById(actaId) {
-        console.log('🔍 Obteniendo acta ID:', actaId);
 
         const acta = this.actaManager.getActaById(actaId);
         const tarjetas = this.tarjetaManager.getTarjetasByActaId(actaId);
@@ -104,7 +100,6 @@ class ActaEntregaService {
      * @returns {Object} Resultado de la operación
      */
     updateActaEntrega(actaId, actaData, tarjetasIds = null) {
-        console.log('📝 Actualizando acta ID:', actaId);
 
         return executeTransaction(this.db, () => {
             // 1. Verificar que existe
@@ -143,7 +138,6 @@ class ActaEntregaService {
      * @returns {Object} Resultado de la operación
      */
     deleteActaEntrega(actaId) {
-        console.log('🗑️ Eliminando acta ID:', actaId);
 
         return executeTransaction(this.db, () => {
             // 1. Obtener acta para información

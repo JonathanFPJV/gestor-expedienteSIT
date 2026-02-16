@@ -25,12 +25,11 @@ module.exports = function createTarjetaManager(db) {
             }
 
             const stmt = db.prepare(queries.updateTarjetaActa);
-            
+
             for (const tarjetaId of tarjetasIds) {
                 stmt.run(actaId, tarjetaId);
             }
 
-            console.log(`✅ ${tarjetasIds.length} tarjetas asociadas al acta ${actaId}`);
             return tarjetasIds.length;
         },
 
@@ -46,7 +45,6 @@ module.exports = function createTarjetaManager(db) {
             const stmt = db.prepare(queries.desasociarTarjetasDeActa);
             stmt.run(actaId);
 
-            console.log(`✅ ${count} tarjetas desasociadas del acta ${actaId}`);
             return count;
         },
 

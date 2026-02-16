@@ -16,7 +16,7 @@ function registerReadHandlers(ipcMain, tarjetaService, db) {
     // Obtener todas las tarjetas
     ipcMain.handle('tarjeta:obtener-todas', handleError(
         async (filtros = {}) => {
-            console.log('📥 Solicitud obtener todas las tarjetas');
+            console.log('Solicitud obtener todas las tarjetas');
             return await tarjetaService.getTarjetas(filtros);
         },
         'Error al obtener tarjetas'
@@ -25,7 +25,7 @@ function registerReadHandlers(ipcMain, tarjetaService, db) {
     // Obtener tarjeta por ID
     ipcMain.handle('tarjeta:obtener-por-id', handleError(
         async (tarjetaId) => {
-            console.log('📥 Solicitud obtener tarjeta por ID:', tarjetaId);
+            console.log('Solicitud obtener tarjeta por ID:', tarjetaId);
             return await tarjetaService.getTarjetaById(tarjetaId);
         },
         'Error al obtener tarjeta'
@@ -34,7 +34,7 @@ function registerReadHandlers(ipcMain, tarjetaService, db) {
     // Buscar tarjetas
     ipcMain.handle('tarjeta:buscar', handleError(
         async (searchTerm) => {
-            console.log('📥 Solicitud buscar tarjetas:', searchTerm);
+            console.log('Solicitud buscar tarjetas:', searchTerm);
             return await tarjetaService.searchTarjetas(searchTerm);
         },
         'Error al buscar tarjetas'
@@ -43,7 +43,7 @@ function registerReadHandlers(ipcMain, tarjetaService, db) {
     // Obtener tarjetas por expediente (resolución)
     ipcMain.handle('tarjeta:obtener-por-expediente', handleError(
         async (expedienteId) => {
-            console.log('📥 Solicitud obtener tarjetas por expediente:', expedienteId);
+            console.log('Solicitud obtener tarjetas por expediente:', expedienteId);
             return await tarjetaService.getTarjetasByExpediente(expedienteId);
         },
         'Error al obtener tarjetas del expediente'
@@ -52,7 +52,7 @@ function registerReadHandlers(ipcMain, tarjetaService, db) {
     // Buscar tarjeta por placa específica
     ipcMain.handle('tarjeta:buscar-por-placa', handleError(
         async (placa) => {
-            console.log('📥 Solicitud buscar tarjeta por placa:', placa);
+            console.log('Solicitud buscar tarjeta por placa:', placa);
             return await tarjetaService.getTarjetaByPlaca(placa);
         },
         'Error al buscar tarjeta por placa'
@@ -61,7 +61,7 @@ function registerReadHandlers(ipcMain, tarjetaService, db) {
     // Obtener tarjetas por acta de entrega
     ipcMain.handle('tarjeta:obtener-por-acta-entrega', handleError(
         async (actaEntregaId) => {
-            console.log('📥 Solicitud obtener tarjetas por acta de entrega:', actaEntregaId);
+            console.log('Solicitud obtener tarjetas por acta de entrega:', actaEntregaId);
             return await tarjetaService.getTarjetasByActaEntrega(actaEntregaId);
         },
         'Error al obtener tarjetas por acta de entrega'
@@ -70,29 +70,29 @@ function registerReadHandlers(ipcMain, tarjetaService, db) {
     // Buscar tarjeta (compatibilidad - búsqueda general con datos enriquecidos)
     ipcMain.handle('buscar-tarjeta', handleError(
         async (searchTerm) => {
-            console.log('📥 Solicitud buscar tarjeta (general):', searchTerm);
-            
+            console.log('Solicitud buscar tarjeta (general):', searchTerm);
+
             // Buscar tarjetas por placa o número
             const tarjetas = await tarjetaService.searchTarjetas(searchTerm);
-            
+
             if (!tarjetas.success || tarjetas.tarjetas.length === 0) {
                 return { success: true, data: [] };
             }
-            
+
             // Formatear resultados con datos del expediente y acta de entrega
             const resultados = tarjetas.tarjetas.map((tarjeta) => {
                 const expediente = db.expedientes.findOne({ _id: tarjeta.resolucionId });
-                const actaEntrega = tarjeta.actaEntregaId 
-                    ? db.actasEntrega.findOne({ _id: tarjeta.actaEntregaId }) 
+                const actaEntrega = tarjeta.actaEntregaId
+                    ? db.actasEntrega.findOne({ _id: tarjeta.actaEntregaId })
                     : null;
-                
+
                 // Log detallado de PDFs encontrados
-                console.log('📄 PDFs encontrados para tarjeta', tarjeta.placa, ':', {
+                console.log('PDFs encontrados para tarjeta', tarjeta.placa, ':', {
                     tarjetaPdf: tarjeta.pdfPath || 'NO',
                     expedientePdf: expediente?.pdfPathActa || 'NO',
                     expedienteId: expediente?._id
                 });
-                
+
                 return {
                     _id: tarjeta._id,
                     placa: tarjeta.placa,
@@ -112,19 +112,19 @@ function registerReadHandlers(ipcMain, tarjetaService, db) {
                     } : null
                 };
             });
-            
-            console.log('✅ Resultados formateados:', resultados.length, 'tarjeta(s) con datos completos');
-            
+
+            console.log('Resultados formateados:', resultados.length, 'tarjeta(s) con datos completos');
+
             return { success: true, data: resultados };
         },
         'Error al buscar tarjeta'
     ));
 
-    // 🔍 Buscar tarjetas con paginación (optimizado para tabla CRUD)
+    // Buscar tarjetas con paginación (optimizado para tabla CRUD)
     ipcMain.handle('buscar-tarjetas', handleError(
         async (options) => {
             const { searchTerm = '', page = 1, limit = 10 } = options;
-            console.log('📥 Buscar tarjetas (paginado):', { searchTerm, page, limit });
+            console.log('Buscar tarjetas (paginado):', { searchTerm, page, limit });
 
             let tarjetasFiltradas = [];
 
@@ -135,7 +135,7 @@ function registerReadHandlers(ipcMain, tarjetaService, db) {
                 // Con búsqueda: filtrar por placa, número de tarjeta o estado
                 const termUpper = searchTerm.toUpperCase().trim();
                 tarjetasFiltradas = db.tarjetas.find({})
-                    .filter(t => 
+                    .filter(t =>
                         (t.placa && t.placa.toUpperCase().includes(termUpper)) ||
                         (t.numeroTarjeta && t.numeroTarjeta.toUpperCase().includes(termUpper)) ||
                         (t.estado && t.estado.toUpperCase().includes(termUpper))
@@ -145,15 +145,15 @@ function registerReadHandlers(ipcMain, tarjetaService, db) {
             const total = tarjetasFiltradas.length;
             const totalPages = Math.ceil(total / limit);
             const offset = (page - 1) * limit;
-            
+
             // Aplicar paginación
             const tarjetasPaginadas = tarjetasFiltradas.slice(offset, offset + limit);
 
             // Enriquecer con datos del expediente y acta de entrega
             const tarjetasConDatos = tarjetasPaginadas.map(tarjeta => {
                 const expediente = db.expedientes.findOne({ _id: tarjeta.resolucionId });
-                const actaEntrega = tarjeta.actaEntregaId 
-                    ? db.actasEntrega.findOne({ _id: tarjeta.actaEntregaId }) 
+                const actaEntrega = tarjeta.actaEntregaId
+                    ? db.actasEntrega.findOne({ _id: tarjeta.actaEntregaId })
                     : null;
 
                 return {
@@ -175,7 +175,7 @@ function registerReadHandlers(ipcMain, tarjetaService, db) {
                 };
             });
 
-            console.log(`✅ Tarjetas encontradas: ${total} | Página ${page}/${totalPages}`);
+            console.log(`Tarjetas encontradas: ${total} | Página ${page}/${totalPages}`);
 
             return {
                 success: true,

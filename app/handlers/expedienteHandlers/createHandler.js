@@ -23,7 +23,7 @@ const { handleError, notifyAllWindows, prepareExpedientePayload } = require('./u
  * @param {ExpedienteService} expedienteService - Servicio de expedientes
  */
 function registerCreateHandlers(expedienteService) {
-    console.log('➕ Registrando handlers de creación de expedientes...');
+    console.log('Registrando handlers de creación de expedientes...');
 
     /**
      * Crear nuevo expediente (Acta de Resolución completa)
@@ -31,7 +31,7 @@ function registerCreateHandlers(expedienteService) {
      */
     ipcMain.handle('crear-expediente', async (event, expedienteData) => {
         try {
-            console.log('📥 Solicitud crear expediente:', expedienteData);
+            console.log('Solicitud crear expediente:', expedienteData);
             const result = await expedienteService.createExpediente(expedienteData);
 
             // Preparar payload para notificación
@@ -52,7 +52,7 @@ function registerCreateHandlers(expedienteService) {
      */
     ipcMain.handle('guardar-expediente', async (event, expedienteData) => {
         try {
-            console.log('📥 Solicitud guardar expediente (compatibilidad):', expedienteData);
+            console.log('Solicitud guardar expediente (compatibilidad):', expedienteData);
             const result = await expedienteService.createExpediente(expedienteData);
 
             // Preparar payload para notificación
@@ -67,7 +67,7 @@ function registerCreateHandlers(expedienteService) {
         }
     });
 
-    console.log('✅ Create Handlers registrados (2 canales)');
+    console.log('Create Handlers registrados (2 canales)');
 }
 
 module.exports = registerCreateHandlers;

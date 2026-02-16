@@ -14,7 +14,7 @@ const { handleErrorNoEvent } = require('./utils');
 function registerStatsHandler(ipcMain, tarjetaService) {
     ipcMain.handle('tarjeta:estadisticas', handleErrorNoEvent(
         async () => {
-            console.log('📥 Solicitud estadísticas de tarjetas');
+            console.log('Solicitud estadísticas de tarjetas');
             return await tarjetaService.getEstadisticas();
         },
         'Error al obtener estadísticas'

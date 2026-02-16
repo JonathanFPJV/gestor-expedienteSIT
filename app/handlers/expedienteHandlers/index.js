@@ -45,8 +45,8 @@ class ExpedienteHandlers {
         this.expedienteService = new ExpedienteService(db, fileHandlers);
         this.fileHandlers = fileHandlers;
         this.db = db;
-        
-        console.log('🏗️ ExpedienteHandlers constructor:');
+
+        console.log('ExpedienteHandlers constructor:');
         console.log('   - db recibido:', !!db);
         console.log('   - fileHandlers recibido:', !!fileHandlers);
         console.log('   - expedienteService creado:', !!this.expedienteService);
@@ -57,7 +57,7 @@ class ExpedienteHandlers {
      * Coordina el registro de todos los módulos
      */
     registerHandlers() {
-        console.log('📝 Registrando manejadores IPC para Expedientes...');
+        console.log('Registrando manejadores IPC para Expedientes...');
         console.log('='.repeat(60));
 
         // Registrar handlers modulares
@@ -70,7 +70,7 @@ class ExpedienteHandlers {
 
         // Resumen final
         console.log('='.repeat(60));
-        console.log('✅ Manejadores IPC de Expedientes registrados exitosamente');
+        console.log('Manejadores IPC de Expedientes registrados exitosamente');
         console.log('   📊 Handlers organizados en módulos:');
         console.log('      - readHandler: 4 canales (detalle, todos, buscar, info-eliminación)');
         console.log('      - createHandler: 2 canales (crear, guardar)');
@@ -108,7 +108,7 @@ class ExpedienteHandlers {
             ipcMain.removeHandler(handler);
         });
 
-        console.log('🗑️ Manejadores IPC de Expedientes removidos (9 canales)');
+        console.log('Manejadores IPC de Expedientes removidos (9 canales)');
     }
 }
 

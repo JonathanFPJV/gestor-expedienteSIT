@@ -27,16 +27,16 @@ const { handleError, mapExpedienteCompleto, mapTarjetaForFrontend } = require('.
  * @param {Object} db - Base de datos con APIs
  */
 function registerReadHandlers(expedienteService, db) {
-    console.log('📖 Registrando handlers de lectura de expedientes...');
+    console.log('Registrando handlers de lectura de expedientes...');
 
     /**
      * Obtener detalle completo de un expediente con sus tarjetas
      */
     ipcMain.handle('obtener-expediente-detalle', (event, expedienteId) => {
         try {
-            console.log('📥 Solicitud obtener detalle expediente:', expedienteId, `(tipo: ${typeof expedienteId})`);
+            console.log('Solicitud obtener detalle expediente:', expedienteId, `(tipo: ${typeof expedienteId})`);
             const result = expedienteService.getExpedienteDetalle(expedienteId);
-            console.log('✅ Detalle obtenido exitosamente:', result.success ? 'SÍ' : 'NO');
+            console.log('Detalle obtenido exitosamente:', result.success ? 'SÍ' : 'NO');
             return result;
         } catch (error) {
             return handleError(error, 'obtener detalle de expediente');
@@ -60,36 +60,36 @@ function registerReadHandlers(expedienteService, db) {
                 sortOrder = 'desc'
             } = options;
 
-            console.log('📥 Solicitud obtener expedientes paginados:', { page, limit, sortBy, sortOrder });
+            console.log('Solicitud obtener expedientes paginados:', { page, limit, sortBy, sortOrder });
 
             // Obtener todos los expedientes (después optimizaremos con índices)
             const allExpedientes = db.expedientes.find({});
             const totalExpedientes = allExpedientes.length;
-            
+
             // Ordenar
             allExpedientes.sort((a, b) => {
                 const valorA = a[sortBy];
                 const valorB = b[sortBy];
-                
+
                 if (sortOrder === 'asc') {
                     return valorA > valorB ? 1 : valorA < valorB ? -1 : 0;
                 } else {
                     return valorA < valorB ? 1 : valorA > valorB ? -1 : 0;
                 }
             });
-            
+
             // Calcular paginación
             const startIndex = (page - 1) * limit;
             const endIndex = startIndex + limit;
             const expedientesPagina = allExpedientes.slice(startIndex, endIndex);
-            
+
             console.log(`📄 Página ${page}: mostrando ${expedientesPagina.length} de ${totalExpedientes} expedientes`);
-            
+
             // Mapear expedientes con sus tarjetas usando función utilitaria
-            const expedientesConTarjetas = expedientesPagina.map(expediente => 
+            const expedientesConTarjetas = expedientesPagina.map(expediente =>
                 mapExpedienteCompleto(expediente, db)
             );
-            
+
             const resultado = {
                 success: true,
                 data: expedientesConTarjetas,
@@ -102,8 +102,8 @@ function registerReadHandlers(expedienteService, db) {
                     hasPrevPage: page > 1
                 }
             };
-            
-            console.log('✅ Expedientes paginados procesados:', resultado.pagination);
+
+            console.log('Expedientes paginados procesados:', resultado.pagination);
             return resultado;
         } catch (error) {
             console.error('❌ Error en obtener expedientes paginados:', error);
@@ -122,20 +122,18 @@ function registerReadHandlers(expedienteService, db) {
      */
     ipcMain.handle('obtener-todos-expedientes', () => {
         try {
-            console.log('⚠️ ADVERTENCIA: Usando obtener-todos-expedientes (deprecado)');
-            console.log('💡 Considera usar expediente:obtener-paginado para mejor rendimiento');
-            console.log('📥 Solicitud obtener todos los expedientes');
+            console.log('Solicitud obtener todos los expedientes');
             const expedientes = db.expedientes.find({});
             console.log('📊 Expedientes obtenidos de la BD:', expedientes.length);
-            
+
             // Mapear expedientes con sus tarjetas usando función utilitaria
             const expedientesConTarjetas = expedientes.map(expediente => {
                 const resultado = mapExpedienteCompleto(expediente, db);
                 console.log(`🎫 Expediente ${expediente.numeroExpediente}: ${resultado.tarjetasAsociadas.length} tarjetas`);
                 return resultado;
             });
-            
-            console.log('✅ Expedientes con tarjetas procesados:', expedientesConTarjetas.length);
+
+            console.log('Expedientes con tarjetas procesados:', expedientesConTarjetas.length);
             console.log('📦 Primer expediente de ejemplo:', expedientesConTarjetas[0]);
             return expedientesConTarjetas;
         } catch (error) {
@@ -150,21 +148,21 @@ function registerReadHandlers(expedienteService, db) {
      */
     ipcMain.handle('buscar-expediente', (event, searchTerm) => {
         try {
-            console.log('📥 Solicitud buscar expediente:', searchTerm);
-            
+            console.log('Solicitud buscar expediente:', searchTerm);
+
             // Usar el servicio para búsqueda
             const expedientes = expedienteService.searchExpedientes(searchTerm);
-            
+
             if (expedientes.length === 0) {
                 return { success: true, data: [] };
             }
-            
+
             // Formatear resultados con tarjetas asociadas usando función utilitaria
-            const resultados = expedientes.map(expediente => 
+            const resultados = expedientes.map(expediente =>
                 mapExpedienteCompleto(expediente, db)
             );
-            
-            console.log(`✅ Búsqueda de expedientes: ${resultados.length} resultados`);
+
+            console.log(`Búsqueda de expedientes: ${resultados.length} resultados`);
             return { success: true, data: resultados };
         } catch (error) {
             return handleError(error, 'buscar expediente');
@@ -188,7 +186,7 @@ function registerReadHandlers(expedienteService, db) {
                 limit = 10
             } = options;
 
-            console.log(`📥 Búsqueda rápida: "${searchTerm}" (página ${page}, límite ${limit})`);
+            console.log(`Búsqueda rápida: "${searchTerm}" (página ${page}, límite ${limit})`);
 
             if (!searchTerm || searchTerm.trim() === '') {
                 // Sin término, devolver todos paginados
@@ -197,11 +195,11 @@ function registerReadHandlers(expedienteService, db) {
                 const startIndex = (page - 1) * limit;
                 const endIndex = startIndex + limit;
                 const expedientesPagina = allExpedientes.slice(startIndex, endIndex);
-                
-                const expedientesConTarjetas = expedientesPagina.map(exp => 
+
+                const expedientesConTarjetas = expedientesPagina.map(exp =>
                     mapExpedienteCompleto(exp, db)
                 );
-                
+
                 return {
                     success: true,
                     expedientes: expedientesConTarjetas,
@@ -214,11 +212,11 @@ function registerReadHandlers(expedienteService, db) {
 
             // Búsqueda en múltiples campos
             const term = searchTerm.toUpperCase().trim();
-            
+
             const expedientesFiltrados = db.expedientes.find({})
                 .filter(exp => {
                     // Buscar en campos del expediente
-                    const matchExpediente = 
+                    const matchExpediente =
                         (exp.numeroExpediente && exp.numeroExpediente.toUpperCase().includes(term)) ||
                         (exp.anioExpediente && exp.anioExpediente.toString().includes(term)) ||
                         (exp.numeroResolucion && exp.numeroResolucion.toUpperCase().includes(term)) ||
@@ -226,16 +224,16 @@ function registerReadHandlers(expedienteService, db) {
                         (exp.unidadNegocio && exp.unidadNegocio.toUpperCase().includes(term)) ||
                         (exp.numeroFichero && exp.numeroFichero.toUpperCase().includes(term)) ||
                         (exp.observaciones && exp.observaciones.toUpperCase().includes(term));
-                    
+
                     if (matchExpediente) return true;
-                    
+
                     // Buscar en tarjetas asociadas
                     const tarjetas = db.tarjetas.find({ resolucionId: exp._id });
-                    const matchTarjetas = tarjetas.some(t => 
+                    const matchTarjetas = tarjetas.some(t =>
                         (t.placa && t.placa.toUpperCase().includes(term)) ||
                         (t.numeroTarjeta && t.numeroTarjeta.toUpperCase().includes(term))
                     );
-                    
+
                     return matchTarjetas;
                 });
 
@@ -243,14 +241,14 @@ function registerReadHandlers(expedienteService, db) {
             const startIndex = (page - 1) * limit;
             const endIndex = startIndex + limit;
             const expedientesPagina = expedientesFiltrados.slice(startIndex, endIndex);
-            
+
             // Mapear con tarjetas asociadas
-            const expedientesConTarjetas = expedientesPagina.map(exp => 
+            const expedientesConTarjetas = expedientesPagina.map(exp =>
                 mapExpedienteCompleto(exp, db)
             );
-            
-            console.log(`✅ Búsqueda completada: ${total} resultados (mostrando ${expedientesConTarjetas.length})`);
-            
+
+            console.log(`Búsqueda completada: ${total} resultados (mostrando ${expedientesConTarjetas.length})`);
+
             return {
                 success: true,
                 expedientes: expedientesConTarjetas,
@@ -276,8 +274,8 @@ function registerReadHandlers(expedienteService, db) {
      */
     ipcMain.handle('obtener-info-eliminacion', (event, expedienteId) => {
         try {
-            console.log('📥 Solicitud obtener info para eliminación:', expedienteId);
-            
+            console.log('Solicitud obtener info para eliminación:', expedienteId);
+
             // Obtener expediente
             const expediente = db.expedientes.findOne({ _id: expedienteId });
             if (!expediente) {
@@ -289,7 +287,7 @@ function registerReadHandlers(expedienteService, db) {
 
             // Obtener tarjetas asociadas
             const tarjetas = db.tarjetas.find({ resolucionId: expedienteId });
-            
+
             // Contar archivos PDF
             let archivosTotal = expediente.pdfPathActa ? 1 : 0;
             const tarjetasConPDF = tarjetas.filter(t => t.pdfPath).length;
@@ -310,7 +308,7 @@ function registerReadHandlers(expedienteService, db) {
                 pdfPath: expediente.pdfPathActa
             };
 
-            console.log('✅ Info de eliminación obtenida:', {
+            console.log('Info de eliminación obtenida:', {
                 expediente: expedienteInfo.numero,
                 tarjetas: summary.totalTarjetas,
                 archivos: summary.totalArchivos
@@ -329,7 +327,7 @@ function registerReadHandlers(expedienteService, db) {
         }
     });
 
-    console.log('✅ Read Handlers registrados (4 canales)');
+    console.log('Read Handlers registrados (4 canales)');
 }
 
 module.exports = registerReadHandlers;

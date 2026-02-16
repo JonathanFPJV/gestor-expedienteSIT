@@ -33,7 +33,7 @@ module.exports = function createExpedienteManager(db) {
             };
 
             const newExpediente = db.expedientes.insert(expedienteToInsert);
-            console.log('✅ Acta de Resolución creada con ID:', newExpediente._id);
+            console.log('Acta de Resolución creada con ID:', newExpediente._id);
 
             return newExpediente;
         },
@@ -62,8 +62,8 @@ module.exports = function createExpedienteManager(db) {
         getAllExpedientes(filtros = {}) {
             const query = buildExpedienteQuery(filtros);
             const expedientes = db.expedientes.find(query);
-            
-            console.log(`📊 Expedientes obtenidos: ${expedientes.length}`);
+
+            console.log(`Expedientes obtenidos: ${expedientes.length}`);
             return expedientes;
         },
 
@@ -75,19 +75,19 @@ module.exports = function createExpedienteManager(db) {
          */
         updateExpediente(expedienteId, updateData) {
             const numericId = normalizeId(expedienteId);
-            
+
             const result = db.expedientes.update(
                 { _id: numericId },
                 updateData
             );
 
             const changesCount = typeof result === 'number' ? result : (result.changes || 0);
-            
+
             if (changesCount === 0) {
                 throw new Error('No se pudo actualizar el expediente');
             }
 
-            console.log('✅ Acta de Resolución actualizada:', expedienteId);
+            console.log('Acta de Resolución actualizada:', expedienteId);
             return this.getExpedienteById(numericId);
         },
 
@@ -98,15 +98,15 @@ module.exports = function createExpedienteManager(db) {
          */
         deleteExpediente(expedienteId) {
             const numericId = normalizeId(expedienteId);
-            
+
             const result = db.expedientes.remove({ _id: numericId });
             const expedienteChanges = typeof result === 'number' ? result : (result.changes || 0);
-            
+
             if (expedienteChanges === 0) {
                 throw new Error('No se pudo eliminar el expediente de la base de datos');
             }
 
-            console.log('✅ Expediente eliminado de la BD');
+            console.log('Expediente eliminado de la BD');
             return expedienteChanges;
         },
 
@@ -121,15 +121,15 @@ module.exports = function createExpedienteManager(db) {
             }
 
             const term = searchTerm.toUpperCase().trim();
-            
+
             const expedientes = db.expedientes.find({})
-                .filter(exp => 
+                .filter(exp =>
                     (exp.numeroExpediente && exp.numeroExpediente.toUpperCase().includes(term)) ||
                     (exp.numeroResolucion && exp.numeroResolucion.toUpperCase().includes(term)) ||
                     (exp.nombreEmpresa && exp.nombreEmpresa.toUpperCase().includes(term))
                 );
 
-            console.log(`🔍 Búsqueda "${searchTerm}": ${expedientes.length} resultados`);
+            console.log(`Búsqueda "${searchTerm}": ${expedientes.length} resultados`);
             return expedientes;
         },
 

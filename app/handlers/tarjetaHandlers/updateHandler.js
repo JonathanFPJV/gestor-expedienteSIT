@@ -14,7 +14,7 @@ const { handleError } = require('./utils');
 function registerUpdateHandler(ipcMain, tarjetaService) {
     ipcMain.handle('tarjeta:actualizar', handleError(
         async (tarjetaId, updateData, pdfFilePath = null) => {
-            console.log('📥 Solicitud actualizar tarjeta:', tarjetaId, updateData);
+            console.log('Solicitud actualizar tarjeta:', tarjetaId, updateData);
             return await tarjetaService.updateTarjeta(tarjetaId, updateData, pdfFilePath);
         },
         'Error al actualizar tarjeta'

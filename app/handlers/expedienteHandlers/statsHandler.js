@@ -21,7 +21,7 @@ const { handleError } = require('./utils');
  * @param {Object} db - Base de datos con APIs
  */
 function registerStatsHandlers(db) {
-    console.log('📊 Registrando handlers de estadísticas de expedientes...');
+    console.log('Registrando handlers de estadísticas de expedientes...');
 
     /**
      * Obtener estadísticas generales de expedientes
@@ -34,8 +34,8 @@ function registerStatsHandlers(db) {
      */
     ipcMain.handle('expediente:estadisticas', () => {
         try {
-            console.log('📥 Solicitud estadísticas de expedientes');
-            
+            console.log('Solicitud estadísticas de expedientes');
+
             const todosExpedientes = db.expedientes.find({});
             const expedientesConTarjetas = todosExpedientes.filter(exp => {
                 const tarjetas = db.tarjetas.find({ resolucionId: exp._id });
@@ -49,12 +49,12 @@ function registerStatsHandlers(db) {
                 expedientesConTarjetas: expedientesConTarjetas.length,
                 expedientesSinTarjetas: todosExpedientes.length - expedientesConTarjetas.length,
                 totalTarjetas: totalTarjetas,
-                promedioTarjetasPorExpediente: todosExpedientes.length > 0 
-                    ? (totalTarjetas / todosExpedientes.length).toFixed(2) 
+                promedioTarjetasPorExpediente: todosExpedientes.length > 0
+                    ? (totalTarjetas / todosExpedientes.length).toFixed(2)
                     : 0
             };
 
-            console.log('✅ Estadísticas calculadas:', estadisticas);
+            console.log('Estadísticas calculadas:', estadisticas);
 
             return {
                 success: true,
@@ -65,7 +65,7 @@ function registerStatsHandlers(db) {
         }
     });
 
-    console.log('✅ Stats Handlers registrados (1 canal)');
+    console.log('Stats Handlers registrados (1 canal)');
 }
 
 module.exports = registerStatsHandlers;

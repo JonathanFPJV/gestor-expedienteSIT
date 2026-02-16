@@ -13,11 +13,11 @@
 const createTarjetaManager = require('./tarjetaManager');
 const createPdfManager = require('./pdfManager');
 const createStatsManager = require('./statsManager');
-const { 
-    validateTarjetaData, 
+const {
+    validateTarjetaData,
     normalizePlaca,
-    formatSuccessResponse, 
-    formatErrorResponse 
+    formatSuccessResponse,
+    formatErrorResponse
 } = require('./utils');
 
 class TarjetaService {
@@ -45,7 +45,7 @@ class TarjetaService {
             // Verificar si ya existe una tarjeta con la misma placa
             if (tarjetaData.placa) {
                 const existente = this.tarjetaManager.getTarjetaByPlaca(tarjetaData.placa);
-                
+
                 if (existente) {
                     throw new Error(`Ya existe una tarjeta con la placa ${tarjetaData.placa}`);
                 }
@@ -66,8 +66,8 @@ class TarjetaService {
             // Si hay archivo PDF y resolucionId, guardarlo
             if (pdfFilePath && nuevaTarjeta.resolucionId && this.fileHandlers) {
                 try {
-                    const resolucion = this.db.expedientes.findOne({ 
-                        _id: nuevaTarjeta.resolucionId 
+                    const resolucion = this.db.expedientes.findOne({
+                        _id: nuevaTarjeta.resolucionId
                     });
 
                     if (resolucion) {
@@ -82,16 +82,16 @@ class TarjetaService {
                         this.tarjetaManager.updateTarjeta(nuevaTarjeta._id, nuevaTarjeta);
                     }
                 } catch (pdfError) {
-                    console.warn('⚠️ No se pudo guardar el PDF de la tarjeta:', pdfError);
+                    console.warn('No se pudo guardar el PDF de la tarjeta:', pdfError);
                     // No fallar la creación de la tarjeta si el PDF falla
                 }
             }
-            
-            console.log('✅ Tarjeta creada exitosamente:', nuevaTarjeta._id);
+
+            console.log('Tarjeta creada exitosamente:', nuevaTarjeta._id);
             return formatSuccessResponse(nuevaTarjeta, 'Tarjeta creada exitosamente');
 
         } catch (error) {
-            console.error('❌ Error al crear tarjeta:', error);
+            console.error('Error al crear tarjeta:', error);
             return formatErrorResponse(error);
         }
     }
@@ -104,8 +104,8 @@ class TarjetaService {
     getTarjetas(filtros = {}) {
         try {
             const tarjetas = this.tarjetaManager.getAllTarjetas(filtros);
-            
-            console.log(`📋 Tarjetas obtenidas: ${tarjetas.length}`);
+
+            console.log(`Tarjetas obtenidas: ${tarjetas.length}`);
             return {
                 success: true,
                 tarjetas: tarjetas,
@@ -113,7 +113,7 @@ class TarjetaService {
             };
 
         } catch (error) {
-            console.error('❌ Error al obtener tarjetas:', error);
+            console.error('Error al obtener tarjetas:', error);
             return {
                 success: false,
                 message: error.message || 'Error al obtener tarjetas',
@@ -137,10 +137,10 @@ class TarjetaService {
 
             // Si tiene resolución asociada, obtener sus datos
             if (tarjeta.resolucionId) {
-                const resolucion = this.db.expedientes.findOne({ 
-                    _id: tarjeta.resolucionId 
+                const resolucion = this.db.expedientes.findOne({
+                    _id: tarjeta.resolucionId
                 });
-                
+
                 return {
                     success: true,
                     tarjeta: {
@@ -156,7 +156,7 @@ class TarjetaService {
             };
 
         } catch (error) {
-            console.error('❌ Error al obtener tarjeta:', error);
+            console.error('Error al obtener tarjeta:', error);
             return {
                 success: false,
                 message: error.message || 'Error al obtener tarjeta'
@@ -177,8 +177,8 @@ class TarjetaService {
 
             const tarjetas = this.tarjetaManager.searchTarjetas(searchTerm);
 
-            console.log(`🔍 Búsqueda "${searchTerm}": ${tarjetas.length} resultados`);
-            
+            console.log(`Búsqueda "${searchTerm}": ${tarjetas.length} resultados`);
+
             return {
                 success: true,
                 tarjetas: tarjetas,
@@ -187,7 +187,7 @@ class TarjetaService {
             };
 
         } catch (error) {
-            console.error('❌ Error en búsqueda de tarjetas:', error);
+            console.error('Error en búsqueda de tarjetas:', error);
             return {
                 success: false,
                 message: error.message || 'Error en búsqueda de tarjetas',
@@ -209,8 +209,8 @@ class TarjetaService {
 
             const tarjetas = this.tarjetaManager.getTarjetasByResolucion(resolucionId);
 
-            console.log(`🎫 Tarjetas de la resolución ${resolucionId}: ${tarjetas.length}`);
-            
+            console.log(`Tarjetas de la resolución ${resolucionId}: ${tarjetas.length}`);
+
             return {
                 success: true,
                 tarjetas: tarjetas,
@@ -219,7 +219,7 @@ class TarjetaService {
             };
 
         } catch (error) {
-            console.error('❌ Error al obtener tarjetas de la resolución:', error);
+            console.error('Error al obtener tarjetas de la resolución:', error);
             return {
                 success: false,
                 message: error.message || 'Error al obtener tarjetas de la resolución',
@@ -241,16 +241,9 @@ class TarjetaService {
                 throw new Error('ID de tarjeta no proporcionado');
             }
 
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            console.log('🔄 INICIANDO ACTUALIZACIÓN DE TARJETA');
-            console.log('   ID:', tarjetaId);
-            console.log('   Datos a actualizar:', JSON.stringify(updateData, null, 2));
-            console.log('   PDF nuevo:', pdfFilePath || 'NO HAY PDF NUEVO');
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-            // Verificar que la tarjeta existe
             const tarjetaExistente = this.tarjetaManager.getTarjetaById(tarjetaId);
-            console.log('📋 Tarjeta existente:',  JSON.stringify(tarjetaExistente, null, 2));
+            console.log('Tarjeta existente:', JSON.stringify(tarjetaExistente, null, 2));
 
             // Si se está actualizando la placa, verificar que no exista otra con la misma
             if (updateData.placa && normalizePlaca(updateData.placa) !== tarjetaExistente.placa) {
@@ -266,12 +259,12 @@ class TarjetaService {
                 placa: normalizePlaca(updateData.placa) || tarjetaExistente.placa,
                 numeroTarjeta: updateData.numeroTarjeta !== undefined ? updateData.numeroTarjeta : tarjetaExistente.numeroTarjeta,
                 estado: updateData.estado !== undefined ? updateData.estado : tarjetaExistente.estado,
-                resolucionId: updateData.expedienteId !== undefined ? updateData.expedienteId : 
-                             (updateData.resolucionId !== undefined ? updateData.resolucionId : tarjetaExistente.resolucionId),
+                resolucionId: updateData.expedienteId !== undefined ? updateData.expedienteId :
+                    (updateData.resolucionId !== undefined ? updateData.resolucionId : tarjetaExistente.resolucionId),
                 actaEntregaId: updateData.actaEntregaId !== undefined ? updateData.actaEntregaId : tarjetaExistente.actaEntregaId,
                 pdfPath: tarjetaExistente.pdfPath
             };
-            
+
             // Limpiar y validar datos para SQLite
             // SQLite solo acepta: numbers, strings, bigints, buffers, y null
             const cleanDataForSQLite = (obj) => {
@@ -294,44 +287,39 @@ class TarjetaService {
                     ) {
                         cleaned[key] = value;
                     }
-                    // Si es otro tipo (objeto, array, etc), convertir a null
                     else {
-                        console.warn(`⚠️ Valor inválido para SQLite en campo ${key}:`, typeof value, value);
+                        console.warn(`Valor inválido para SQLite en campo ${key}:`, typeof value, value);
                         cleaned[key] = null;
                     }
                 }
                 return cleaned;
             };
-            
+
             const cleanedDataToUpdate = cleanDataForSQLite(dataToUpdate);
-            
+
             // Log para debugging
-            console.log('📋 Datos originales:', dataToUpdate);
-            console.log('🧹 Datos limpiados para SQLite:', cleanedDataToUpdate);
+            console.log('Datos originales:', dataToUpdate);
+            console.log('Datos limpiados para SQLite:', cleanedDataToUpdate);
 
             // Manejar archivo PDF si se proporciona
             if (pdfFilePath && cleanedDataToUpdate.resolucionId && this.fileHandlers) {
                 try {
-                    const resolucion = this.db.expedientes.findOne({ 
-                        _id: cleanedDataToUpdate.resolucionId 
+                    const resolucion = this.db.expedientes.findOne({
+                        _id: cleanedDataToUpdate.resolucionId
                     });
 
                     if (resolucion) {
                         // PASO 1: Eliminar PDF anterior si existe (CRÍTICO - evita duplicados)
                         if (tarjetaExistente.pdfPath && tarjetaExistente.pdfPath.trim() !== '') {
-                            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                            console.log('🗑️ ELIMINANDO PDF ANTERIOR');
-                            console.log('   Ruta antigua:', tarjetaExistente.pdfPath);
-                            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                             try {
                                 const deleteResult = await this.pdfManager.deletePdf(tarjetaExistente.pdfPath);
                                 if (deleteResult) {
-                                    console.log('✅ PDF anterior eliminado exitosamente');
+                                    console.log('PDF anterior eliminado exitosamente');
                                 } else {
-                                    console.warn('⚠️ No se pudo confirmar la eliminación del PDF anterior');
+                                    console.warn('No se pudo confirmar la eliminación del PDF anterior');
                                 }
                             } catch (deleteError) {
-                                console.error('❌ Error al eliminar PDF anterior:', deleteError);
+                                console.error('Error al eliminar PDF anterior:', deleteError);
                                 // Continuar de todos modos para no bloquear la actualización
                             }
                         } else {
@@ -339,50 +327,36 @@ class TarjetaService {
                         }
 
                         // PASO 2: Guardar nuevo PDF (AWAIT es crucial aquí)
-                        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                        console.log('📎 GUARDANDO NUEVO PDF');
-                        console.log('   Ruta temporal:', pdfFilePath);
-                        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                         const pdfPath = await this.pdfManager.savePdf(
                             pdfFilePath,
                             cleanedDataToUpdate,
                             resolucion
                         );
-                        
+
                         if (pdfPath) {
                             cleanedDataToUpdate.pdfPath = pdfPath;
-                            console.log('✅ Nuevo PDF guardado en:', pdfPath);
+                            console.log('Nuevo PDF guardado en:', pdfPath);
                         } else {
-                            console.warn('⚠️ No se obtuvo ruta del PDF guardado');
+                            console.warn('No se obtuvo ruta del PDF guardado');
                         }
                     } else {
-                        console.warn('⚠️ No se encontró la resolución asociada');
+                        console.warn('No se encontró la resolución asociada');
                     }
                 } catch (pdfError) {
-                    console.error('❌ Error al actualizar el PDF:', pdfError);
+                    console.error('Error al actualizar el PDF:', pdfError);
                     // No lanzar error para no bloquear la actualización de datos
                 }
             }
 
             // Actualizar en la base de datos
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            console.log('💾 ACTUALIZANDO EN BASE DE DATOS');
-            console.log('   Datos finales:', JSON.stringify(cleanedDataToUpdate, null, 2));
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             const tarjetaActualizada = this.tarjetaManager.updateTarjeta(tarjetaId, cleanedDataToUpdate);
 
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            console.log('✅ ACTUALIZACIÓN COMPLETADA EXITOSAMENTE');
+            console.log('Actualización completada exitosamente');
             console.log('   Tarjeta actualizada:', JSON.stringify(tarjetaActualizada, null, 2));
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             return formatSuccessResponse(tarjetaActualizada, 'Tarjeta actualizada exitosamente');
 
         } catch (error) {
-            console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            console.error('❌ ERROR EN ACTUALIZACIÓN DE TARJETA');
-            console.error('   Error:', error.message);
-            console.error('   Stack:', error.stack);
-            console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.error('Error en actualización de tarjeta:', error.message);
             return formatErrorResponse(error);
         }
     }
@@ -406,7 +380,7 @@ class TarjetaService {
                 try {
                     await this.pdfManager.deletePdf(tarjetaExistente.pdfPath);
                 } catch (deleteError) {
-                    console.warn('⚠️ No se pudo eliminar el PDF:', deleteError);
+                    console.warn('No se pudo eliminar el PDF:', deleteError);
                 }
             }
 
@@ -417,7 +391,7 @@ class TarjetaService {
                 throw new Error('No se pudo eliminar la tarjeta');
             }
 
-            console.log('✅ Tarjeta eliminada exitosamente:', tarjetaId);
+            console.log('Tarjeta eliminada exitosamente:', tarjetaId);
             return {
                 success: true,
                 message: 'Tarjeta eliminada exitosamente',
@@ -425,7 +399,7 @@ class TarjetaService {
             };
 
         } catch (error) {
-            console.error('❌ Error al eliminar tarjeta:', error);
+            console.error('Error al eliminar tarjeta:', error);
             return formatErrorResponse(error);
         }
     }
@@ -451,7 +425,7 @@ class TarjetaService {
                         try {
                             await this.pdfManager.deletePdf(tarjeta.pdfPath);
                         } catch (deleteError) {
-                            console.warn('⚠️ No se pudo eliminar PDF:', deleteError);
+                            console.warn('No se pudo eliminar PDF:', deleteError);
                         }
                     }
                 }
@@ -460,7 +434,7 @@ class TarjetaService {
             // Eliminar las tarjetas
             const changes = this.tarjetaManager.deleteTarjetasByResolucion(resolucionId);
 
-            console.log(`✅ ${changes} tarjetas eliminadas de la resolución ${resolucionId}`);
+            console.log(`${changes} tarjetas eliminadas de la resolución ${resolucionId}`);
             return {
                 success: true,
                 message: `${changes} tarjetas eliminadas exitosamente`,
@@ -468,7 +442,7 @@ class TarjetaService {
             };
 
         } catch (error) {
-            console.error('❌ Error al eliminar tarjetas de la resolución:', error);
+            console.error('Error al eliminar tarjetas de la resolución:', error);
             return formatErrorResponse(error);
         }
     }
@@ -506,7 +480,7 @@ class TarjetaService {
             };
 
         } catch (error) {
-            console.error('❌ Error al obtener estadísticas:', error);
+            console.error('Error al obtener estadísticas:', error);
             return {
                 success: false,
                 message: error.message || 'Error al obtener estadísticas'
@@ -541,7 +515,7 @@ class TarjetaService {
             };
 
         } catch (error) {
-            console.error('❌ Error al buscar tarjeta por placa:', error);
+            console.error('Error al buscar tarjeta por placa:', error);
             return {
                 success: false,
                 message: error.message || 'Error al buscar tarjeta por placa',
@@ -563,8 +537,8 @@ class TarjetaService {
 
             const tarjetas = this.tarjetaManager.getTarjetasByActaEntrega(actaEntregaId);
 
-            console.log(`📋 Tarjetas del acta de entrega ${actaEntregaId}: ${tarjetas.length}`);
-            
+            console.log(`Tarjetas del acta de entrega ${actaEntregaId}: ${tarjetas.length}`);
+
             return {
                 success: true,
                 tarjetas: tarjetas,
@@ -573,7 +547,7 @@ class TarjetaService {
             };
 
         } catch (error) {
-            console.error('❌ Error al obtener tarjetas por acta de entrega:', error);
+            console.error('Error al obtener tarjetas por acta de entrega:', error);
             return {
                 success: false,
                 message: error.message || 'Error al obtener tarjetas por acta de entrega',
@@ -600,9 +574,9 @@ class TarjetaService {
     getTarjetasByEstado(estado) {
         try {
             const tarjetas = this.tarjetaManager.getTarjetasByEstado(estado);
-            
-            console.log(`🎫 Tarjetas con estado ${estado}: ${tarjetas.length}`);
-            
+
+            console.log(`Tarjetas con estado ${estado}: ${tarjetas.length}`);
+
             return {
                 success: true,
                 tarjetas: tarjetas,
@@ -611,7 +585,7 @@ class TarjetaService {
             };
 
         } catch (error) {
-            console.error('❌ Error al obtener tarjetas por estado:', error);
+            console.error('Error al obtener tarjetas por estado:', error);
             return {
                 success: false,
                 message: error.message || 'Error al obtener tarjetas por estado',
@@ -634,8 +608,8 @@ class TarjetaService {
 
             const tarjetaActualizada = this.tarjetaManager.cambiarEstado(tarjetaId, nuevoEstado);
 
-            console.log(`✅ Estado de tarjeta ${tarjetaId} cambiado a ${nuevoEstado}`);
-            
+            console.log(`Estado de tarjeta ${tarjetaId} cambiado a ${nuevoEstado}`);
+
             return {
                 success: true,
                 message: `Tarjeta ${nuevoEstado.toLowerCase()} exitosamente`,
@@ -643,7 +617,7 @@ class TarjetaService {
             };
 
         } catch (error) {
-            console.error('❌ Error al cambiar estado de tarjeta:', error);
+            console.error('Error al cambiar estado de tarjeta:', error);
             return formatErrorResponse(error);
         }
     }

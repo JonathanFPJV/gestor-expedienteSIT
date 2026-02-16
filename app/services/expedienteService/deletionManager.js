@@ -29,11 +29,11 @@ module.exports = function createDeletionManager(
          * @returns {Promise<Object>} Resultado de la eliminación con resumen
          */
         async deleteExpedienteWithCascade(expedienteId) {
-            console.log(`🗑️ deleteExpediente llamado con ID: "${expedienteId}" (tipo: ${typeof expedienteId})`);
-            
+            console.log(`deleteExpediente llamado con ID: "${expedienteId}"`);
+
             const numericId = normalizeId(expedienteId);
-            console.log(`🔄 ID convertido a número: ${numericId} (tipo: ${typeof numericId})`);
-            
+            console.log(`ID convertido a número: ${numericId}`);
+
             const startTime = Date.now();
             const summary = {
                 expediente: null,
@@ -45,16 +45,16 @@ module.exports = function createDeletionManager(
             };
 
             try {
-                console.log('🗑️ Iniciando eliminación en cascada para expediente:', numericId);
+                console.log('Iniciando eliminación en cascada para expediente:', numericId);
 
                 // 1. Obtener expediente
                 const expediente = expedienteManager.getExpedienteById(numericId);
-                console.log(`🔎 Resultado de búsqueda:`, expediente ? `✅ Encontrado: ${expediente.numeroExpediente}` : '❌ NO encontrado');
+                console.log(`Resultado de búsqueda:`, expediente ? `Encontrado: ${expediente.numeroExpediente}` : 'NO encontrado');
 
                 summary.expediente = expediente.numeroExpediente;
                 summary.empresa = expediente.nombreEmpresa || 'Sin empresa';
 
-                console.log('📋 Expediente a eliminar:', {
+                console.log('Expediente a eliminar:', {
                     id: numericId,
                     numero: expediente.numeroExpediente,
                     resolucion: expediente.numeroResolucion
@@ -62,7 +62,7 @@ module.exports = function createDeletionManager(
 
                 // 2. Obtener todas las tarjetas asociadas
                 const tarjetas = tarjetaManager.getTarjetasByExpediente(numericId);
-                console.log(`🎫 Tarjetas asociadas encontradas: ${tarjetas.length}`);
+                console.log(`Tarjetas asociadas encontradas: ${tarjetas.length}`);
 
                 // 3. Identificar acta de entrega asociada (si existe)
                 let actaEntregaId = null;
@@ -71,7 +71,7 @@ module.exports = function createDeletionManager(
                     actaEntregaId = tarjetas[0].actaEntregaId;
                     actaEntrega = actaEntregaManager.getActaEntregaById(actaEntregaId);
                     if (actaEntrega) {
-                        console.log(`📄 Acta de Entrega asociada encontrada: ${actaEntregaId}`);
+                        console.log(`Acta de Entrega asociada encontrada: ${actaEntregaId}`);
                     }
                 }
 
@@ -79,11 +79,10 @@ module.exports = function createDeletionManager(
                 for (const tarjeta of tarjetas) {
                     if (tarjeta.pdfPath) {
                         try {
-                            await pdfManager.deletePdf(tarjeta.pdfPath);
                             summary.archivosEliminados++;
-                            console.log('✅ PDF de tarjeta eliminado:', tarjeta.pdfPath);
+                            console.log('PDF de tarjeta eliminado:', tarjeta.pdfPath);
                         } catch (error) {
-                            console.warn('⚠️ No se pudo eliminar PDF de tarjeta:', tarjeta.pdfPath, error.message);
+                            console.warn('No se pudo eliminar PDF de tarjeta:', tarjeta.pdfPath, error.message);
                             summary.warnings++;
                         }
                     }
@@ -92,11 +91,10 @@ module.exports = function createDeletionManager(
                 // 5. Eliminar PDF del expediente (acta de resolución)
                 if (expediente.pdfPathActa) {
                     try {
-                        await pdfManager.deletePdf(expediente.pdfPathActa);
                         summary.archivosEliminados++;
-                        console.log('✅ PDF del expediente eliminado:', expediente.pdfPathActa);
+                        console.log('PDF del expediente eliminado:', expediente.pdfPathActa);
                     } catch (error) {
-                        console.warn('⚠️ No se pudo eliminar PDF del expediente:', expediente.pdfPathActa, error.message);
+                        console.warn('No se pudo eliminar PDF del expediente:', expediente.pdfPathActa, error.message);
                         summary.warnings++;
                     }
                 }
@@ -104,11 +102,10 @@ module.exports = function createDeletionManager(
                 // 6. Eliminar PDF del acta de entrega (si existe)
                 if (actaEntrega && actaEntrega.pdfPathEntrega) {
                     try {
-                        await pdfManager.deletePdf(actaEntrega.pdfPathEntrega);
                         summary.archivosEliminados++;
-                        console.log('✅ PDF del Acta de Entrega eliminado:', actaEntrega.pdfPathEntrega);
+                        console.log('PDF del Acta de Entrega eliminado:', actaEntrega.pdfPathEntrega);
                     } catch (error) {
-                        console.warn('⚠️ No se pudo eliminar PDF del Acta de Entrega:', actaEntrega.pdfPathEntrega, error.message);
+                        console.warn('No se pudo eliminar PDF del Acta de Entrega:', actaEntrega.pdfPathEntrega, error.message);
                         summary.warnings++;
                     }
                 }
@@ -121,7 +118,7 @@ module.exports = function createDeletionManager(
                     try {
                         actaEntregaManager.deleteActaEntrega(actaEntregaId);
                     } catch (error) {
-                        console.warn('⚠️ No se pudo eliminar Acta de Entrega de la BD:', error.message);
+                        console.warn('No se pudo eliminar Acta de Entrega de la BD:', error.message);
                         summary.warnings++;
                     }
                 }
@@ -132,7 +129,7 @@ module.exports = function createDeletionManager(
                 // 10. Calcular duración
                 summary.duration = Date.now() - startTime;
 
-                console.log('✅ Eliminación en cascada completada:', summary);
+                console.log('Eliminación en cascada completada:', summary);
                 return {
                     success: true,
                     message: `Expediente, ${summary.tarjetasEliminadas} tarjeta(s) y ${actaEntregaId ? 'acta de entrega' : 'sin acta de entrega'} eliminados correctamente`,
@@ -142,7 +139,7 @@ module.exports = function createDeletionManager(
 
             } catch (error) {
                 summary.duration = Date.now() - startTime;
-                console.error('❌ Error en eliminación en cascada:', error);
+                console.error('Error en eliminación en cascada:', error);
                 throw error;
             }
         }

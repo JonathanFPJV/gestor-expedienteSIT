@@ -14,7 +14,7 @@ const { handleError } = require('./utils');
 function registerCreateHandler(ipcMain, tarjetaService) {
     ipcMain.handle('tarjeta:crear', handleError(
         async (tarjetaData, pdfFilePath = null) => {
-            console.log('📥 Solicitud crear tarjeta:', tarjetaData);
+            console.log('Solicitud crear tarjeta:', tarjetaData);
             return await tarjetaService.createTarjeta(tarjetaData, pdfFilePath);
         },
         'Error al crear tarjeta'

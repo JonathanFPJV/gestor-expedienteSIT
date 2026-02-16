@@ -15,7 +15,7 @@ function handleError(handler, errorMessage = 'Error en operación') {
         try {
             return await handler(...args);
         } catch (error) {
-            console.error(`❌ ${errorMessage}:`, error);
+            console.error(`${errorMessage}:`, error);
             return {
                 success: false,
                 message: error.message || errorMessage
@@ -35,7 +35,7 @@ function handleErrorNoEvent(handler, errorMessage = 'Error en operación') {
         try {
             return await handler();
         } catch (error) {
-            console.error(`❌ ${errorMessage}:`, error);
+            console.error(`${errorMessage}:`, error);
             return {
                 success: false,
                 message: error.message || errorMessage

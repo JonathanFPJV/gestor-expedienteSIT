@@ -15,7 +15,7 @@ function registerDeleteHandlers(ipcMain, tarjetaService) {
     // Eliminar tarjeta individual
     ipcMain.handle('tarjeta:eliminar', handleError(
         async (tarjetaId) => {
-            console.log('📥 Solicitud eliminar tarjeta:', tarjetaId);
+            console.log('Solicitud eliminar tarjeta:', tarjetaId);
             return await tarjetaService.deleteTarjeta(tarjetaId);
         },
         'Error al eliminar tarjeta'
@@ -24,7 +24,7 @@ function registerDeleteHandlers(ipcMain, tarjetaService) {
     // Eliminar tarjetas por expediente
     ipcMain.handle('tarjeta:eliminar-por-expediente', handleError(
         async (expedienteId) => {
-            console.log('📥 Solicitud eliminar tarjetas por expediente:', expedienteId);
+            console.log('Solicitud eliminar tarjetas por expediente:', expedienteId);
             return await tarjetaService.deleteTarjetasByExpediente(expedienteId);
         },
         'Error al eliminar tarjetas del expediente'

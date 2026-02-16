@@ -17,7 +17,7 @@ const createTarjetaManager = require('./tarjetaManager');
 const createActaEntregaManager = require('./actaEntregaManager');
 const createPdfManager = require('./pdfManager');
 const createDeletionManager = require('./deletionManager');
-const { 
+const {
     buildExpedienteLabel,
     buildTarjetaFileName,
     buildExpedienteQuery,
@@ -53,7 +53,7 @@ class ExpedienteService {
         const expedienteData = { ...rawData };
         const tarjetas = Array.isArray(expedienteData.tarjetas) ? expedienteData.tarjetas : [];
         delete expedienteData.tarjetas;
-        
+
         // Extraer datos del acta de entrega si existen
         const actaEntregaData = expedienteData.actaEntrega;
         delete expedienteData.actaEntrega;
@@ -88,15 +88,15 @@ class ExpedienteService {
         // Crear acta de entrega si se proporcionó
         let actaEntregaId = null;
         if (actaEntregaData) {
-            console.log('📋 Procesando Acta de Entrega...');
-            
+            console.log('Procesando Acta de Entrega...');
+
             // Guardar PDF del acta de entrega si existe
             if (actaEntregaData.pdfSourcePath && this.fileHandlers) {
                 const pdfPath = await this.pdfManager.saveActaEntregaPdf(
                     actaEntregaData.pdfSourcePath,
                     newExpediente
                 );
-                
+
                 if (pdfPath) {
                     actaEntregaData.pdfPathEntrega = pdfPath;
                     delete actaEntregaData.pdfSourcePath;
@@ -118,7 +118,7 @@ class ExpedienteService {
             actaEntregaId
         );
 
-        console.log('✅ Acta de Resolución creada:', newExpediente._id);
+        console.log('Acta de Resolución creada:', newExpediente._id);
         return formatSuccessResponse(
             {
                 expediente: newExpediente,
@@ -136,11 +136,11 @@ class ExpedienteService {
      * @returns {Promise<Object>} Expediente actualizado
      */
     async updateExpediente(expedienteId, rawData = {}) {
-        console.log(`🔄 updateExpediente llamado con ID: "${expedienteId}" (tipo: ${typeof expedienteId})`);
-        
+        console.log(`updateExpediente llamado con ID: "${expedienteId}"`);
+
         // Verificar que el expediente existe
         const expedienteExistente = this.expedienteManager.getExpedienteById(expedienteId);
-        console.log(`🔎 Resultado de búsqueda:`, expedienteExistente ? `✅ Encontrado: ${expedienteExistente.numeroExpediente}` : '❌ NO encontrado');
+        console.log(`Resultado de búsqueda:`, expedienteExistente ? `Encontrado: ${expedienteExistente.numeroExpediente}` : 'NO encontrado');
 
         const expedienteData = { ...rawData };
         const tarjetasProvided = Object.prototype.hasOwnProperty.call(expedienteData, 'tarjetas');
@@ -173,20 +173,20 @@ class ExpedienteService {
         } else if (expedienteData.pdfPath) {
             // Usuario NO cambió el PDF - PRESERVAR el existente
             // No hacemos nada, mantenemos el pdfPath actual
-            console.log('📎 Manteniendo PDF existente:', expedienteData.pdfPath);
+            console.log('Manteniendo PDF existente:', expedienteData.pdfPath);
             expedienteData.pdfPathActa = expedienteData.pdfPath;
             delete expedienteData.pdfPath;
         }
 
         // Preparar datos para actualización
         const updateData = {};
-        
+
         if (expedienteData.numeroExpediente !== undefined) {
             updateData.numeroExpediente = expedienteData.numeroExpediente;
         } else if (expedienteData.expediente !== undefined) {
             updateData.numeroExpediente = expedienteData.expediente;
         }
-        
+
         if (expedienteData.anioExpediente !== undefined) updateData.anioExpediente = expedienteData.anioExpediente;
         if (expedienteData.numeroResolucion !== undefined) updateData.numeroResolucion = expedienteData.numeroResolucion;
         if (expedienteData.fecha !== undefined) updateData.fechaExpediente = expedienteData.fecha;
@@ -204,12 +204,12 @@ class ExpedienteService {
         // 📋 Procesar acta de entrega si se proporciona
         let actaEntregaId = null;
         if (actaEntregaData) {
-            console.log('📋 Procesando acta de entrega en actualización:', actaEntregaData);
-            
+            console.log('Procesando acta de entrega en actualización:', actaEntregaData);
+
             // Obtener tarjetas antiguas para verificar si ya tienen acta
             const tarjetasAntiguas = this.tarjetaManager.getTarjetasByExpediente(expedienteActualizado._id);
             const actaEntregaIdExistente = tarjetasAntiguas.length > 0 ? tarjetasAntiguas[0].actaEntregaId : null;
-            
+
             // Si hay PDF del acta, guardarlo
             if (actaEntregaData.pdfSourcePath && this.fileHandlers) {
                 const pdfPath = await this.pdfManager.saveActaEntregaPdf(
@@ -221,26 +221,26 @@ class ExpedienteService {
                 );
                 actaEntregaData.pdfPathEntrega = pdfPath;
                 delete actaEntregaData.pdfSourcePath;
-                console.log('📎 PDF del acta guardado:', pdfPath);
+                console.log('PDF del acta guardado:', pdfPath);
             }
-            
+
             // Si ya existe un acta, actualizarla; si no, crear una nueva
             if (actaEntregaIdExistente) {
-                console.log('🔄 Actualizando acta de entrega existente:', actaEntregaIdExistente);
+                console.log('Actualizando acta de entrega existente:', actaEntregaIdExistente);
                 const actaActualizada = this.actaEntregaManager.updateActaEntrega(
                     actaEntregaIdExistente,
                     actaEntregaData
                 );
                 actaEntregaId = actaActualizada._id;
-                console.log('✅ Acta de entrega actualizada:', actaEntregaId);
+                console.log('Acta de entrega actualizada:', actaEntregaId);
             } else {
-                console.log('🆕 Creando nueva acta de entrega');
+                console.log('Creando nueva acta de entrega');
                 const newActaEntrega = this.actaEntregaManager.createActaEntrega(
                     actaEntregaData,
                     expedienteActualizado._id
                 );
                 actaEntregaId = newActaEntrega._id;
-                console.log('✅ Nueva acta de entrega creada:', actaEntregaId);
+                console.log('Nueva acta de entrega creada:', actaEntregaId);
             }
         }
 
@@ -250,50 +250,50 @@ class ExpedienteService {
             // 💾 Hacer backup de las tarjetas antiguas con su actaEntregaId
             const tarjetasAntiguas = this.tarjetaManager.getTarjetasByExpediente(expedienteActualizado._id);
             const backupTarjetas = tarjetasAntiguas.map(t => ({ ...t })); // Deep copy
-            
+
             // 🔗 Determinar el actaEntregaId final: usar el nuevo si se creó/actualizó, o el existente
             const actaEntregaIdFinal = actaEntregaId || (tarjetasAntiguas.length > 0 ? tarjetasAntiguas[0].actaEntregaId : null);
-            console.log(`💾 Backup: ${backupTarjetas.length} tarjetas (actaEntregaId final: ${actaEntregaIdFinal || 'sin acta'})`);
-            
+            console.log(`Backup: ${backupTarjetas.length} tarjetas (actaEntregaId final: ${actaEntregaIdFinal || 'sin acta'})`);
+
             try {
                 // Paso 1: Eliminar tarjetas antiguas
-                console.log(`🗑️ Eliminando ${tarjetasAntiguas.length} tarjetas antiguas...`);
+                console.log(`Eliminando ${tarjetasAntiguas.length} tarjetas antiguas...`);
                 this.tarjetaManager.deleteTarjetasByExpediente(expedienteActualizado._id);
-                
+
                 // Paso 2: Guardar tarjetas nuevas con el actaEntregaId correcto
                 if (tarjetas.length > 0) {
-                    console.log(`💾 Guardando ${tarjetas.length} tarjetas nuevas con actaEntregaId: ${actaEntregaIdFinal || 'sin acta'}`);
-                    
+                    console.log(`Guardando ${tarjetas.length} tarjetas nuevas con actaEntregaId: ${actaEntregaIdFinal || 'sin acta'}`);
+
                     // 🔗 Asegurar que cada tarjeta nueva tenga el actaEntregaId correcto
                     const tarjetasConActaId = tarjetas.map(t => ({
                         ...t,
                         actaEntregaId: actaEntregaIdFinal // Usar el actaEntregaId final (nuevo o existente)
                     }));
-                    
+
                     tarjetasGuardadas = await this.tarjetaManager.saveTarjetasParaExpediente(
                         expedienteActualizado,
                         tarjetasConActaId,
                         actaEntregaIdFinal // Pasar el actaEntregaId correcto como parámetro
                     );
-                    console.log(`✅ ${tarjetasGuardadas.length} tarjetas guardadas exitosamente con vínculo al acta`);
+                    console.log(`${tarjetasGuardadas.length} tarjetas guardadas exitosamente con vínculo al acta`);
                 }
-                
+
             } catch (error) {
                 // 🔥 ERROR: Restaurar tarjetas del backup
-                console.error(`❌ Error al actualizar tarjetas: ${error.message}`);
-                console.log(`🔄 Restaurando ${backupTarjetas.length} tarjetas desde backup...`);
-                
+                console.error(`Error al actualizar tarjetas: ${error.message}`);
+                console.log(`Restaurando ${backupTarjetas.length} tarjetas desde backup...`);
+
                 try {
                     // Restaurar cada tarjeta del backup CON su actaEntregaId original
                     backupTarjetas.forEach(tarjetaBackup => {
                         delete tarjetaBackup._id; // Permitir que SQLite genere nuevo ID
                         this.tarjetaManager.db.tarjetas.insert(tarjetaBackup);
                     });
-                    console.log(`✅ Tarjetas restauradas desde backup con actaEntregaId preservado`);
+                    console.log('Tarjetas restauradas desde backup con actaEntregaId preservado');
                 } catch (restoreError) {
-                    console.error(`❌ Error crítico al restaurar backup:`, restoreError);
+                    console.error(`Error crítico al restaurar backup:`, restoreError);
                 }
-                
+
                 throw new Error(`Error al actualizar tarjetas: ${error.message}. Se restauraron las tarjetas anteriores.`);
             }
         }
@@ -327,12 +327,12 @@ class ExpedienteService {
      * @returns {Object} Expediente con tarjetas asociadas
      */
     getExpedienteDetalle(expedienteId) {
-        console.log(`🔍 getExpedienteDetalle llamado con ID: "${expedienteId}" (tipo: ${typeof expedienteId})`);
-        
+        console.log(`getExpedienteDetalle llamado con ID: "${expedienteId}"`);
+
         const expediente = this.expedienteManager.getExpedienteById(expedienteId);
         const tarjetas = this.tarjetaManager.getTarjetasByExpediente(expediente._id);
 
-        console.log(`📋 Detalle de expediente ${expediente._id}: ${tarjetas.length} tarjetas`);
+        console.log(`Detalle de expediente ${expediente._id}: ${tarjetas.length} tarjetas`);
         return {
             success: true,
             expediente,
@@ -384,7 +384,7 @@ class ExpedienteService {
         try {
             return this.expedienteManager.getAllExpedientes(filtros);
         } catch (error) {
-            console.error('❌ Error al obtener expedientes:', error);
+            console.error('Error al obtener expedientes:', error);
             throw error;
         }
     }
@@ -398,7 +398,7 @@ class ExpedienteService {
         try {
             return this.expedienteManager.searchExpedientes(searchTerm);
         } catch (error) {
-            console.error('❌ Error en búsqueda de expedientes:', error);
+            console.error('Error en búsqueda de expedientes:', error);
             throw error;
         }
     }

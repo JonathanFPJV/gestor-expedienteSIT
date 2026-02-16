@@ -23,7 +23,7 @@ const { handleError, notifyAllWindows } = require('./utils');
  * @param {ExpedienteService} expedienteService - Servicio de expedientes
  */
 function registerDeleteHandlers(expedienteService) {
-    console.log('🗑️ Registrando handlers de eliminación de expedientes...');
+    console.log('Registrando handlers de eliminación de expedientes...');
 
     /**
      * Eliminar expediente con cascada (tarjetas y archivos)
@@ -36,7 +36,7 @@ function registerDeleteHandlers(expedienteService) {
      */
     ipcMain.handle('eliminar-expediente', async (event, expedienteId) => {
         try {
-            console.log('📥 Solicitud eliminar expediente:', expedienteId);
+            console.log('Solicitud eliminar expediente:', expedienteId);
             const result = await expedienteService.deleteExpediente(expedienteId);
 
             // Notificar a todas las ventanas con resumen de eliminación
@@ -51,7 +51,7 @@ function registerDeleteHandlers(expedienteService) {
         }
     });
 
-    console.log('✅ Delete Handlers registrados (1 canal)');
+    console.log('Delete Handlers registrados (1 canal)');
 }
 
 module.exports = registerDeleteHandlers;

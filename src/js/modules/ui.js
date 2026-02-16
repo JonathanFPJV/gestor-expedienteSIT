@@ -1,5 +1,4 @@
 // src/js/modules/ui.js
-import { pdfViewer } from './pdfViewer.js';
 import { simplePdfViewer } from './simplePdfViewer.js';
 
 const expedienteForm = document.getElementById('expediente-form');

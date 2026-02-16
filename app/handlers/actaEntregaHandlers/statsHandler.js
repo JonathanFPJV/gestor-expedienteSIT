@@ -21,7 +21,7 @@ const { handleError, handleSuccess } = require('./utils');
  * @param {ActaEntregaService} actaEntregaService - Servicio de actas de entrega
  */
 function registerStatsHandlers(actaEntregaService) {
-    console.log('📊 Registrando handlers de estadísticas de actas de entrega...');
+    console.log('Registrando handlers de estadísticas de actas de entrega...');
 
     /**
      * Obtener estadísticas generales de actas de entrega
@@ -34,18 +34,18 @@ function registerStatsHandlers(actaEntregaService) {
      */
     ipcMain.handle('acta-entrega:estadisticas', (event) => {
         try {
-            console.log('📥 Solicitud estadísticas de actas');
+            console.log('Solicitud estadísticas de actas');
             const stats = actaEntregaService.getEstadisticas();
-            
-            console.log('✅ Estadísticas calculadas:', stats);
-            
+
+            console.log('Estadísticas calculadas');
+
             return handleSuccess({ estadisticas: stats });
         } catch (error) {
             return handleError(error, 'obtener estadísticas');
         }
     });
 
-    console.log('✅ Stats Handlers registrados (1 canal)');
+    console.log('Stats Handlers registrados (1 canal)');
 }
 
 module.exports = registerStatsHandlers;

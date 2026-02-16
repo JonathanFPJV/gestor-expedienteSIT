@@ -141,7 +141,6 @@ export class ExpedientesCRUD {
             this.exportarExcelBtn.style.opacity = '1';
         }
 
-        console.log('Estado de campos de búsqueda restaurado');
     }
 
     /**
@@ -213,7 +212,6 @@ export class ExpedientesCRUD {
      * Suscribirse a eventos del sistema
      */
     subscribeToEvents() {
-        console.log('Suscribiendo ExpedientesCRUD a eventos del sistema...');
 
         eventBus.on(APP_EVENTS.EXPEDIENTE_UPDATED, (data) => {
             this.refreshExpedienteInTable(data.expediente);
@@ -227,7 +225,6 @@ export class ExpedientesCRUD {
             this.addExpedienteToTable(data.expediente);
         });
 
-        console.log('Suscripción a eventos completada');
     }
 
     /**
@@ -239,7 +236,6 @@ export class ExpedientesCRUD {
             this.expedientes[index] = updatedExpediente;
             this.filteredExpedientes = [...this.expedientes];
             this.renderTable();
-            console.log('Expediente actualizado en tabla');
         }
     }
 
@@ -251,7 +247,6 @@ export class ExpedientesCRUD {
         this.filteredExpedientes = [...this.expedientes];
         this.renderTable();
         this.updatePagination();
-        console.log('Expediente eliminado de tabla');
     }
 
     /**
@@ -275,7 +270,6 @@ export class ExpedientesCRUD {
         this.paginationController.currentPage = 1;
         this.renderTable();
         this.updatePagination();
-        console.log('Nuevo expediente agregado a tabla');
     }
 
     /**
@@ -283,7 +277,6 @@ export class ExpedientesCRUD {
      */
     async loadExpedientes() {
         try {
-            console.log('Cargando expedientes...');
             this.tableRenderer.showLoadingState();
 
             const result = await this.expedienteService.loadExpedientes({
@@ -306,13 +299,12 @@ export class ExpedientesCRUD {
                 this.updatePagination();
                 this.populateYearFilter();
 
-                console.log('Expedientes cargados correctamente');
             } else {
                 this.tableRenderer.showErrorState(result.error);
-                console.error('❌ Error al cargar expedientes:', result.error);
+                console.error('Error al cargar expedientes:', result.error);
             }
         } catch (error) {
-            console.error('❌ Error al cargar expedientes:', error);
+            console.error('Error al cargar expedientes:', error);
             this.tableRenderer.showErrorState('Error al cargar expedientes');
         }
     }
@@ -491,7 +483,6 @@ export class ExpedientesCRUD {
     viewExpediente(expedienteId) {
         const expediente = this.expedientes.find(exp => exp._id === expedienteId);
         if (expediente) {
-            console.log('Visualizando expediente:', expediente.numeroExpediente);
             this.viewer.showExpedienteDetails(expediente);
         }
     }
@@ -500,7 +491,6 @@ export class ExpedientesCRUD {
      * Editar expediente
      */
     async editExpediente(expedienteId) {
-        console.log('Editar expediente:', expedienteId);
 
         const expediente = this.expedientes.find(exp => exp._id === expedienteId);
         if (!expediente) {
@@ -563,7 +553,6 @@ export class ExpedientesCRUD {
             },
             () => {
                 // onCancel
-                console.log('Eliminación cancelada por el usuario');
             }
         );
     }
@@ -639,7 +628,7 @@ export class ExpedientesCRUD {
      */
     async extraerOcrTarjeta(index) {
         const result = await this.tarjetaService.extraerOcrTarjeta(index, (progress, message) => {
-            console.log(`OCR: ${progress}% - ${message}`);
+            // console.debug(`OCR: ${progress}% - ${message}`);
         });
 
         if (result.success && result.extractedData) {
@@ -683,7 +672,6 @@ export class ExpedientesCRUD {
     // === MÉTODOS AUXILIARES ===
 
     showSuccess(message) {
-        console.log('Exito:', message);
         ui.showNotification(message, 'success');
     }
 

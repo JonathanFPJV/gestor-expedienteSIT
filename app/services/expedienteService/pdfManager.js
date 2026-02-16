@@ -11,7 +11,7 @@
  */
 module.exports = function createPdfManager(fileHandlers) {
     if (!fileHandlers) {
-        console.warn('⚠️ PdfManager inicializado sin fileHandlers');
+        console.warn('PdfManager inicializado sin fileHandlers');
         return {
             saveExpedientePdf: () => Promise.resolve(null),
             saveActaEntregaPdf: () => Promise.resolve(null),
@@ -42,11 +42,11 @@ module.exports = function createPdfManager(fileHandlers) {
                     }
                 );
 
-                console.log('📄 PDF de expediente guardado:', saveResult.path);
+                console.log('PDF de expediente guardado:', saveResult.path);
                 return saveResult.path;
 
             } catch (error) {
-                console.warn('⚠️ No se pudo guardar el PDF del expediente:', error);
+                console.warn('No se pudo guardar el PDF del expediente:', error);
                 throw error;
             }
         },
@@ -74,14 +74,14 @@ module.exports = function createPdfManager(fileHandlers) {
                 );
 
                 if (saveResult.success) {
-                    console.log('✅ PDF del Acta de Entrega guardado en:', saveResult.path);
+                    console.log('PDF del Acta de Entrega guardado en:', saveResult.path);
                     return saveResult.path;
                 }
 
                 return null;
 
             } catch (error) {
-                console.warn('⚠️ No se pudo guardar el PDF del acta de entrega:', error);
+                console.warn('No se pudo guardar el PDF del acta de entrega:', error);
                 throw error;
             }
         },
@@ -98,11 +98,11 @@ module.exports = function createPdfManager(fileHandlers) {
 
             try {
                 const result = await fileHandlers.deletePdf(pdfPath);
-                console.log('🗑️ PDF eliminado:', pdfPath);
+                console.log('PDF eliminado:', pdfPath);
                 return result.success;
 
             } catch (error) {
-                console.warn('⚠️ No se pudo eliminar el PDF:', error.message);
+                console.warn('No se pudo eliminar el PDF:', error.message);
                 return false;
             }
         }

@@ -14,7 +14,7 @@ const path = require('path');
  * @param {Object} db - Instancia de base de datos para consultas directas
  */
 function registerExportHandler(expedienteService, db) {
-    console.log('📊 Registrando handler de exportación a Excel...');
+    console.log('Registrando handler de exportación a Excel...');
 
     /**
      * Exportar expedientes y tarjetas a Excel con filtros
@@ -22,11 +22,11 @@ function registerExportHandler(expedienteService, db) {
      */
     ipcMain.handle('expediente:exportar-excel', async (event, filters = {}) => {
         try {
-            console.log('📊 Iniciando exportación a Excel con filtros:', filters);
+            console.log('Iniciando exportación a Excel con filtros:', filters);
 
             // Obtener referencia a la BD (desde expedienteService)
             const database = expedienteService.db || db;
-            
+
             if (!database || !database.db) {
                 throw new Error('No se pudo acceder a la base de datos');
             }
@@ -111,12 +111,12 @@ function registerExportHandler(expedienteService, db) {
             const stmt = database.db.prepare(sql);
             const rows = stmt.all(...params);
 
-            console.log(`📊 Registros encontrados: ${rows.length}`);
+            console.log(`Registros encontrados: ${rows.length}`);
 
             if (rows.length === 0) {
-                return { 
-                    success: false, 
-                    message: "No hay datos para exportar con los filtros actuales." 
+                return {
+                    success: false,
+                    message: "No hay datos para exportar con los filtros actuales."
                 };
             }
 
@@ -131,7 +131,7 @@ function registerExportHandler(expedienteService, db) {
             });
 
             if (canceled || !filePath) {
-                console.log('⚠️ Exportación cancelada por el usuario');
+                console.log('Exportación cancelada por el usuario');
                 return { success: false, message: "Exportación cancelada", canceled: true };
             }
 
@@ -180,27 +180,27 @@ function registerExportHandler(expedienteService, db) {
             // 9. Guardar archivo
             XLSX.writeFile(workbook, filePath);
 
-            console.log(`✅ Archivo Excel guardado en: ${filePath}`);
-            console.log(`📊 Total de registros exportados: ${excelData.length}`);
+            console.log(`Archivo Excel guardado en: ${filePath}`);
+            console.log(`Total de registros exportados: ${excelData.length}`);
 
-            return { 
-                success: true, 
+            return {
+                success: true,
                 message: `Exportación completada: ${excelData.length} registros`,
                 filePath: filePath,
                 count: excelData.length
             };
-            
+
         } catch (error) {
-            console.error('❌ Error al exportar a Excel:', error);
-            return { 
-                success: false, 
+            console.error('Error al exportar a Excel:', error);
+            return {
+                success: false,
                 error: error.message,
                 message: `Error al exportar: ${error.message}`
             };
         }
     });
 
-    console.log('✅ Handler de exportación a Excel registrado');
+    console.log('Handler de exportación a Excel registrado');
 }
 
 module.exports = registerExportHandler;

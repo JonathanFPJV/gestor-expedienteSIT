@@ -1,7 +1,7 @@
 // app/services/expedienteService.js
 /**
  * ExpedienteService - Punto de Entrada
- * ⚡ REFACTORIZADO - Arquitectura Limpia
+ * REFACTORIZADO - Arquitectura Limpia
  * 
  * Módulos especializados:
  * - expedienteManager: CRUD de expedientes

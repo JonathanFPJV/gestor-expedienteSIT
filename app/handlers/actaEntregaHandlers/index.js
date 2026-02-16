@@ -2,7 +2,7 @@
 /**
  * ActaEntregaHandlers - Clase Orquestadora
  * 
- * ⚡ REFACTORIZADO - Arquitectura Limpia
+ *  REFACTORIZADO - Arquitectura Limpia
  * Esta clase coordina todos los módulos de gestión de actas de entrega.
  * 
  * Módulos coordinados:
@@ -42,18 +42,9 @@ class ActaEntregaHandlers {
      * @param {FileHandlers} fileHandlers - Gestor de archivos (opcional)
      */
     constructor(db, fileHandlers = null) {
-        console.log('🔍 ActaEntregaHandlers constructor:');
-        console.log('   - db recibido:', !!db);
-        console.log('   - Tipo de db:', typeof db);
-        console.log('   - Tiene prepare?:', typeof db?.prepare);
-        console.log('   - Constructor:', db?.constructor?.name);
-        console.log('   - fileHandlers recibido:', !!fileHandlers);
-        
         this.db = db;
         this.actaEntregaService = new ActaEntregaService(db, fileHandlers);
         this.fileHandlers = fileHandlers;
-        
-        console.log('✅ ActaEntregaService inicializado con db válido');
     }
 
     /**
@@ -61,8 +52,7 @@ class ActaEntregaHandlers {
      * Coordina el registro de todos los módulos
      */
     registerHandlers() {
-        console.log('📝 Registrando manejadores IPC para Actas de Entrega...');
-        console.log('='.repeat(60));
+        console.log('Registrando manejadores IPC para Actas de Entrega...');
 
         // Registrar handlers modulares
         registerReadHandlers(this.actaEntregaService);
@@ -73,17 +63,7 @@ class ActaEntregaHandlers {
         registerPdfHandlers(this.fileHandlers);
 
         // Resumen final
-        console.log('='.repeat(60));
-        console.log('✅ Manejadores IPC de Actas de Entrega registrados exitosamente');
-        console.log('   📊 Handlers organizados en módulos:');
-        console.log('      - readHandler: 5 canales (todas, por-id, buscar, tarjetas, info-eliminar)');
-        console.log('      - createHandler: 1 canal (crear)');
-        console.log('      - updateHandler: 1 canal (actualizar)');
-        console.log('      - deleteHandler: 1 canal (eliminar)');
-        console.log('      - statsHandler: 1 canal (estadísticas)');
-        console.log('      - pdfHandler: 2 canales (seleccionar, abrir)');
-        console.log('   📈 Total: 11 canales IPC activos');
-        console.log('='.repeat(60));
+        console.log('Manejadores IPC de Actas de Entrega registrados exitosamente');
     }
 }
 

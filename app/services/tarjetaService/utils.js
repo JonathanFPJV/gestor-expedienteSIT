@@ -30,7 +30,7 @@ function normalizePlaca(placa) {
         return null;
     }
     if (typeof placa !== 'string') {
-        console.warn('⚠️ normalizePlaca recibió un valor no-string:', typeof placa, placa);
+        console.warn('normalizePlaca recibió un valor no-string:', typeof placa, placa);
         return null;
     }
     return placa.toUpperCase().trim();
